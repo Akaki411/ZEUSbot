@@ -3,6 +3,7 @@ const {Keyboard} = require('vk-io')
 class KeyboardButtons
 {
     none = Keyboard.keyboard([])
+    inlineNone = Keyboard.keyboard([]).inline()
 
     build = (buttons) => {
         return Keyboard.keyboard(buttons)
@@ -540,6 +541,22 @@ class KeyboardButtons
         }
     })
 
+    getRegistrationButton = Keyboard.textButton({
+        label: '➕ Прописаться в городе',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'get_registration'
+        }
+    })
+
+    refuseRegistrationButton = Keyboard.textButton({
+        label: '❌ Отказаться от прописки',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'refuse_registration'
+        }
+    })
+
     merryButton = Keyboard.textButton({
         label: '💍 Вступить в брак',
         color: Keyboard.SECONDARY_COLOR,
@@ -552,15 +569,25 @@ class KeyboardButtons
         label: '💔 Подать на развод',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'refuse_merry'
+            choice: 'divorce'
         }
     })
+
+
 
     aboutMeButton = Keyboard.textButton({
         label: '💪 Обо мне',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'about_me'
+        }
+    })
+
+    transactionButton = Keyboard.textButton({
+        label: '🔀 Перевести',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'transaction'
         }
     })
 
@@ -581,7 +608,7 @@ class KeyboardButtons
     })
 
     newBuildingButton = Keyboard.textButton({
-        label: '🗑 Новая постройка',
+        label: '➕ Новая постройка',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'new_building'
@@ -589,7 +616,7 @@ class KeyboardButtons
     })
 
     deleteBuildingButton = Keyboard.textButton({
-        label: '🗑 Снести постройку',
+        label: '❌ Снести постройку',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'delete_building'
@@ -597,10 +624,50 @@ class KeyboardButtons
     })
 
     allBuildingsButton = Keyboard.textButton({
-        label: '🗑 Список построек',
+        label: '📋 Список построек',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'all_buildings'
+        }
+    })
+
+    listButton = Keyboard.textButton({
+        label: '📋 Список',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'list'
+        }
+    })
+
+    buildButton = Keyboard.textButton({
+        label: '➕ Построить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'build'
+        }
+    })
+
+    upgradeButton = Keyboard.textButton({
+        label: '⬆ Улучшить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'upgrade'
+        }
+    })
+
+    giveKeyButton = Keyboard.textButton({
+        label: '🔑 Отдать ключ',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'give_key'
+        }
+    })
+
+    copyKeyButton = Keyboard.textButton({
+        label: '🔑🔑 Сделать дубликат ключа',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'copy_key'
         }
     })
 
@@ -612,25 +679,119 @@ class KeyboardButtons
         }
     })
 
+    mostActiveButton = Keyboard.textButton({
+        label: '🎆 Самые активные',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'most_active'
+        }
+    })
+
+    mostUnculturedButton = Keyboard.textButton({
+        label: '😡 Некультурные',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'uncultured'
+        }
+    })
+
+    stickermansButton = Keyboard.textButton({
+        label: '💩 Любители стикеров',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'stickermans'
+        }
+    })
+
+    musicLoversButton = Keyboard.textButton({
+        label: '🎵 Любители музыки',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'music_lovers'
+        }
+    })
+
+    moneyButton = Keyboard.textButton({
+        label: '💵 Деньги',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'money'
+        }
+    })
+
+    wheatButton = Keyboard.textButton({
+        label: '🌾 Зерно',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'wheat'
+        }
+    })
+
+    diamondButton = Keyboard.textButton({
+        label: '💎 Алмазы',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'diamond'
+        }
+    })
+
+    adminsButton = Keyboard.textButton({
+        label: '📋 Список админов',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'admins'
+        }
+    })
+
+    infoButton = Keyboard.textButton({
+        label: 'ℹ Информация о проекте',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'info'
+        }
+    })
+
+    notificationsOnButton = Keyboard.textButton({
+        label: '✅ Включить уведомления',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'notifications_on'
+        }
+    })
+
+    notificationsOffButton = Keyboard.textButton({
+        label: '❌ Отключить уведомления',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'notifications_off'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
+        obj.parameter = obj.parameter || null
         return Keyboard.callbackButton({
-            label: 'Принять',
-            color: Keyboard.PRIMARY_COLOR,
+            label: '✅ Принять',
+            color: Keyboard.POSITIVE_COLOR,
+            type: "show_snackbar",
+            text: "Отправлено",
             payload: {
                 command: obj.command,
-                item: obj.item
+                item: obj.item,
+                addition: obj.parameter
             }
         })
     }
 
     declineCallbackButton = (obj) => {
+        obj.parameter = obj.parameter || null
         return Keyboard.callbackButton({
-            label: 'Отклонить',
+            label: '⛔ Отклонить',
             color: Keyboard.NEGATIVE_COLOR,
             payload: {
                 command: obj.command,
-                item: obj.item
+                item: obj.item,
+                addition: obj.parameter
             }
         })
     }

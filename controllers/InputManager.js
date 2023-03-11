@@ -335,7 +335,6 @@ class InputManager
                 })
                 return resolve(null)
             }
-
         })
     }
 }

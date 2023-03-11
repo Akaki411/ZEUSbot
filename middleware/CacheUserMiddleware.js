@@ -11,12 +11,7 @@ const ErrorHandler = require("../error/ErrorHandler");
 module.exports = async (context, next) =>
 {
     context.command = context.text?.toLowerCase()
-    const {peerId} = context
-
-    if(context.peerType === "chat")
-    {
-        return next()
-    }
+    const peerId = context.peerType === "chat" ? context.senderId : context.peerId
 
     if(Data.users[peerId])
     {
@@ -38,22 +33,20 @@ module.exports = async (context, next) =>
                 context.player = Data.users[peerId]
                 return next()
             }
-            else
+            else if(context.peerType !== "chat")
             {
                 context.send(`🚫Внимание!🚫
                                 Вы были забанены в проекте *public218388422 («ZEUS - Вселенная игроков»)
                                 Если вы не согласны с блокировкой - напишите одному из админов:
-                                ${Data.admins.map(key => {
-                    return "@id" + key.id + "(" + key.nick +")\n"
-                })}`, {
+                                ${Data.GiveAdminList()}`, {
                     keyboard: keyboard.none
                 })
             }
         }
-        else
+        else if(context.peerType !== "chat")
         {
             const current_keyboard = [[keyboard.registrationButton]]
-            if(context.command.match(commands.registration))
+            if(context.command?.match(commands.registration))
             {
                 try
                 {

@@ -1,6 +1,6 @@
 const SceneController = require("../controllers/SceneController")
 const Data = require("./CacheData")
-const keyboard = require("../variables/Keyboards")
+const NameLibrary = require("../variables/NameLibrary")
 class User
 {
     constructor(user, status, info, resources)
@@ -8,17 +8,18 @@ class User
 
         this.id = user.dataValues.id
         this.nick = user.dataValues.nick
-        this.gender = user.dataValues.gender ? "Мужчина" : "Женщина"
+        this.gender = NameLibrary.GetGender(user.dataValues.gender)
         this.warningScore = user.dataValues.warningScore
         this.role = user.dataValues.role
         this.status = user.dataValues.status
         this.location = status.dataValues.location
         this.citizenship = status.dataValues.citizenship
+        this.notifications = status.dataValues.notifications
         this.marriedID = info.dataValues.marriedID
         this.nationality = info.dataValues.nationality
         this.age = info.dataValues.age
         this.registration = info.dataValues.registration
-        this.fatigue = 95
+        this.fatigue = 100
         this.effects = []
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
@@ -29,6 +30,7 @@ class User
         this.silver = resources.dataValues.silver
         this.diamond = resources.dataValues.diamond
         this.isMayor = false
+        this.isMarried = this.marriedID !== null
         this.inBuild = null
         this.lastActionTime = new Date()
         this.timeout = null
@@ -50,6 +52,20 @@ class User
     SetState(state)
     {
         this.state = state
+    }
+
+    CanPay(pay)
+    {
+        let can = true
+        if(pay.money) can = can && (this.money - pay.money >= 0)
+        if(pay.stone) can = can && (this.stone - pay.stone >= 0)
+        if(pay.wood) can = can && (this.wood - pay.wood >= 0)
+        if(pay.wheat) can = can && (this.wheat - pay.wheat >= 0)
+        if(pay.iron) can = can && (this.iron - pay.iron >= 0)
+        if(pay.copper) can = can && (this.copper - pay.copper >= 0)
+        if(pay.silver) can = can && (this.silver - pay.silver >= 0)
+        if(pay.diamond) can = can && (this.diamond - pay.diamond >= 0)
+        return can
     }
 }
 

@@ -8,7 +8,7 @@ class ErrorHandler
 {
     async SendLogs(context, place, error)
     {
-        await context.send("⛔Ошибка⛔\nПроизошла ошибка, вся информация отправлена поддержке, скоро это будет исправлено.")
+        await api.SendMessage(context.player.id, "⛔Ошибка⛔\nПроизошла ошибка, вся информация отправлена поддержке, скоро это будет исправлено.")
 
         const filename = `error_${NameLibrary.GetDate() + "&" + NameLibrary.GetTime()}.log`
         await new Promise(res => {
@@ -24,9 +24,10 @@ class ErrorHandler
                 },
                 title: filename
             }).then(async (log) => {
-            for (const key of Data.supports)
+
+            for (const key of Object.keys(Data.supports))
             {
-                await api.SendMessageWithAttachment(key.id,
+                await api.SendMessageWithAttachment(Data.supports[key].id,
                     `⚠Произошла ошибка⚠\nИгрок: *id${context.player.id}(${context.player.nick})\nМесто: ${place}\nКод ошибки: ${error.message}`, log)
             }
         })

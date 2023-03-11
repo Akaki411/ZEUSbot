@@ -1,18 +1,8 @@
-const {Player, Country, City, PlayerStatus, PlayerInfo} = require("../database/Models")
+const {Player, PlayerStatus, PlayerInfo} = require("../database/Models")
 const Data = require("../models/CacheData")
+const Prices = require("./Prices");
 class NameLibrary
 {
-    GenerateUniqueKey()
-    {
-        const symbols = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        let newKey = ""
-        for(let i = 0; i < 16; i++)
-        {
-            newKey += symbols[Math.round(Math.random() * symbols.length)]
-        }
-        return newKey
-    }
-
     GetChance(chance)
     {
         chance = Math.min(chance, 100)
@@ -21,7 +11,7 @@ class NameLibrary
 
     GetRandomNumb(min, max)
     {
-        return min + Math.round(Math.random() * (max - min))
+        return Math.round(min + Math.round(Math.random() * (max - min)))
     }
 
     GetDate()
@@ -45,6 +35,11 @@ class NameLibrary
             (hh>9 ? '' : '0') + hh,
             (mm>9 ? '' : '0') + mm
         ].join('.')
+    }
+
+    GetGender(sex)
+    {
+        return sex ? "Мужчина" : "Женщина"
     }
 
     RoleEstimator(role)
@@ -78,66 +73,12 @@ class NameLibrary
         return "Неизвестный эффект, обратитесь в тех поддержку."
     }
 
-    GetBuildingName(building)
-    {
-        switch (building)
-        {
-            case "house":
-                return "🏠 Часный дом"
-            case "stone":
-                return "⛏ Каменоломня"
-            case "wood":
-                return "⛏ Лесозаготовка"
-            case "wheat":
-                return "⛏ Поле"
-            case "iron":
-                return "⛏ Железный рудник"
-            case "copper":
-                return "⛏ Медный рудник"
-            case "silver":
-                return "⛏ Серебрянный рудник"
-            case "mint":
-                return "💼 Монетный двор"
-            case "bank":
-                return "💼 Банк"
-            case "barracks":
-                return "⚔ Казарма"
-            case "port":
-                return "⚔ Порт"
-            case "church":
-                return "☦ Церковь"
-        }
-    }
-
-    GetPrice(thing)
-    {
-        // Ресурсы {money, stone, wood, wheat, iron, copper, silver, diamond}
-        switch (thing)
-        {
-            case "new_city":
-                return {
-                    money: -25000,
-                    stone: -80000,
-                    wood: -70000
-                }
-            case "expand_city":
-                return {
-                    money: -6000,
-                    stone: -19000,
-                    wood: -18500
-                }
-            case "new_road":
-                return {
-                    money: -3000,
-                    stone: -27000,
-                }
-        }
-    }
-
     GetResourceName(res)
     {
         switch(res)
         {
+            case "money":
+                return "💵 Монеты"
             case "wheat":
                 return "🌾 Зерно"
             case "wood":
@@ -154,6 +95,31 @@ class NameLibrary
                 return "💎 Алмазы"
         }
         return res
+    }
+
+    GetPrice(price)
+    {
+        const resources = Object.keys(price)
+        let request = ""
+        for(let i = 0; i < resources.length; i++)
+        {
+            request += this.GetResourceName(resources[i]) + " : " + (price[resources[i]] * -1) + "\n"
+        }
+        return request
+    }
+
+    ReversePrice(price)
+    {
+        let newPrice = {}
+        Object.keys(price).forEach(key => {
+            newPrice[key] = price[key] * -1
+        })
+        return newPrice
+    }
+
+    GetPlayerResources(context)
+    {
+        return `*id${context.player.id}(Ваш) инвентарь:\n💵 Деньги:  ${context.player.money}\n🪨 Камень:${context.player.stone}\n🌾 Зерно:${context.player.wheat}\n🪵 Дерево:${context.player.wood}\n🌑 Железо:${context.player.iron}\n🪙 Медь:${context.player.copper}\n🥈 Серебро:${context.player.silver}\n💎 Алмазы:${context.player.diamond}`
     }
 
     GetRoleName(role)
@@ -184,6 +150,8 @@ class NameLibrary
         {
             case "stateless":
                 return "🫴 Апатрид"
+            case "candidate":
+                return "Кандидат на гражданство"
             case "citizen":
                 return "🪪 Гражданин"
             case "official":
@@ -196,19 +164,36 @@ class NameLibrary
         return "Не указано"
     }
 
+    GetBuildingType(type)
+    {
+        switch (type)
+        {
+            case "building_of_house":
+                return "🏠 Жилой дом"
+            case "building_of_bank":
+                return "🏦 Банк"
+            case "building_of_wheat":
+                return "🌾 Сельское хозяйство"
+            case "building_of_stone":
+                return "🪨 Каменоломня"
+            case "building_of_wood":
+                return "🪵 Лесополоса"
+            case "building_of_iron":
+                return "🌑 Железный рудник"
+            case "building_of_copper":
+                return "🪙 Бронзовый рудник"
+            case "building_of_silver":
+                return "🥈 Серебрянный рудник"
+        }
+        return "Новый, еще не добавленный тип"
+    }
+
     async GetPlayerNick(id)
     {
         const user = await Player.findOne({where: {id: id}})
         return `*id${user.dataValues.id}(${user.dataValues.nick})`
     }
 
-
-    async GetCountryForCity(cityName)
-    {
-        const city = await City.findOne({where: {name: cityName}})
-        const country = await Country.findOne({where: {id: city.dataValues.countryID}})
-        return country.dataValues
-    }
 
     async GetUserInfo(id)
     {

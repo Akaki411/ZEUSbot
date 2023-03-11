@@ -1,5 +1,6 @@
-const {Player, Country, City, CityResources, CountryResources, PlayerResources} = require("../database/Models")
+const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings} = require("../database/Models")
 const fs = require("fs")
+const Building = require("../models/Building")
 
 class CacheData
 {
@@ -13,11 +14,16 @@ class CacheData
         this.moderators = []         //Модераторы
         this.admins = []             //Список всех полноправных админов
 
-        this.users = []              //Кэш пользователей
+        this.users = {}              //Кэш пользователей
         this.cities = []             //Список городов
         this.countries = []          //Список государств
-        this.stats = []              //Статистика за день
-        this.variables = null
+        this.buildings = {}
+        this.delegates = {}
+        this.variables = null        //Переменные
+        this.activity = {}
+        this.uncultured = {}
+        this.stickermans = {}
+        this.musicLovers = {}
     }
 
     GetCountryButtons()
@@ -27,6 +33,21 @@ class CacheData
             if(key)
             {
                 buttons.push([key.name, "ID" + key.id])
+            }
+        })
+        return buttons
+    }
+
+    GetCityForCountryButtons(countryID)
+    {
+        const buttons = []
+        this.cities.forEach((key) => {
+            if(key)
+            {
+                if(key.countryID === countryID)
+                {
+                    buttons.push([key.name, "ID" + key.id])
+                }
             }
         })
         return buttons
@@ -44,19 +65,9 @@ class CacheData
         return buttons
     }
 
-    GetCityInCountryButtons(id)
+    GetCity(id)
     {
-        const buttons = []
-        this.cities.forEach((key) => {
-            if(key)
-            {
-                if(key.countryID === id)
-                {
-                    buttons.push([key.name, "ID" + key.id])
-                }
-            }
-        })
-        return buttons
+        return this.cities[id]
     }
 
     GetCountryName(id)
@@ -91,16 +102,37 @@ class CacheData
         return id.replace("ID", "")
     }
 
+    GiveAdminList()
+    {
+        let request = ""
+        if (this.owner) request += `*id${this.owner.id}(${this.owner.nick})\n`
+        if (this.projectHead) request += `*id${this.projectHead.id}(${this.projectHead.nick})\n`
+        if(Object.keys(this.supports).length !== 0)
+        {
+            for (const key of Object.keys(this.supports))
+            {
+                request += `*id${this.supports[key].id}(${this.supports[key].nick})\n`
+            }
+        }
+        if(Object.keys(this.administrators).length !== 0)
+        {
+            for (const key of Object.keys(this.administrators))
+            {
+                request += `*id${this.administrators[key].id}(${this.administrators[key].nick})\n`
+            }
+        }
+        return request
+    }
+
     async LoadAdmins ()
     {
         //Очистка
         this.owner = null
         this.projectHead = null
-        this.supports = []
-        this.administrators = []
-        this.gameMasters = []
-        this.moderators = []
-        this.admins = []
+        this.supports = {}
+        this.administrators = {}
+        this.gameMasters = {}
+        this.moderators = {}
 
         //Загрузка с базы данных
         return new Promise(async (resolve) => {
@@ -108,28 +140,19 @@ class CacheData
             this.projectHead = await Player.findOne({where: {role: "project_head"}})?.dataValues
             const supports = await Player.findAll({where: {role: "support"}})
             supports.forEach(key => {
-                this.supports.push(key.dataValues)
+                this.supports[key.dataValues.id] = key.dataValues
             })
             const administrators = await Player.findAll({where: {role: "admin"}})
             administrators.forEach(key => {
-                this.administrators.push(key.dataValues)
+                this.administrators[key.dataValues.id] = key.dataValues
             })
             const gameMasters = await Player.findAll({where: {role: "GM"}})
             gameMasters.forEach(key => {
-                this.gameMasters.push(key.dataValues)
+                this.gameMasters[key.dataValues.id] = key.dataValues
             })
             const moderators = await Player.findAll({where: {role: "moder"}})
             moderators.forEach(key => {
-                this.moderators.push(key.dataValues)
-            })
-
-            if(this.owner) this.admins.push(this.owner)
-            if(this.projectHead) this.admins.push(this.projectHead)
-            this.supports.forEach(key => {
-                this.admins.push(key)
-            })
-            this.administrators.forEach(key => {
-                this.admins.push(key)
+                this.moderators[key.dataValues.id] = key.dataValues
             })
             return resolve()
         })
@@ -153,6 +176,26 @@ class CacheData
         })
     }
 
+    async LoadDelegates()
+    {
+        return new Promise(async (resolve) => {
+            this.delegates = {}
+            for (const key of this.countries) {
+                if (key) {
+                    this.delegates[key.id] = []
+                    this.delegates[key.id].push(key.leaderID)
+                    const officials = await OfficialInfo.findAll({where: {countryID: key.id, canBeDelegate: true}})
+                    officials.forEach(official => {
+                        this.delegates[key.id].push(official.dataValues.id)
+                    })
+                }
+            }
+            return resolve()
+        })
+    }
+
+
+
     async LoadCities()
     {
         this.cities = []
@@ -166,6 +209,32 @@ class CacheData
                     let res = await CityResources.findOne({where: {id: key.dataValues.id}})
                     if(res) this.cities[key.dataValues.id].res = res.dataValues
                 }
+            }
+            return resolve()
+        })
+    }
+
+    async LoadBuildings()
+    {
+        this.buildings = {}
+        return new Promise(async (resolve) =>
+        {
+            const buildings = await Buildings.findAll()
+            for(let i = 0; i < buildings.length; i++)
+            {
+                if(!buildings[i].dataValues.freezing)
+                {
+                    if(this.buildings[buildings[i].dataValues.cityID])
+                    {
+                        this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
+                    }
+                    else
+                    {
+                        this.buildings[buildings[i].dataValues.cityID] = []
+                        this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
+                    }
+                }
+
             }
             return resolve()
         })
