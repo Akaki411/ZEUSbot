@@ -1,6 +1,6 @@
 const {Player, PlayerStatus, PlayerInfo} = require("../database/Models")
 const Data = require("../models/CacheData")
-const Prices = require("./Prices");
+const Samples = require("./Samples")
 class NameLibrary
 {
     GetChance(chance)
@@ -35,6 +35,69 @@ class NameLibrary
             (hh>9 ? '' : '0') + hh,
             (mm>9 ? '' : '0') + mm
         ].join('.')
+    }
+
+    ParseDateTime(date)
+    {
+        const time = new Date(date)
+        const month = time.getMonth() + 1
+        const day = time.getDate()
+        const hour = time.getHours()
+        const minute = time.getMinutes()
+        return [
+            [
+                (day>9 ? '' : '0') + day,
+                (month>9 ? '' : '0') + month,
+                time.getFullYear()
+            ].join('.'),
+            [
+                (hour>9 ? '' : '0') + hour,
+                (minute>9 ? '' : '0') + minute
+            ].join(':')
+        ].join(' ')
+    }
+
+    GetRandomSample(sample)
+    {
+        let samples = Samples[sample]
+        return samples[this.GetRandomNumb(0, samples.length - 1)]
+    }
+
+    ParseFutureTime(future)
+    {
+        const time = new Date()
+        let request = ""
+        let differance = future - time
+        let weeks = Math.trunc(differance / 604800000)
+        if(weeks > 0)
+        {
+            request += weeks + "н "
+            differance -= weeks * 604800000
+        }
+        let days = Math.trunc(differance / 86400000)
+        if(days > 0)
+        {
+            request += days + "д "
+            differance -= days * 86400000
+        }
+        let hours = Math.trunc(differance / 3600000)
+        if(hours > 0)
+        {
+            request += hours + "ч "
+            differance -= hours * 3600000
+        }
+        let minutes = Math.trunc(differance / 60000)
+        if(minutes > 0)
+        {
+            request += minutes + "м "
+            differance -= minutes * 60000
+        }
+        let seconds = Math.trunc(differance / 1000)
+        if(seconds > 0)
+        {
+            request += seconds + "с "
+        }
+        return request
     }
 
     GetGender(sex)
@@ -78,7 +141,7 @@ class NameLibrary
         switch(res)
         {
             case "money":
-                return "💵 Монеты"
+                return "💰 Монеты"
             case "wheat":
                 return "🌾 Зерно"
             case "wood":
@@ -88,7 +151,7 @@ class NameLibrary
             case "iron":
                 return "🌑 Железо"
             case "copper":
-                return "🪙 Бронза"
+                return "🥉 Бронза"
             case "silver":
                 return "🥈 Серебро"
             case "diamond":
@@ -103,7 +166,7 @@ class NameLibrary
         let request = ""
         for(let i = 0; i < resources.length; i++)
         {
-            request += this.GetResourceName(resources[i]) + " : " + (price[resources[i]] * -1) + "\n"
+            request += this.GetResourceName(resources[i]) + " : " + Math.abs(price[resources[i]]) + "\n"
         }
         return request
     }
@@ -115,11 +178,6 @@ class NameLibrary
             newPrice[key] = price[key] * -1
         })
         return newPrice
-    }
-
-    GetPlayerResources(context)
-    {
-        return `*id${context.player.id}(Ваш) инвентарь:\n💵 Деньги:  ${context.player.money}\n🪨 Камень:${context.player.stone}\n🌾 Зерно:${context.player.wheat}\n🪵 Дерево:${context.player.wood}\n🌑 Железо:${context.player.iron}\n🪙 Медь:${context.player.copper}\n🥈 Серебро:${context.player.silver}\n💎 Алмазы:${context.player.diamond}`
     }
 
     GetRoleName(role)
@@ -172,6 +230,14 @@ class NameLibrary
                 return "🏠 Жилой дом"
             case "building_of_bank":
                 return "🏦 Банк"
+            case "building_of_barracks":
+                return "⚔ Казарма"
+            case "building_of_port":
+                return "🛟 Порт"
+            case "building_of_mint":
+                return "🪙 Монетный двор"
+            case "building_of_church":
+                return "✝ Храм"
             case "building_of_wheat":
                 return "🌾 Сельское хозяйство"
             case "building_of_stone":
@@ -180,12 +246,87 @@ class NameLibrary
                 return "🪵 Лесополоса"
             case "building_of_iron":
                 return "🌑 Железный рудник"
-            case "building_of_copper":
-                return "🪙 Бронзовый рудник"
             case "building_of_silver":
                 return "🥈 Серебрянный рудник"
         }
         return "Новый, еще не добавленный тип"
+    }
+    GetBuildingEmoji(type)
+    {
+        switch (type)
+        {
+            case "building_of_house":
+                return "🏠 "
+            case "building_of_bank":
+                return "🏦 "
+            case "building_of_barracks":
+                return "⚔ "
+            case "building_of_port":
+                return "🛟 "
+            case "building_of_mint":
+                return "🪙 "
+            case "building_of_church":
+                return "✝ "
+            case "building_of_wheat":
+                return "🌾 "
+            case "building_of_stone":
+                return "🪨 "
+            case "building_of_wood":
+                return "🪵 "
+            case "building_of_iron":
+                return "🌑 "
+            case "building_of_silver":
+                return "🥈 "
+        }
+        return ""
+    }
+
+    GetFarmRandom(type)
+    {
+        switch (type)
+        {
+            case "wheat_lvl1":
+                return this.GetRandomNumb(125, 375)
+            case "wheat_lvl2":
+                return this.GetRandomNumb(250, 750)
+            case "wheat_lvl3":
+                return this.GetRandomNumb(500, 1500)
+            case "wheat_lvl4":
+                return this.GetRandomNumb(1000, 3000)
+            case "stone_lvl1":
+                return this.GetRandomNumb(125, 250)
+            case "stone_lvl2":
+                return this.GetRandomNumb(250, 500)
+            case "stone_lvl3":
+                return this.GetRandomNumb(500, 1000)
+            case "stone_lvl4":
+                return this.GetRandomNumb(1000, 2000)
+            case "wood_lvl1":
+                return this.GetRandomNumb(125, 250)
+            case "wood_lvl2":
+                return this.GetRandomNumb(250, 500)
+            case "wood_lvl3":
+                return this.GetRandomNumb(500, 1000)
+            case "wood_lvl4":
+                return this.GetRandomNumb(1000, 2000)
+            case "iron_lvl1":
+                return this.GetRandomNumb(35, 90)
+            case "iron_lvl2":
+                return this.GetRandomNumb(65, 185)
+            case "iron_lvl3":
+                return this.GetRandomNumb(130, 370)
+            case "iron_lvl4":
+                return this.GetRandomNumb(260, 740)
+            case "silver_lvl1":
+                return this.GetRandomNumb(65, 185)
+            case "silver_lvl2":
+                return this.GetRandomNumb(125, 375)
+            case "silver_lvl3":
+                return this.GetRandomNumb(250, 750)
+            case "silver_lvl4":
+                return this.GetRandomNumb(500, 1500)
+        }
+        return 0
     }
 
     async GetPlayerNick(id)

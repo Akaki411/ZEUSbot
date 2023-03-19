@@ -6,8 +6,10 @@ class InputManager
     static async InputInteger(context, message, current_keyboard, min, max)
     {
         return new Promise(async (resolve) => {
-            min = min || Number.MIN_SAFE_INTEGER
-            max = max || Number.MAX_SAFE_INTEGER
+            if (min) min = Math.max(min, -2147483646)
+            if (max) max = Math.min(max, 2147483646)
+            min = min || -2147483646
+            max = max || 2147483646
 
             let answer = await context.question(message, {
                 keyboard: keyboard.build([[keyboard.cancelButton]]),
@@ -34,7 +36,7 @@ class InputManager
                 })
                 return resolve(null)
             }
-            return resolve(parseInt(answer.text, 10))
+            return resolve(parseInt(answer.text))
         })
     }
 
@@ -141,10 +143,7 @@ class InputManager
     static async InputGroup(context, message, current_keyboard)
     {
         return new Promise(async (resolve) => {
-
-            await context.send(message)
-
-            let answer = await context.question("⚠ Перешлите в диалог пост из группы, которую хотите выбрать", {
+            let answer = await context.question(message + "\n\nℹ Перешлите в диалог пост из группы, которую хотите выбрать", {
                 keyboard: keyboard.build([[keyboard.cancelButton]]),
                 answerTimeLimit: 300_000
             })
@@ -154,7 +153,7 @@ class InputManager
             {
                 answer = await context.question("⚠ Перешлите пост", {
                     keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 600_000
                 })
                 id = answer.attachments[0]?.largeSizeUrl
             }
@@ -198,6 +197,73 @@ class InputManager
                 return resolve(null)
             }
             return resolve(answer.payload.choice)
+        })
+    }
+
+    // Радио клавиатуру можно использовать когда надо изменить несколько параметров типа BOOL
+    // Принимает в себя 3-м параметром массив формата [[Имя(STRING), Значение(STRING), Вкл/Выкл(BOOL)], [Имя(STRING), Значение(STRING), Вкл/Выкл(BOOL)], ...]
+    // Метод рассчитан на максимум 16 передаваемых параметров, если параметров надо ввести больше - делай несколько таких методов последовательно
+    // Метод возвращает двухмерный массив формата [[Значение(STRING), Вкл/Выкл(BOOL)], [Значение(STRING), Вкл/Выкл(BOOL)], ...]
+    static async RadioKeyboardBuilder(context, message, array, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            const arrayToKeyboard = (arr) => {
+                let kb = []
+                for(let i = 0; i < Math.ceil(arr.length / 4); i++)
+                {
+                    kb[i] = arr.slice((i * 4), (i * 4) + 4)
+                }
+                kb.push([keyboard.greyCancelButton, keyboard.nextButton])
+                return kb
+            }
+            const convertKeyboard = (kb, choice) => {
+                for (let i = 0; i < kb.length; i++)
+                {
+                    if(kb[i].options.payload.choice === choice)
+                    {
+                        kb[i].options.color = kb[i].options.color === "negative" ? "positive" : "negative"
+                    }
+                }
+                return kb
+            }
+            let radioKeyboard = []
+            let answer = null
+            let request = message + "\n\nℹ Пометьте пункты которые вы хотите включить зеленым, а которые выключить - красным"
+            for(let i = 0; i < array.length; i++)
+            {
+                radioKeyboard[i] = keyboard.secondaryButton([array[i][0], array[i][1]])
+                radioKeyboard[i].options.color = array[i][2] ? "positive" : "negative"
+            }
+            do
+            {
+                answer = await context.question(request, {
+                    keyboard: keyboard.build(arrayToKeyboard(radioKeyboard)),
+                    answerTimeLimit: 300_000
+                })
+                request = "Ок"
+                if(answer.payload) radioKeyboard = convertKeyboard(radioKeyboard, answer.payload.choice)
+            }
+            while(!answer.isTimeout && !answer?.payload?.choice.match(/cancel|next/))
+            if(answer.isTimeout)
+            {
+                await context.send('⛔ Ввод отменен: время на ввод вышло.', {
+                    keyboard: keyboard.build(current_keyboard)
+                })
+                return resolve(null)
+            }
+            if(answer?.payload?.choice === "cancel")
+            {
+                await context.send('⛔ Ввод отменен', {
+                    keyboard: keyboard.build(current_keyboard)
+                })
+                return resolve(null)
+            }
+            array = []
+            for(let i = 0; i < radioKeyboard.length; i++)
+            {
+                array.push([radioKeyboard[i].options.payload.choice, radioKeyboard[i].options.color === "positive"])
+            }
+            return resolve(array)
         })
     }
 
@@ -265,20 +331,16 @@ class InputManager
         })
     }
 
-    static async SearchUser(context, message, current_keyboard)
+    static async InputUser(context, message, current_keyboard)
     {
         return new Promise(async (resolve) => {
             try
             {
-                let answer, user
-
-                await context.send(message)
-
-                answer = await context.question("Введите ник, ID игрока или перешлите сюда его сообщение.", {
+                let user
+                let answer = await context.question(message + "\n\nℹ Введите ник, ID игрока или перешлите сюда его сообщение. (Именно перешлите, ответ на сообщение не сработает)", {
                     keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 600_000
                 })
-
                 if(answer.isTimeout)
                 {
                     await context.send('⛔ Ввод отменен: время на ввод вышло.', {
@@ -293,25 +355,21 @@ class InputManager
                     })
                     return resolve(null)
                 }
-
                 if(answer.forwards.length > 0 && !answer.payload && !answer.isTimeout) user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
                 else if (answer.text && !answer.payload && !answer.isTimeout) {if(isNaN(answer.text)) user = await Player.findOne({where: {nick: answer.text}})}
                 else if (answer.text?.match(/\d/) && !answer.payload && !answer.isTimeout) user = await Player.findOne({where: {id: answer.text}})
                 else if (!answer.text || answer.payload || answer.isTimeout) return resolve(null)
-
-
                 while (!answer.isTimeout && !answer.payload && !user)
                 {
                     answer = await context.question("⚠ Игрок не найден", {
                         keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 600_000
                     })
                     if(answer.forwards.length > 0) user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
                     else if (answer.text?.match(/\d/)) user = await Player.findOne({where: {id: answer.text}})
                     else if (answer.text) {if(isNaN(answer.text)) user = await Player.findOne({where: {nick: answer.text}})}
                     else if (!answer.text || answer.payload) return resolve(null)
                 }
-
                 if(answer.isTimeout)
                 {
                     await context.send('⛔ Ввод отменен: время на ввод вышло.', {

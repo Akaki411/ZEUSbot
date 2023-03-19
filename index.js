@@ -27,7 +27,7 @@ const start = async () => {
         await database.sync().then(() => {
             console.log("База данных синхронизирована.")
         })
-        await Data.LoadAdmins().then(() => {
+        await Data.LoadWorkers().then(() => {
             console.log("Список админов загружен")
         })
         await Data.LoadCountries().then(() => {
@@ -39,13 +39,15 @@ const start = async () => {
         await Data.LoadBuildings().then(() => {
             console.log("Список построек загружен")
         })
-        await Data.LoadDelegates().then(async () => {
-            console.log("Делегаты загружены")
+        await Data.LoadOfficials().then(async () => {
+            console.log("Чиновники загружены")
         })
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
         })
-
+        await Data.LoadChats().then(async () => {
+            console.log("Список бесед загружен")
+        })
         bot.updates.on('message_new', async(msg) =>
         {
             msg.peerType === "user" && await msg.player.state(msg)

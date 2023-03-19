@@ -1,6 +1,9 @@
-const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings} = require("../database/Models")
+const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings, PlayerStatus} = require("../database/Models")
 const fs = require("fs")
 const Building = require("../models/Building")
+const CityObject = require("../models/City")
+const CountryObject = require("../models/Country")
+const api = require("../middleware/API");
 
 class CacheData
 {
@@ -8,22 +11,24 @@ class CacheData
     {
         this.owner = null            //Владелец
         this.projectHead = null      //Глава проекта
-        this.supports = []           //Тех-поддержка
-        this.administrators = []     //Администраторы
-        this.gameMasters = []        //ГМы
-        this.moderators = []         //Модераторы
-        this.admins = []             //Список всех полноправных админов
+        this.supports = {}           //Тех-поддержка
+        this.administrators = {}     //Администраторы
+        this.gameMasters = {}        //ГМы
+        this.moderators = {}         //Модераторы
 
         this.users = {}              //Кэш пользователей
         this.cities = []             //Список городов
         this.countries = []          //Список государств
-        this.buildings = {}
-        this.delegates = {}
-        this.variables = null        //Переменные
+        this.buildings = {}          // и т.д., я устал писать, слишком много пробелов
+        this.officials = {}
+        this.variables = null
         this.activity = {}
         this.uncultured = {}
         this.stickermans = {}
         this.musicLovers = {}
+
+        this.allChats = []
+        this.countryChats = {}
     }
 
     GetCountryButtons()
@@ -65,6 +70,36 @@ class CacheData
         return buttons
     }
 
+    async GetUserStatus(id)
+    {
+        for(let i = 0; i < this.countries; i++)
+        {
+            if(this.countries[i]?.leaderID === id)
+            {
+                return "leader"
+            }
+        }
+        for(const key of Object.keys(this.officials))
+        {
+            if(this.officials[key])
+            {
+                for(const j of Object.keys(this.officials[key]))
+                {
+                    if(parseInt(j) === id)
+                    {
+                        return "official"
+                    }
+                }
+            }
+        }
+        const status = await PlayerStatus.findOne({where: {id: id}})
+        if(status?.dataValues.citizenship)
+        {
+            return "citizen"
+        }
+        return "stateless"
+    }
+
     GetCity(id)
     {
         return this.cities[id]
@@ -99,7 +134,7 @@ class CacheData
 
     ParseButtonID(id)
     {
-        return id.replace("ID", "")
+        return parseInt(id.replace("ID", ""))
     }
 
     GiveAdminList()
@@ -124,7 +159,7 @@ class CacheData
         return request
     }
 
-    async LoadAdmins ()
+    async LoadWorkers ()
     {
         //Очистка
         this.owner = null
@@ -167,34 +202,27 @@ class CacheData
             {
                 if(key)
                 {
-                    this.countries[key.dataValues.id] = key.dataValues
                     let res = await CountryResources.findOne({where: {id: key.dataValues.id}})
-                    if (res) this.countries[key.dataValues.id].res = res.dataValues
+                    this.countries[key.dataValues.id] = new CountryObject(key, res)
                 }
             }
             return resolve()
         })
     }
 
-    async LoadDelegates()
+    async LoadOfficials()
     {
+        this.officials = {}
         return new Promise(async (resolve) => {
-            this.delegates = {}
-            for (const key of this.countries) {
-                if (key) {
-                    this.delegates[key.id] = []
-                    this.delegates[key.id].push(key.leaderID)
-                    const officials = await OfficialInfo.findAll({where: {countryID: key.id, canBeDelegate: true}})
-                    officials.forEach(official => {
-                        this.delegates[key.id].push(official.dataValues.id)
-                    })
-                }
+            const officials = await OfficialInfo.findAll()
+            for(let i = 0; i < officials.length; i++)
+            {
+                if(!this.officials[officials[i].dataValues.countryID]) this.officials[officials[i].dataValues.countryID] = {}
+                this.officials[officials[i].dataValues.countryID][officials[i].dataValues.id] = officials[i].dataValues
             }
             return resolve()
         })
     }
-
-
 
     async LoadCities()
     {
@@ -205,9 +233,8 @@ class CacheData
             {
                 if(key)
                 {
-                    this.cities[key.dataValues.id] = key.dataValues
                     let res = await CityResources.findOne({where: {id: key.dataValues.id}})
-                    if(res) this.cities[key.dataValues.id].res = res.dataValues
+                    this.cities[key.dataValues.id] = new CityObject(key, res)
                 }
             }
             return resolve()
@@ -248,6 +275,31 @@ class CacheData
         })
     }
 
+    async LoadChats()
+    {
+        return new Promise(async(resolve) => {
+            // let chats = null
+            // this.allChats = []
+            // let offset = 0
+            // do
+            // {
+            //     chats = await api.api.messages.getConversations({
+            //         offset: offset,
+            //         count: 200
+            //     })
+            //     for (const chat of chats.items)
+            //     {
+            //         this.allChats.push(chat)
+            //         console.log(chat?.conversation?.chat_settings)
+            //     }
+            //     offset++
+            // }
+            // while (chats.count >= 200)
+
+            return resolve()
+        })
+    }
+
     async SaveVariables()
     {
         return new Promise((resolve) => {
@@ -262,23 +314,23 @@ class CacheData
     async AddCityResources(id, res)
     {
         let resources = await CityResources.findOne({where: {id: id}})
-        this.cities[id].resources.money += res.money ? res.money : 0
-        this.cities[id].resources.stone += res.stone ? res.stone : 0
-        this.cities[id].resources.wood += res.wood ? res.wood : 0
-        this.cities[id].resources.wheat += res.wheat ? res.wheat : 0
-        this.cities[id].resources.iron += res.iron ? res.iron : 0
-        this.cities[id].resources.copper += res.copper ? res.copper : 0
-        this.cities[id].resources.silver += res.silver ? res.silver : 0
-        this.cities[id].resources.diamond += res.diamond ? res.diamond : 0
+        this.cities[id].money += res.money ? res.money : 0
+        this.cities[id].stone += res.stone ? res.stone : 0
+        this.cities[id].wood += res.wood ? res.wood : 0
+        this.cities[id].wheat += res.wheat ? res.wheat : 0
+        this.cities[id].iron += res.iron ? res.iron : 0
+        this.cities[id].copper += res.copper ? res.copper : 0
+        this.cities[id].silver += res.silver ? res.silver : 0
+        this.cities[id].diamond += res.diamond ? res.diamond : 0
         resources.set({
-            money: this.cities[id].resources.money,
-            stone: this.cities[id].resources.stone,
-            wood: this.cities[id].resources.wood,
-            wheat: this.cities[id].resources.wheat,
-            iron: this.cities[id].resources.iron,
-            copper: this.cities[id].resources.copper,
-            silver: this.cities[id].resources.silver,
-            diamond: this.cities[id].resources.diamond
+            money: this.cities[id].money,
+            stone: this.cities[id].stone,
+            wood: this.cities[id].wood,
+            wheat: this.cities[id].wheat,
+            iron: this.cities[id].iron,
+            copper: this.cities[id].copper,
+            silver: this.cities[id].silver,
+            diamond: this.cities[id].diamond
         })
         await resources.save()
     }
@@ -286,23 +338,23 @@ class CacheData
     async AddCountryResources(id, res)
     {
         let resources = await CountryResources.findOne({where: {id: id}})
-        this.countries[id].resources.money += res.money ? res.money : 0
-        this.countries[id].resources.stone += res.stone ? res.stone : 0
-        this.countries[id].resources.wood += res.wood ? res.wood : 0
-        this.countries[id].resources.wheat += res.wheat ? res.wheat : 0
-        this.countries[id].resources.iron += res.iron ? res.iron : 0
-        this.countries[id].resources.copper += res.copper ? res.copper : 0
-        this.countries[id].resources.silver += res.silver ? res.silver : 0
-        this.countries[id].resources.diamond += res.diamond ? res.diamond : 0
+        this.countries[id].money += res.money ? res.money : 0
+        this.countries[id].stone += res.stone ? res.stone : 0
+        this.countries[id].wood += res.wood ? res.wood : 0
+        this.countries[id].wheat += res.wheat ? res.wheat : 0
+        this.countries[id].iron += res.iron ? res.iron : 0
+        this.countries[id].copper += res.copper ? res.copper : 0
+        this.countries[id].silver += res.silver ? res.silver : 0
+        this.countries[id].diamond += res.diamond ? res.diamond : 0
         resources.set({
-            money: this.countries[id].resources.money,
-            stone: this.countries[id].resources.stone,
-            wood: this.countries[id].resources.wood,
-            wheat: this.countries[id].resources.wheat,
-            iron: this.countries[id].resources.iron,
-            copper: this.countries[id].resources.copper,
-            silver: this.countries[id].resources.silver,
-            diamond: this.countries[id].resources.diamond
+            money: this.countries[id].money,
+            stone: this.countries[id].stone,
+            wood: this.countries[id].wood,
+            wheat: this.countries[id].wheat,
+            iron: this.countries[id].iron,
+            copper: this.countries[id].copper,
+            silver: this.countries[id].silver,
+            diamond: this.countries[id].diamond
         })
         await resources.save()
     }

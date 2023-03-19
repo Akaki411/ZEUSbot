@@ -1,5 +1,6 @@
 const {API} = require('vk-io')
 const keyboard = require('../variables/Keyboards')
+const Data = require("../models/CacheData")
 
 class VK_API
 {
@@ -24,46 +25,36 @@ class VK_API
         })
     }
 
-    async SendMessage(id, message, kb)
+    async SendMessage(id, message)
     {
-        if(kb)
-        {
-            await this.api.messages.send({
-                user_id: id,
-                random_id: Math.round(Math.random() * 100000),
-                message: message,
-                keyboard: keyboard.build(kb)
-            })
-        }
-        else
-        {
-            await this.api.messages.send({
-                user_id: id,
-                random_id: Math.round(Math.random() * 100000),
-                message: message
-            })
-        }
+        await this.api.messages.send({
+            user_id: id,
+            random_id: Math.round(Math.random() * 100000),
+            message: message
+        })
     }
 
-    async SendMessageWithAttachment(id, message, attachment, kb)
+    async SendMessageWithKeyboard(id, message, kb)
     {
-        if(kb)
+        await this.api.messages.send({
+            user_id: id,
+            random_id: Math.round(Math.random() * 100000),
+            message: message,
+            keyboard: keyboard.build(kb)
+        })
+    }
+
+
+    async GMMailing(message, kb)
+    {
+        let GMs = Object.keys(Data.gameMasters)
+        for(let i = 0; i < GMs.length; i++)
         {
             await this.api.messages.send({
-                user_id: id,
+                user_id: GMs[i],
                 random_id: Math.round(Math.random() * 100000),
                 message: message,
-                attachment: attachment,
-                keyboard: keyboard.build(kb)
-            })
-        }
-        else
-        {
-            await this.api.messages.send({
-                user_id: id,
-                random_id: Math.round(Math.random() * 100000),
-                message: message,
-                attachment: attachment
+                keyboard: kb ? keyboard.build(kb).inline().oneTime() : keyboard.inlineNone
             })
         }
     }

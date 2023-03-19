@@ -15,28 +15,6 @@ module.exports = async (context, next) =>
             {
                 Data.activity[context.senderId] = 1
             }
-            if(context.attachments[0]?.type === "sticker")
-            {
-                if(Data.stickermans[context.senderId])
-                {
-                    Data.stickermans[context.senderId]++
-                }
-                else
-                {
-                    Data.stickermans[context.senderId] = 1
-                }
-            }
-            if(context.attachments[0]?.type === "audio")
-            {
-                if(Data.musicLovers[context.senderId])
-                {
-                    Data.musicLovers[context.senderId]++
-                }
-                else
-                {
-                    Data.musicLovers[context.senderId] = 1
-                }
-            }
             if(context.command?.match(Commands.censorship))
             {
                 if(Data.uncultured[context.senderId])
@@ -46,6 +24,31 @@ module.exports = async (context, next) =>
                 else
                 {
                     Data.uncultured[context.senderId] = 1
+                }
+            }
+            for(let i = 0; i < context.attachments?.length; i++)
+            {
+                if(context.attachments[i]?.type === "sticker")
+                {
+                    if(Data.stickermans[context.senderId])
+                    {
+                        Data.stickermans[context.senderId]++
+                    }
+                    else
+                    {
+                        Data.stickermans[context.senderId] = 1
+                    }
+                }
+                if(context.attachments[i]?.type === "audio")
+                {
+                    if(Data.musicLovers[context.senderId])
+                    {
+                        Data.musicLovers[context.senderId]++
+                    }
+                    else
+                    {
+                        Data.musicLovers[context.senderId] = 1
+                    }
                 }
             }
         }

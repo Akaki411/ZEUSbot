@@ -19,9 +19,27 @@ class KeyboardButtons
         })
     }
 
+    startButton = (params) => {
+        return Keyboard.textButton({
+            label: "🏁 Начать",
+            color: Keyboard.SECONDARY_COLOR,
+            payload: {
+                choice: params
+            }
+        })
+    }
+
     cancelButton = Keyboard.textButton({
         label: '⛔ Отмена',
         color: Keyboard.NEGATIVE_COLOR,
+        payload: {
+            choice: 'cancel'
+        }
+    })
+
+    greyCancelButton = Keyboard.textButton({
+        label: '⛔ Отмена',
+        color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'cancel'
         }
@@ -91,54 +109,6 @@ class KeyboardButtons
         }
     })
 
-    romanButton = Keyboard.textButton({
-        label: 'Римлянин 🔱',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'rim'
-        }
-    })
-
-    celtButton = Keyboard.textButton({
-        label: 'Кельт 🍀',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'celt'
-        }
-    })
-
-    greekButton = Keyboard.textButton({
-        label: 'Грек 🏛️',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'greek'
-        }
-    })
-
-    armenianButton = Keyboard.textButton({
-        label: 'Армянин 💃',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'armenian'
-        }
-    })
-
-    persianButton = Keyboard.textButton({
-        label: 'Перс 🐘',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'persian'
-        }
-    })
-
-    germanButton = Keyboard.textButton({
-        label: 'Германец ⚔',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'german'
-        }
-    })
-
     adminPanelButton = Keyboard.textButton({
         label: '🎚 Админка',
         color: Keyboard.SECONDARY_COLOR,
@@ -203,63 +173,6 @@ class KeyboardButtons
         }
     })
 
-    statsButton = Keyboard.textButton({
-        label: '📈 Статистика',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'stats'
-        }
-    })
-
-
-    playerButton = Keyboard.textButton({
-        label: '👶 Игрок',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'player'
-        }
-    })
-
-    moderatorButton = Keyboard.textButton({
-        label: '🧒 Модератор',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'moder'
-        }
-    })
-
-    GMButton = Keyboard.textButton({
-        label: '🧑 Гейм-мастер',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'GM'
-        }
-    })
-
-    adminButton = Keyboard.textButton({
-        label: '👨‍🦳 Админ',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'admin'
-        }
-    })
-
-    supportButton = Keyboard.textButton({
-        label: '🔧 Тех-поддержка',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'support'
-        }
-    })
-
-    projectHeadButton = Keyboard.textButton({
-        label: '🤴 Глава проекта',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'project_head'
-        }
-    })
-
     createCountryButton = Keyboard.textButton({
         label: '➕ Создать фракцию',
         color: Keyboard.SECONDARY_COLOR,
@@ -313,22 +226,6 @@ class KeyboardButtons
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'silver'
-        }
-    })
-
-    todayStatsButton = Keyboard.textButton({
-        label: '📈 Статистика за сегодня',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'stats_today'
-        }
-    })
-
-    dateStatsButton = Keyboard.textButton({
-        label: '📈 Статистика за период',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'stats_date'
         }
     })
 
@@ -608,7 +505,7 @@ class KeyboardButtons
     })
 
     newBuildingButton = Keyboard.textButton({
-        label: '➕ Новая постройка',
+        label: '🏗 Построить',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'new_building'
@@ -623,14 +520,6 @@ class KeyboardButtons
         }
     })
 
-    allBuildingsButton = Keyboard.textButton({
-        label: '📋 Список построек',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'all_buildings'
-        }
-    })
-
     listButton = Keyboard.textButton({
         label: '📋 Список',
         color: Keyboard.SECONDARY_COLOR,
@@ -640,7 +529,7 @@ class KeyboardButtons
     })
 
     buildButton = Keyboard.textButton({
-        label: '➕ Построить',
+        label: '🏗 Построить',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'build'
@@ -688,7 +577,7 @@ class KeyboardButtons
     })
 
     mostUnculturedButton = Keyboard.textButton({
-        label: '😡 Некультурные',
+        label: '🤬 Некультурные',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'uncultured'
@@ -744,7 +633,7 @@ class KeyboardButtons
     })
 
     infoButton = Keyboard.textButton({
-        label: 'ℹ Информация о проекте',
+        label: 'ℹ Информация',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'info'
@@ -767,14 +656,365 @@ class KeyboardButtons
         }
     })
 
+    getResourcesButton = Keyboard.textButton({
+        label: '🫳 Собрать ресурсы',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'get_resource'
+        }
+    })
+
+    changeMoneyButton = Keyboard.textButton({
+        label: '💱 Обменять серебро на деньги',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_money'
+        }
+    })
+
+    checkTimeButton = Keyboard.textButton({
+        label: '⏰ Время',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'check_time'
+        }
+    })
+
+    changeButton = Keyboard.textButton({
+        label: '♻ Изменить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change'
+        }
+    })
+
+    expandButton = Keyboard.textButton({
+        label: '↔ Расширить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'expand'
+        }
+    })
+
+    cityInformationButton = Keyboard.textButton({
+        label: 'ℹ Информация о городе',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'city_info'
+        }
+    })
+
+    nameButton= Keyboard.textButton({
+        label: '⏏ Название',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'name'
+        }
+    })
+
+    descriptionButton= Keyboard.textButton({
+        label: '⏏ Описание',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'description'
+        }
+    })
+
+    publicButton= Keyboard.textButton({
+        label: '⏏ Группа',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'public'
+        }
+    })
+
+    photoButton = Keyboard.textButton({
+        label: '⏏ Фото',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'photo'
+        }
+    })
+
+    welcomePictureButton = Keyboard.textButton({
+        label: '⏏ Приветственное фото',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'welcome_picture'
+        }
+    })
+
+    budgetButton = Keyboard.textButton({
+        label: '💰 Бюджет',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'budget'
+        }
+    })
+
+    officialsButton = Keyboard.textButton({
+        label: '💼 Чиновники',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'officials'
+        }
+    })
+
+    citiesButton = Keyboard.textButton({
+        label: '🌇 Города',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'cities'
+        }
+    })
+
+    countryInfoButton = Keyboard.textButton({
+        label: 'ℹ Информация о фракции',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'country_info'
+        }
+    })
+
+    getTaxButton = Keyboard.textButton({
+        label: '📥 Собрать все налоги',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'get_tax'
+        }
+    })
+
+    setMayorButton = Keyboard.textButton({
+        label: '💼 Назначить градоначальника',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'set_mayor'
+        }
+    })
+
+    buildRoadButton = Keyboard.textButton({
+        label: '🛣 Построить дорогу',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'build_road'
+        }
+    })
+
+    buildCityButton = Keyboard.textButton({
+        label: '🏙 Возвести город',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'build_city'
+        }
+    })
+
+    setTaxButton = Keyboard.textButton({
+        label: '📊 Установить налог',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'set_tax'
+        }
+    })
+
+    nextButton = Keyboard.textButton({
+        label: '⏭ Далее',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'next'
+        }
+    })
+
+    officialListButton = Keyboard.textButton({
+        label: '📃 Список чиновников',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'official_list'
+        }
+    })
+
+    setButton = Keyboard.textButton({
+        label: '⤵ Назначить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'set'
+        }
+    })
+
+    changeRightsButton = Keyboard.textButton({
+        label: '🛂 Управление возможностями',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_rights'
+        }
+    })
+
+    takeAwayRightsButton = Keyboard.textButton({
+        label: '❌ Забрать права',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'take_away'
+        }
+    })
+
+    takeAwayCitizenshipButton = Keyboard.textButton({
+        label: '❌ Забрать гражданство',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'take_away_citizenship'
+        }
+    })
+
+    usersButton = Keyboard.textButton({
+        label: '🧑 Пользователи',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'users'
+        }
+    })
+
+    technicalButton = Keyboard.textButton({
+        label: '⚙ Техническое',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'technical'
+        }
+    })
+
+    cheatingUserResourcesButton = Keyboard.textButton({
+        label: '⤴ Накрутить пользователю',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'cheating_user_resources'
+        }
+    })
+
+    cheatingCityResourcesButton = Keyboard.textButton({
+        label: '⤴ Накрутить городу',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'cheating_city_resources'
+        }
+    })
+
+    cheatingCountryResourcesButton = Keyboard.textButton({
+        label: '⤴ Накрутить фракции',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'cheating_country_resources'
+        }
+    })
+
+    uploadLogButton = Keyboard.textButton({
+        label: '⬇ Загрузить лог',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'upload_log'
+        }
+    })
+
+    logListButton = Keyboard.textButton({
+        label: '🗒 Список логов',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'log_list'
+        }
+    })
+
+    clearLogsButton = Keyboard.textButton({
+        label: '🗑 Очистить логи',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'clear_logs'
+        }
+    })
+
+    clearUserCacheButton = Keyboard.textButton({
+        label: '🗑 Очистить кэш пользователей',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'clear_user_cache'
+        }
+    })
+
+    uploadMapButton = Keyboard.textButton({
+        label: '🗺 Обновить карту',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'upload_map'
+        }
+    })
+
+    variablesButton = Keyboard.textButton({
+        label: '💲 Переменные',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'variables'
+        }
+    })
+
+    addTheChatButton = Keyboard.textButton({
+        label: '💬 Добавить чат',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'add_the_chat'
+        }
+    })
+
+    addMessageButton = Keyboard.textButton({
+        label: '➕ Написать сообщение',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'add_message'
+        }
+    })
+
+
+    eventsButton = Keyboard.textButton({
+        label: '🎮 События',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'events'
+        }
+    })
+
+    applyEffectsButton = Keyboard.textButton({
+        label: '🪄 Наложить эффект',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'apply_effects'
+        }
+    })
+
+    removeEffectsButton = Keyboard.textButton({
+        label: '🥛 Снять эффект',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'remove_effects'
+        }
+    })
+
+    changeRoadButton = Keyboard.textButton({
+        label: '⏳ Изменить дорогу',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_road'
+        }
+    })
+
+    deleteRoadButton = Keyboard.textButton({
+        label: '🚳 Убрать дорогу',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'delete_road'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null
         return Keyboard.callbackButton({
             label: '✅ Принять',
             color: Keyboard.POSITIVE_COLOR,
-            type: "show_snackbar",
-            text: "Отправлено",
             payload: {
                 command: obj.command,
                 item: obj.item,
@@ -792,6 +1032,41 @@ class KeyboardButtons
                 command: obj.command,
                 item: obj.item,
                 addition: obj.parameter
+            }
+        })
+    }
+
+    startCallbackButton = (obj) => {
+        obj.addition = obj.addition || null
+        return Keyboard.callbackButton({
+            label: '🏁 Начать',
+            color: Keyboard.SECONDARY_COLOR,
+            payload: {
+                command: obj.command,
+                item: obj.item,
+                addition: obj.addition
+            }
+        })
+    }
+
+    appealCallbackButton = (obj) => {
+        obj.addition = obj.addition || null
+        return Keyboard.callbackButton({
+            label: '✅ Обжаловать',
+            color: Keyboard.POSITIVE_COLOR,
+            payload: {
+                command: obj.command,
+                item: obj.item
+            }
+        })
+    }
+
+    hideCallbackButton = () => {
+        return Keyboard.callbackButton({
+            label: '✖ Скрыть',
+            color: Keyboard.SECONDARY_COLOR,
+            payload: {
+                command: "hide_message"
             }
         })
     }

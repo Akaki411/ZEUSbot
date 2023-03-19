@@ -21,7 +21,7 @@ module.exports = async (context, next) => {
                 const info = await PlayerInfo.findOne({where: {id: peerId}})
                 const resources = await PlayerResources.findOne({where: {id: peerId}})
                 Data.users[peerId] = new User(user, status, info, resources)
-                Data.users[peerId].SetState(SceneManager.StayInStartScreen)
+                Data.users[peerId].state = SceneManager.StartScreen
                 context.player = Data.users[peerId]
                 return next()
             }

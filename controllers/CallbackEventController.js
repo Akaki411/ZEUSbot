@@ -1,14 +1,16 @@
 const api = require("../middleware/API")
-const {PlayerInfo, PlayerStatus, Country, Player, Buildings, Keys} = require("../database/Models");
+const {PlayerInfo, PlayerStatus, Country, Player, Buildings, Keys, City, CountryRoads, Warning, Ban} = require("../database/Models");
 const Data = require("../models/CacheData");
 const ErrorHandler = require("../error/ErrorHandler")
 const keyboard = require("../variables/Keyboards")
 const NameLibrary = require("../variables/NameLibrary");
 const Prices = require("../variables/Prices");
+const Scenes = require("./SceneController")
 class CallbackEventController
 {
     async Handler(context)
     {
+        context.eventPayload?.command === "hide_message" && await this.HideMessage(context)
         context.eventPayload?.command === "merry" && await this.Merry(context)
         context.eventPayload?.command  === "decline_merry" && await this.DeclineMerry(context)
         context.eventPayload?.command === "divorce" && await this.Divorce(context)
@@ -19,6 +21,19 @@ class CallbackEventController
         context.eventPayload?.command === "decline_registration" && await this.DeclineRegistration(context)
         context.eventPayload?.command === "allow_user_building" && await this.AllowUserBuilding(context)
         context.eventPayload?.command === "decline_user_building" && await this.DeclineUserBuilding(context)
+        context.eventPayload?.command === "set_road_distance" && await this.HideRoadDistance(context)
+        context.eventPayload?.command === "appeal_warning" && await this.AppealWarning(context)
+        context.eventPayload?.command === "appeal_ban" && await this.AppealBan(context)
+    }
+
+    async HideMessage(context)
+    {
+        await api.api.messages.edit({
+            peer_id: context.peerId,
+            message: "✖ Скрыто",
+            conversation_message_id: context.conversationMessageId,
+            keyboard: keyboard.inlineNone
+        })
     }
 
     async Merry(context)
@@ -171,7 +186,7 @@ class CallbackEventController
                     conversation_message_id: context.conversationMessageId,
                     keyboard: keyboard.inlineNone
                 })
-                await api.SendMessage(secondUserID, `✅ Ваша заявка на гражданство принята.`, [[keyboard.backButton]])
+                await api.SendMessageWithKeyboard(secondUserID, `✅ Ваша заявка на гражданство принята.`, [[keyboard.backButton]])
             }
             else
             {
@@ -243,7 +258,7 @@ class CallbackEventController
                     conversation_message_id: context.conversationMessageId,
                     keyboard: keyboard.inlineNone
                 })
-                await api.SendMessage(secondUserID, `✅ Ваша заявка принята. Теперь вы прописаны в городе ${Data.GetCityName(cityID)}`, [[keyboard.backButton]])
+                await api.SendMessageWithKeyboard(secondUserID, `✅ Ваша заявка принята. Теперь вы прописаны в городе ${Data.GetCityName(cityID)}`, [[keyboard.backButton]])
             }
             else
             {
@@ -302,15 +317,15 @@ class CallbackEventController
         {
             let isActual = false
             let timeoutNum = null
-            if(Data.users[userID]?.waitingAllowBuilding)
+            for (let i = 0; i < Data.users[userID]?.waitingAllowBuilding?.length; i++)
             {
-                for(let i = 0; i < Data.users[userID]?.waitingAllowBuilding.length; i++)
+                if(Data.users[userID]?.waitingAllowBuilding[i])
                 {
-                    if(Data.users[userID]?.waitingAllowBuilding[i][0])
                     if(Data.users[userID]?.waitingAllowBuilding[i][0] === buildingID)
                     {
                         isActual = true
                         timeoutNum = i
+                        break
                     }
                 }
             }
@@ -318,22 +333,60 @@ class CallbackEventController
             {
                 clearTimeout(Data.users[userID]?.waitingAllowBuilding[timeoutNum][1])
                 delete Data.users[userID]?.waitingAllowBuilding[timeoutNum]
+                let length = 0
+                for(let i = 0; i < Data.users[userID]?.waitingAllowBuilding.length; i++)
+                {
+                    if(Data.users[userID].waitingAllowBuilding[i])
+                    {
+                        length ++
+                    }
+                }
+                if(length === 0)
+                {
+                    Data.users[userID].waitingAllowBuilding = null
+                }
                 const building = await Buildings.findOne({where: {id: buildingID}})
+                if(!building)
+                {
+                    await api.api.messages.edit({
+                        peer_id: context.peerId,
+                        message: "⚠ Не актуально",
+                        conversation_message_id: context.conversationMessageId,
+                        keyboard: keyboard.inlineNone
+                    })
+                    return
+                }
+                if(Data.cities[building.dataValues.cityID].buildingsScore >= Data.cities[building.dataValues.cityID].maxBuildings)
+                {
+                    await api.api.messages.edit({
+                        peer_id: context.peerId,
+                        message: "⚠ Не хватает места в городе",
+                        conversation_message_id: context.conversationMessageId,
+                        keyboard: keyboard.inlineNone
+                    })
+                    await Buildings.destroy({where: {id: buildingID}})
+                    const price = NameLibrary.ReversePrice(Prices["new_" + building.dataValues.type.replace("building_of_", "")])
+                    await Data.AddPlayerResources(userID, price)
+                    await api.SendMessageWithKeyboard(userID, `❌ Ваша заявка на размещение в городе постройки ${NameLibrary.GetBuildingType(building.dataValues.type)} отклонена. В городе не нашлось места для вашей постройки. Ресурсы возвращены.`, [[keyboard.backButton]])
+                    return
+                }
                 await Keys.create({
                     houseID: building.dataValues.id,
                     ownerID: userID,
-                    name: "🔑 " + building.dataValues.name,
-                    description: "Ключ от постройки - " + NameLibrary.GetBuildingType(building.dataValues.type) + " в городе " + Data.GetCityName(building.dataValues.cityID)
+                    name: "🔑 " + building.dataValues.name
                 })
                 building.set({freezing: false})
                 await building.save()
+                await Data.LoadBuildings()
+                Data.cities[building.dataValues.cityID].buildingsScore++
+                await City.update({buildingsScore: Data.cities[building.dataValues.cityID].buildingsScore}, {where: {id: building.dataValues.cityID}})
                 await api.api.messages.edit({
                     peer_id: context.peerId,
                     message: "✅ Принято",
                     conversation_message_id: context.conversationMessageId,
                     keyboard: keyboard.inlineNone
                 })
-                await api.SendMessage(userID, `✅ Ваша заявка принята. Теперь вы владелец постройки ${NameLibrary.GetBuildingType(building.dataValues.type)} в городе ${Data.GetCityName(building.dataValues.cityID)}`, [[keyboard.backButton]])
+                await api.SendMessageWithKeyboard(userID, `✅ Ваша заявка принята. Теперь вы владелец постройки ${NameLibrary.GetBuildingType(building.dataValues.type)} в городе ${Data.GetCityName(building.dataValues.cityID)}`, [[keyboard.backButton]])
             }
             else
             {
@@ -347,7 +400,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие одобрения прописки", e)
+            await ErrorHandler.SendLogs(context, "Событие одобрения строительства", e)
         }
     }
 
@@ -359,15 +412,16 @@ class CallbackEventController
         {
             let isActual = false
             let timeoutNum = null
-            if(Data.users[userID]?.waitingAllowBuilding)
+            for (let i = 0; i < Data.users[userID]?.waitingAllowBuilding.length; i++)
             {
-                for(let i = 0; i < Data.users[userID]?.waitingAllowBuilding.length; i++)
+                if(Data.users[userID]?.waitingAllowBuilding[i])
                 {
-                    if(Data.users[userID]?.waitingAllowBuilding[i][0])
+                    console.log(Data.users[userID]?.waitingAllowBuilding[i])
                     if(Data.users[userID]?.waitingAllowBuilding[i][0] === buildingID)
                     {
                         isActual = true
                         timeoutNum = i
+                        break
                     }
                 }
             }
@@ -375,6 +429,18 @@ class CallbackEventController
             {
                 clearTimeout(Data.users[userID]?.waitingAllowBuilding[timeoutNum][1])
                 delete Data.users[userID]?.waitingAllowBuilding[timeoutNum]
+                let length = 0
+                for(let i = 0; i < Data.users[userID]?.waitingAllowBuilding.length; i++)
+                {
+                    if(Data.users[userID].waitingAllowBuilding[i])
+                    {
+                        length ++
+                    }
+                }
+                if(length === 0)
+                {
+                    Data.users[userID].waitingAllowBuilding = null
+                }
                 const building = await Buildings.findOne({where: {id: buildingID}})
                 await Buildings.destroy({where: {id: buildingID}})
                 const price = NameLibrary.ReversePrice(Prices["new_" + building.dataValues.type.replace("building_of_", "")])
@@ -385,7 +451,7 @@ class CallbackEventController
                     conversation_message_id: context.conversationMessageId,
                     keyboard: keyboard.inlineNone
                 })
-                await api.SendMessage(userID, `❌ Ваша заявка на размещение в городе постройки ${NameLibrary.GetBuildingType(building.dataValues.type)} отклонена. Глава города не дал одобрение на строительство. Ресурсы возвращены.`, [[keyboard.backButton]])
+                await api.SendMessageWithKeyboard(userID, `❌ Ваша заявка на размещение в городе постройки ${NameLibrary.GetBuildingType(building.dataValues.type)} отклонена. Глава города не дал одобрение на строительство. Ресурсы возвращены.`, [[keyboard.backButton]])
             }
             else
             {
@@ -399,7 +465,126 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие отклонения ", e)
+            await ErrorHandler.SendLogs(context, "Событие отклонения строительства", e)
+        }
+    }
+
+    async HideRoadDistance(context)
+    {
+        const roadToID = context.eventPayload.item
+        const roadFromID = context.eventPayload.addition
+        try
+        {
+            const road = await CountryRoads.findOne({where: {id: roadFromID}})
+            if(road?.dataValues.time === 0 && road?.dataValues.isBlocked)
+            {
+                await api.api.messages.edit({
+                    peer_id: context.peerId,
+                    message: "✅ Принято",
+                    conversation_message_id: context.conversationMessageId,
+                    keyboard: keyboard.inlineNone
+                })
+                await api.SendMessageWithKeyboard(context.peerId, "Вы направлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" для того чтобы начать ввод информации о новой дороге", [[keyboard.startButton({type: "build_the_road", roadFromID: roadFromID, roadToID: roadToID})]])
+                Data.users[context.peerId].state = Scenes.FillingOutTheForm
+            }
+            else
+            {
+                await api.api.messages.edit({
+                    peer_id: context.peerId,
+                    message: "⚠ Не актуально",
+                    conversation_message_id: context.conversationMessageId,
+                    keyboard: keyboard.inlineNone
+                })
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "Событие начала ввода информации о новой дороге", e)
+        }
+    }
+
+    async AppealWarning(context)
+    {
+        const warningID = context.eventPayload.item
+        try
+        {
+            const warning = await Warning.findOne({where: {id: warningID}})
+            if(warning)
+            {
+                const user = await Player.findOne({where: {id: warning.dataValues.userID}})
+                await Warning.destroy({where: {id: warningID}})
+                const warnCount = await Warning.count({where: {userID: user.dataValues.id}})
+                let request = `✅ Администрация проекта приняла решение обжаловать вам жалобу от ${NameLibrary.ParseDateTime(warning.dataValues.createdAt)}`
+                if(user.dataValues.isBanned && warnCount < 3)
+                {
+                    await Player.update({warningScore: warnCount, isBanned: false}, {where: {id: user.dataValues.id}})
+                    await Ban.destroy({where: {userID: user.dataValues.id}})
+                    if(Data.users[user.dataValues.id]) delete Data.users[user.dataValues.id]
+                    request += "\n\n✅ Теперь у вас менее 3-х предупреждений, поэтому вы получаете разбан в пректе"
+                }
+                else
+                {
+                    await Player.update({warningScore: warnCount}, {where: {id: user.dataValues.id}})
+                    if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].warningScore = warnCount
+                }
+                await api.SendMessage(user.dataValues.id, request)
+                await api.api.messages.edit({
+                    peer_id: context.peerId,
+                    message: "✅ Обжаловано",
+                    conversation_message_id: context.conversationMessageId,
+                    keyboard: keyboard.inlineNone
+                })
+            }
+            else
+            {
+                await api.api.messages.edit({
+                    peer_id: context.peerId,
+                    message: "⚠ Не актуально",
+                    conversation_message_id: context.conversationMessageId,
+                    keyboard: keyboard.inlineNone
+                })
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "Событие начала ввода информации о новой дороге", e)
+        }
+    }
+
+    async AppealBan(context)
+    {
+        const banID = context.eventPayload.item
+        try
+        {
+            const ban = await Ban.findOne({where: {id: banID}})
+            if(ban)
+            {
+                const user = await Player.findOne({where: {id: ban.dataValues.userID}})
+                await Ban.destroy({where: {id: banID}})
+                await Warning.destroy({where: {userID: ban.dataValues.userID}})
+                await Player.update({warningScore: 0, isBanned: false}, {where: {id: user.dataValues.id}})
+                if(Data.users[user.dataValues.id]) delete Data.users[user.dataValues.id]
+                await api.SendMessage(user.dataValues.id, `✅ Администрация проекта приняла решение обжаловать ваш бан от ${NameLibrary.ParseDateTime(ban.dataValues.createdAt)}\n\n✅ Теперь вы можете свободно пользоваться ботом и писать в чатах`)
+                await api.api.messages.edit({
+                    peer_id: context.peerId,
+                    message: "✅ Обжаловано",
+                    conversation_message_id: context.conversationMessageId,
+                    keyboard: keyboard.inlineNone
+                })
+            }
+            else
+            {
+                await api.api.messages.edit({
+                    peer_id: context.peerId,
+                    message: "⚠ Не актуально",
+                    conversation_message_id: context.conversationMessageId,
+                    keyboard: keyboard.inlineNone
+                })
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "Событие начала ввода информации о новой дороге", e)
         }
     }
 }

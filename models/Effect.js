@@ -1,9 +1,8 @@
 class Effect
 {
-    constructor(type, time, level)
+    constructor(type, time)
     {
         this.type = type
-        this.level = level
         this.time = new Date()
         this.time.setDate(time.getMinutes() + time)
     }

@@ -1,4 +1,3 @@
-const {DataTypes} = require("sequelize");
 const {BuildingAddon} = require("../database/Models");
 
 class Building
@@ -12,6 +11,7 @@ class Building
         this.ownerID = building.dataValues.ownerID
         this.ownerType = building.dataValues.ownerType
         this.level = building.dataValues.level
+        this.lastActivityTime = new Date()
         this.addons = []
     }
     Upgrade(level)
