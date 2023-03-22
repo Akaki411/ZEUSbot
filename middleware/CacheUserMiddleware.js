@@ -21,7 +21,10 @@ module.exports = async (context, next) =>
                 context.official = Data.officials[context.player.countryID][peerId]
             }
         }
-        return next()
+        if(!context.player.HasEffect("bot_ignore"))
+        {
+            return next()
+        }
     }
     else
     {

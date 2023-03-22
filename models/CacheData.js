@@ -275,31 +275,6 @@ class CacheData
         })
     }
 
-    async LoadChats()
-    {
-        return new Promise(async(resolve) => {
-            // let chats = null
-            // this.allChats = []
-            // let offset = 0
-            // do
-            // {
-            //     chats = await api.api.messages.getConversations({
-            //         offset: offset,
-            //         count: 200
-            //     })
-            //     for (const chat of chats.items)
-            //     {
-            //         this.allChats.push(chat)
-            //         console.log(chat?.conversation?.chat_settings)
-            //     }
-            //     offset++
-            // }
-            // while (chats.count >= 200)
-
-            return resolve()
-        })
-    }
-
     async SaveVariables()
     {
         return new Promise((resolve) => {

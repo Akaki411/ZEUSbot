@@ -45,6 +45,14 @@ class KeyboardButtons
         }
     })
 
+    defaultsButton = Keyboard.textButton({
+        label: '📌 По умолчанию',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'defaults'
+        }
+    })
+
     backButton = Keyboard.textButton({
         label: '🔙 Назад',
         color: Keyboard.SECONDARY_COLOR,
@@ -641,7 +649,7 @@ class KeyboardButtons
     })
 
     notificationsOnButton = Keyboard.textButton({
-        label: '✅ Включить уведомления',
+        label: '🔊 Включить уведомления',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'notifications_on'
@@ -649,7 +657,7 @@ class KeyboardButtons
     })
 
     notificationsOffButton = Keyboard.textButton({
-        label: '❌ Отключить уведомления',
+        label: '🔇 Отключить уведомления',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'notifications_off'
@@ -696,7 +704,7 @@ class KeyboardButtons
         }
     })
 
-    cityInformationButton = Keyboard.textButton({
+    cityInfoButton = Keyboard.textButton({
         label: 'ℹ Информация о городе',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
@@ -953,7 +961,7 @@ class KeyboardButtons
     })
 
     addTheChatButton = Keyboard.textButton({
-        label: '💬 Добавить чат',
+        label: '💬 Чаты',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'add_the_chat'
@@ -993,19 +1001,27 @@ class KeyboardButtons
         }
     })
 
-    changeRoadButton = Keyboard.textButton({
-        label: '⏳ Изменить дорогу',
+    roadsButton = Keyboard.textButton({
+        label: '🛣 Дороги',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'change_road'
+            choice: 'roads'
         }
     })
 
-    deleteRoadButton = Keyboard.textButton({
-        label: '🚳 Убрать дорогу',
+    userInfoButton = Keyboard.textButton({
+        label: 'ℹ Информация об игроке',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'delete_road'
+            choice: 'user_info'
+        }
+    })
+
+    buildingInfoButton = Keyboard.textButton({
+        label: 'ℹ Информация о здании',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'building_info'
         }
     })
 

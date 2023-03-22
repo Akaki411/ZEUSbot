@@ -1,4 +1,4 @@
-const {Player, PlayerStatus, PlayerInfo} = require("../database/Models")
+const {Player, PlayerStatus, PlayerInfo, PlayerResources} = require("../database/Models")
 const Data = require("../models/CacheData")
 const Samples = require("./Samples")
 class NameLibrary
@@ -130,8 +130,18 @@ class NameLibrary
     {
         switch (effect)
         {
-            case "123":
-                return "Тест"
+            case "block_moving":
+                return "🔗 Кандалы"
+            case "block_transfer":
+                return "⛔ Блокировка счета"
+            case "block_extracting":
+                return "😳 Усталость"
+            case "bot_ignore":
+                return "🤐 Проклятие игнора"
+            case "luck":
+                return "🍀 Удача"
+            case "industriousness":
+                return "💪 Трудолюбие"
         }
         return "Неизвестный эффект, обратитесь в тех поддержку."
     }
@@ -336,19 +346,23 @@ class NameLibrary
     }
 
 
-    async GetUserInfo(id)
+    async GetFullUserInfo(id, userObject)
     {
-        const user = await Player.findOne({where: {id: id}})
-        const userStatus = await PlayerStatus.findOne({where: {id: id}})
-        const userInfo = await PlayerInfo.findOne({where: {id: id}})
-
-        const marry = userInfo.dataValues.marriedID ? await this.GetPlayerNick(userInfo.dataValues.marriedID) : "Нет"
-        const role = this.GetRoleName(user.dataValues.role)
-        const status = this.GetStatusName(user.dataValues.status)
-        const citizen = userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"
-        const registration = userInfo.dataValues.registration ? Data.GetCityName(userStatus.dataValues.citizenship) : "Нет"
-
-        return `📌 Ник: *id${user.dataValues.id}(${user.dataValues.nick})\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${marry}\n🪄 Роль: ${role}\n👑 Статус: ${status}\n🔰 Гражданство: ${citizen}\n📍 Прописка: ${registration}\n📰 Описание: ${userInfo.dataValues.description}`
+        let request = "ℹ Полная информация об игроке:\n\n"
+        if(Data.users[id])
+        {
+            request += Data.users[id].GetInfo() + "\n\n" + Data.users[id].GetResources()
+        }
+        else
+        {
+            const player = await Player.findOne({where: {id: id}})
+            const playerStatus = await PlayerStatus.findOne({where: {id: id}})
+            const playerInfo = await PlayerInfo.findOne({where: {id: id}})
+            const playerResources = await PlayerResources.findOne({where: {id: id}})
+            const user = new userObject(player, playerStatus, playerInfo, playerResources)
+            request += user.GetInfo() + "\n\n" + user.GetResources()
+        }
+        return request
     }
 }
 

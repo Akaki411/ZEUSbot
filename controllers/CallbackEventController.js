@@ -250,7 +250,7 @@ class CallbackEventController
             if(Data.users[secondUserID].waitingRegistration)
             {
                 clearTimeout(Data.users[secondUserID].waitingRegistration)
-                await PlayerInfo.update({registration: cityID},{where: {id: secondUserID}})
+                await PlayerStatus.update({registration: cityID},{where: {id: secondUserID}})
                 Data.users[secondUserID].registration = cityID
                 await api.api.messages.edit({
                     peer_id: context.peerId,

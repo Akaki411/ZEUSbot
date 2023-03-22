@@ -3,7 +3,8 @@ const OutputManager = require("./OutputManager")
 const Data = require("../models/CacheData");
 const keyboard = require("../variables/Keyboards");
 const {City, Country, PlayerStatus, Player, Ban, LastWills, Buildings,
-    CountryResources, CityResources, PlayerInfo, CountryRoads, Keys, OfficialInfo, PlayerResources, Messages
+    CountryResources, CityResources, PlayerInfo, CountryRoads, Keys, OfficialInfo, PlayerResources, Messages, Chats,
+    Warning
 } = require("../database/Models");
 const api = require("../middleware/API");
 const ErrorHandler = require("../error/ErrorHandler")
@@ -12,6 +13,8 @@ const Prices = require("../variables/Prices")
 const Nations = require("../variables/Nations")
 const sequelize = require("../database/DataBase")
 const upload = require("../middleware/Upload")
+const Effects = require("../variables/Effects")
+const User = require("../models/User")
 const fs = require('fs')
 const path = require("path")
 
@@ -90,7 +93,7 @@ class BuildersAndControlsScripts
                     id: context.peerId,
                     nick: "Незарегистрированный пользователь"
                 }
-                await ErrorHandler.SendLogs(context, "Registration", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Registration", e)
             }
         })
     }
@@ -182,7 +185,7 @@ class BuildersAndControlsScripts
                 let accept = await InputManager.InputBoolean(context, `Итак, мы имеем следующее:\n\n📌 Название: *public${groupId}(${name})\n🏙 Столица: ${capitalName}\n👑 Правитель: *id${leader.dataValues.id}(${leader.dataValues.nick})\n\n⛏ Ресурсы для добычи:\n ${resName}\n\nНачальный бюджет:\n${NameLibrary.GetPrice(budget)}\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send('⛔ Ввод отменен.', {
+                    await context.send('🚫 Ввод отменен.', {
                         keyboard: keyboard.build(current_keyboard)
                     })
                     return resolve()
@@ -246,7 +249,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "NewCountry", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/NewCountry", e)
             }
         })
     }
@@ -260,7 +263,7 @@ class BuildersAndControlsScripts
                 if (!user) return resolve()
                 if(NameLibrary.RoleEstimator(context.player.role) <= NameLibrary.RoleEstimator(user.dataValues.role))
                 {
-                    context.send(`⛔ Вы не имеете права изменять роль игрока *id${user.dataValues.id}(${user.dataValues.nick}).`, {
+                    context.send(`🚫 Вы не имеете права изменять роль игрока *id${user.dataValues.id}(${user.dataValues.nick}).`, {
                         keyboard: keyboard.build(current_keyboard)
                     })
                     return resolve()
@@ -294,7 +297,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeRole", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeRole", e)
             }
         })
     }
@@ -362,7 +365,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "AppointLeader", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AppointLeader", e)
             }
         })
     }
@@ -378,7 +381,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ShowListWarnings", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ShowListWarnings", e)
             }
         })
     }
@@ -410,7 +413,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ShowBan", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ShowBan", e)
             }
         })
     }
@@ -430,7 +433,7 @@ class BuildersAndControlsScripts
                 if (!resource) return resolve()
                 if(resource.match(/cancel/))
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 let count = await InputManager.InputInteger(context, "Введите количество", current_keyboard)
@@ -439,7 +442,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Подтвердите перевод:\nКому: *id${user.dataValues.id}(${user.dataValues.nick})\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -452,7 +455,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CheatingUserResources", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CheatingUserResources", e)
             }
         })
     }
@@ -472,7 +475,7 @@ class BuildersAndControlsScripts
                 const resource = await InputManager.ChooseButton(context, "Выберите какой ресурс вы хотите накрутить", resources, current_keyboard)
                 if (resource === "cancel")
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 let count = await InputManager.InputInteger(context, "Введите количество", current_keyboard)
@@ -481,7 +484,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Подтвердите перевод:\nКому: ${Data.GetCityName(cityID)}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -494,7 +497,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CheatingCityResources", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CheatingCityResources", e)
             }
         })
     }
@@ -515,7 +518,7 @@ class BuildersAndControlsScripts
                 const resource = await InputManager.ChooseButton(context, `${country.GetResources()}\n\nВыберите какой ресурс вы хотите перевести в бюджет фракции ${country.GetName()}?`, resources, current_keyboard)
                 if (resource === "cancel")
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -525,7 +528,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Подтвердите перевод:\nКому: Фракция ${country.GetName()}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -537,7 +540,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CheatingCountryResources", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CheatingCountryResources", e)
             }
         })
     }
@@ -558,7 +561,7 @@ class BuildersAndControlsScripts
                 const lastWillText = await InputManager.InputString(context, "2️⃣ Введите текст завещания. Этот текст будет виден только вам и наследователю после вашей смерти. (до 1000 символов)", current_keyboard, 0, 1000)
                 if (!lastWillText)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -573,7 +576,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CreateLastWill", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateLastWill", e)
             }
         })
     }
@@ -596,7 +599,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "DeleteLastWill", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteLastWill", e)
             }
         })
     }
@@ -632,7 +635,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "Relax", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Relax", e)
             }
         })
     }
@@ -654,7 +657,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Переименовать город \"${Data.cities[context.cityID].name}\" в "${name}"?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await City.update({name: name}, {where: {id: context.cityID}})
@@ -663,7 +666,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCityName", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityName", e)
             }
         })
     }
@@ -678,7 +681,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Изменить описание города?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await City.update({description: description}, {where: {id: context.cityID}})
@@ -687,7 +690,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCityDescription", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityDescription", e)
             }
         })
     }
@@ -710,7 +713,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Изменить фото города?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await City.update({photoURL: photo}, {where: {id: context.cityID}})
@@ -719,7 +722,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCityPhoto", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityPhoto", e)
             }
         })
     }
@@ -736,7 +739,7 @@ class BuildersAndControlsScripts
                 const resource = await InputManager.ChooseButton(context, `${Data.cities[context.cityID].GetResources()}\n\nПереводить ресурсы можно только в бюджет фракции.\n\nВыберите какой ресурс вы хотите перевести в бюджет фракции ${Data.GetCountryName(Data.GetCountryForCity(context.cityID).id)}?`, resources, current_keyboard)
                 if (resource === "cancel")
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(Data.cities[context.cityID][resource] <= 0)
@@ -757,7 +760,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Подтвердите перевод:\nКому: ${Data.GetCountryName(Data.GetCountryForCity(context.cityID).id)}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -773,7 +776,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CityToCountryTransaction", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
             }
         })
     }
@@ -831,7 +834,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "DeleteCityBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteCityBuilding", e)
             }
         })
     }
@@ -915,7 +918,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CreateCityBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateCityBuilding", e)
             }
         })
     }
@@ -975,7 +978,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Продолжить?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено.", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Data.AddCityResources(Data.cities[context.cityID].id ,Prices[building.type.replace("building_of_", "") + "_lvl" + (building.level + 1)])
@@ -985,7 +988,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "UpgradeCityBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeCityBuilding", e)
             }
         })
     }
@@ -1005,7 +1008,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Расширение города ${maxBuildings} => ${maxBuildings + 2} мест для строительства.\n\n${Data.cities[context.cityID].GetResources()}\n\nСтоимость расширения:\n${NameLibrary.GetPrice(Prices['expand_city'])}\n\nПродолжить?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено.", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(!Data.cities[context.cityID].CanPay(Prices['expand_city']))
@@ -1019,7 +1022,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ExpandCity", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ExpandCity", e)
             }
         })
     }
@@ -1079,7 +1082,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetAllCityResources", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetAllCityResources", e)
             }
         })
     }
@@ -1103,7 +1106,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetCountryCities", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryCities", e)
             }
         })
     }
@@ -1125,7 +1128,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Переименовать фракцию ${context.country.GetName()} в "${"*public" + context.country.groupID + "(" + name + ")"}"?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Country.update({name: name}, {where: {id: context.country.id}})
@@ -1134,7 +1137,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCountryName", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryName", e)
             }
         })
     }
@@ -1149,7 +1152,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Изменить описание фракции?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Country.update({description: description}, {where: {id: context.country.id}})
@@ -1158,7 +1161,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCountryDescription", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryDescription", e)
             }
         })
     }
@@ -1181,7 +1184,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Изменить фото фракции?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Country.update({photoURL: photo}, {where: {id: context.country.id}})
@@ -1190,7 +1193,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCountryPhoto", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryPhoto", e)
             }
         })
     }
@@ -1213,7 +1216,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Изменить приветственное фото фракции?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Country.update({welcomePhotoURL: photo}, {where: {id: context.country.id}})
@@ -1222,7 +1225,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCountryWelcomePhoto", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryWelcomePhoto", e)
             }
         })
     }
@@ -1237,7 +1240,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Изменить группу на *public${group}(новую)?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отмена", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Country.update({groupID: group}, {where: {id: context.country.id}})
@@ -1246,7 +1249,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeCountryGroup", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryGroup", e)
             }
         })
     }
@@ -1318,7 +1321,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetAllCountryResources", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetAllCountryResources", e)
             }
         })
     }
@@ -1338,7 +1341,7 @@ class BuildersAndControlsScripts
                 const resource = await InputManager.ChooseButton(context, `${context.country.GetResources()}\n\nПереводить ресурсы можно только в бюджет города фракции.\n\nВыберите какой ресурс вы хотите перевести в бюджет города ${Data.GetCityName(cityID)}?`, resources, current_keyboard)
                 if (resource === "cancel")
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(context.country[resource] <= 0)
@@ -1359,7 +1362,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Подтвердите перевод:\nКому: ${Data.GetCityName(cityID)}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -1375,7 +1378,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CountryToCityTransaction", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryToCityTransaction", e)
             }
         })
     }
@@ -1419,7 +1422,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetCountryTax", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryTax", e)
             }
         })
     }
@@ -1447,7 +1450,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Назначить *id${user.dataValues.id}(${user.dataValues.nick}) главой города ${city.name}?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "official"
@@ -1467,7 +1470,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "SetMayor", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SetMayor", e)
             }
         })
     }
@@ -1502,7 +1505,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "SetTax", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SetTax", e)
             }
         })
     }
@@ -1517,7 +1520,7 @@ class BuildersAndControlsScripts
                 let leaderInfo = await PlayerStatus.findOne({where: {id: leader.dataValues.id}})
                 if(leaderInfo.dataValues.citizenship !== context.country.id)
                 {
-                    await context.send("⛔ В бюджете не хватает ресурсов", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 В бюджете не хватает ресурсов", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(!context.country.CanPay(Prices["new_city"]))
@@ -1575,7 +1578,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildNewCity", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BuildNewCity", e)
             }
         })
     }
@@ -1615,13 +1618,13 @@ class BuildersAndControlsScripts
                 country = Data.countries[Data.ParseButtonID(country)]
                 if(!context.country.CanPay(Prices["new_road"]))
                 {
-                    await context.send("⛔ В бюджете не хватает ресурсов", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 В бюджете не хватает ресурсов", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 const accept = await InputManager.InputBoolean(context, `Построить дорогу от ${context.country.GetName()} до ${country.GetName()}?`)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Data.AddCountryResources(context.country.id, Prices["new_road"])
@@ -1632,7 +1635,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildTheRoad", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BuildTheRoad", e)
             }
         })
     }
@@ -1712,7 +1715,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CreateCountryBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateCountryBuilding", e)
             }
         })
     }
@@ -1788,7 +1791,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Продолжить?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено.", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Data.AddCountryResources(context.country.id, Prices[building.type.replace("building_of_", "") + "_lvl" + (building.level + 1)])
@@ -1798,7 +1801,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "UpgradeCountryBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeCountryBuilding", e)
             }
         })
     }
@@ -1852,7 +1855,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetCountryOfficials", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryOfficials", e)
             }
         })
     }
@@ -1897,7 +1900,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "SetOfficial", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SetOfficial", e)
             }
         })
     }
@@ -1943,7 +1946,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeOfficial", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeOfficial", e)
             }
         })
     }
@@ -1970,7 +1973,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Вы действительно хотите забрать права чиновника у игрока *id${official.id}(${official.nick})?`)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await OfficialInfo.destroy({where: {id: official.id}})
@@ -1988,7 +1991,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "TakeAwayOfficial", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TakeAwayOfficial", e)
             }
         })
     }
@@ -2008,7 +2011,7 @@ class BuildersAndControlsScripts
                 }
                 if(user.dataValues.id === context.country.leaderID)
                 {
-                    await context.send(`⛔ Невозможно забрать гражданство у правителя`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`🚫 Невозможно забрать гражданство у правителя`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(user.dataValues.status?.match(/official|leader/))
@@ -2019,7 +2022,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Лишить игрока *id${user.dataValues.id}(${user.dataValues.nick}) гражданства фракции ${context.country.GetName()}?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 status.set({citizenship: null})
@@ -2035,7 +2038,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "TakeAwayCitizenship", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TakeAwayCitizenship", e)
             }
         })
     }
@@ -2060,7 +2063,7 @@ class BuildersAndControlsScripts
                 }
                 if(NameLibrary.GetGender(user.dataValues.gender) === context.player.gender)
                 {
-                    await context.send("✝ Не надо так.", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("✝ Мы такое не одобряем.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 const text = await InputManager.InputString(context, "Напишите текст предложения.", current_keyboard)
@@ -2069,13 +2072,13 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Текст предложения:\n${text}\nСделать предложение вступления в брак игроку *id${user.dataValues.id}(${user.dataValues.nick})?\nℹ Если игрок согласится, то у вас будет заключен брак.`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await api.api.messages.send({
                     user_id: user.dataValues.id,
                     random_id: Math.round(Math.random() * 100000),
-                    message: `💍 Игрок *id${context.player.id}(${context.player.nick}) отправил вам предложение руки и сердца с текстом:\n${text}`,
+                    message: `💌 Игрок *id${context.player.id}(${context.player.nick}) отправил вам предложение руки и сердца с текстом:\n${text}`,
                     keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "merry", item: context.player.id}), keyboard.declineCallbackButton({command: "decline_merry", item: context.player.id})]]).inline().oneTime()
                 })
                 Data.users[context.player.id].isMarried = true
@@ -2084,7 +2087,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "OfferMarry", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/OfferMarry", e)
             }
         })
     }
@@ -2102,7 +2105,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Вы хотите расторгнуть брак с игроком ${await NameLibrary.GetPlayerNick(context.player.marriedID)}?\nℹ Если игрок тоже согласится на это, то ваш брак будет расторжен.`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено")
+                    await context.send("🚫 Отменено")
                     return resolve()
                 }
                 await api.api.messages.send({
@@ -2115,7 +2118,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "Divorce", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Divorce", e)
             }
         })
     }
@@ -2181,7 +2184,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetCitizenship", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCitizenship", e)
             }
         })
     }
@@ -2199,13 +2202,13 @@ class BuildersAndControlsScripts
                 const firstAccept = await InputManager.InputBoolean(context, `⚠ Выточно хотите отказаться от гражданства фракции ${Data.GetCountryName(context.player.citizenship)}?\nПосле отказа ваш статус изменится на \"апатрид\" и пропадет прописка, ваше имущество останется у вас.`, current_keyboard)
                 if(!firstAccept)
                 {
-                    await context.send("⛔ Отклонено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отклонено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 const secondAccept = await  InputManager.InputBoolean(context, "Вы уверены?", current_keyboard)
                 if(!secondAccept)
                 {
-                    await context.send("⛔ Отклонено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отклонено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 const country = await Country.findOne({where: {id: context.player.citizenship}})
@@ -2214,9 +2217,7 @@ class BuildersAndControlsScripts
                 })
                 await country.save()
                 await PlayerStatus.update({
-                    citizenship: null
-                },{where: {id: context.player.id}})
-                await PlayerInfo.update({
+                    citizenship: null,
                     registration: null
                 },{where: {id: context.player.id}})
                 if(!context.player.status.match(/worker/))
@@ -2232,7 +2233,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "RefuseCitizenship", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RefuseCitizenship", e)
             }
         })
     }
@@ -2261,7 +2262,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetRegistration", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetRegistration", e)
             }
         })
     }
@@ -2289,7 +2290,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "RefuseRegistration", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RefuseRegistration", e)
             }
         })
     }
@@ -2303,7 +2304,7 @@ class BuildersAndControlsScripts
                 if(!user) return resolve()
                 if(user.dataValues.id === context.player.id)
                 {
-                    context.send("⛔ Какой смысл переводить самому себе?", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Какой смысл переводить самому себе?", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 context.send(`*id${context.player.id}(Ваш) инвентарь:\n💵 Деньги:  ${context.player.money}\n🪨 Камень:${context.player.stone}\n🌾 Зерно:${context.player.wheat}\n🪵 Дерево:${context.player.wood}\n🌑 Железо:${context.player.iron}\n🪙 Медь:${context.player.copper}\n🥈 Серебро:${context.player.silver}\n💎 Алмазы:${context.player.diamond}`)
@@ -2315,7 +2316,7 @@ class BuildersAndControlsScripts
                 if (!resource) return resolve()
                 if(resource.match(/cancel/))
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(Data.users[context.player.id][resource] === 0)
@@ -2336,7 +2337,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Подтвердите перевод:\nКому: *id${user.dataValues.id}(${user.dataValues.nick})\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
-                    context.send("⛔ Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
+                    context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
 
@@ -2353,7 +2354,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "Transaction", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Transaction", e)
             }
         })
     }
@@ -2362,6 +2363,16 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
+                if(Data.cities[context.player.location].isSiege)
+                {
+                    await context.send("🚫 Город находится под осадой", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                if(Data.countries[context.player.countryID].isSiege)
+                {
+                    await context.send("🚫 В фракции введено военное положение, перемещение между городами невозможно", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
                 const cities = await City.findAll({where: {countryID: Data.GetCountryForCity(context.player.location).id}})
                 const cityButtons = []
                 for(let i = 0; i < cities.length; i++)
@@ -2382,7 +2393,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Перемещение в другой город займет ${Data.variables["cityToCityTime"]} минут, на это время вы будете заморожены.\nПродолжить?`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(context.player.status === "worker")
@@ -2415,7 +2426,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GoToOtherCity", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GoToOtherCity", e)
             }
         })
     }
@@ -2425,6 +2436,16 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
+                if(Data.cities[context.player.location].isSiege)
+                {
+                    await context.send("🚫 Город находится под осадой", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                if(Data.countries[context.player.countryID].isSiege)
+                {
+                    await context.send("🚫 В фракции введено военное положение, выезд запрещен", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
                 const playerPlace = Data.GetCountryForCity(context.player.location).id
                 const roads = await CountryRoads.findAll({where: {fromID: playerPlace}})
                 const countryButtons = []
@@ -2476,7 +2497,7 @@ class BuildersAndControlsScripts
                 }
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(context.player.status === "worker")
@@ -2516,7 +2537,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GoToOtherCountry", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GoToOtherCountry", e)
             }
         })
     }
@@ -2547,7 +2568,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GiveKey", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GiveKey", e)
             }
         })
     }
@@ -2575,6 +2596,7 @@ class BuildersAndControlsScripts
                     await context.send("⚠ У вас не хватает ресурсов", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
+                await Data.AddPlayerResources(context.player.id, Prices["copy_key"])
                 key = Data.ParseButtonID(key)
                 keys.forEach((i) => {if(parseInt(i.dataValues.id)  === parseInt(key)) key = i.dataValues})
                 await Keys.create({
@@ -2586,7 +2608,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "CopyKey", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CopyKey", e)
             }
         })
     }
@@ -2631,7 +2653,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetAllProperty", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetAllProperty", e)
             }
         })
     }
@@ -2684,7 +2706,7 @@ class BuildersAndControlsScripts
                     ownerID: context.player.id,
                     ownerType: "user",
                     level: 1,
-                    freezing: parseInt(context.player.location) !== parseInt(context.player.registration)
+                    freezing: (parseInt(context.player.location) !== parseInt(context.player.registration)) && building === "house"
                 })
                 if(parseInt(context.player.location) === parseInt(context.player.registration) && building === "house")
                 {
@@ -2733,7 +2755,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "NewUserBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/NewUserBuilding", e)
             }
         })
     }
@@ -2775,7 +2797,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "Продолжить?", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено.", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Data.AddPlayerResources(context.player.id ,Prices[building.type.replace("building_of_", "") + "_lvl" + (building.level + 1)])
@@ -2792,7 +2814,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "UpgradeUserBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeUserBuilding", e)
             }
         })
     }
@@ -2847,7 +2869,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "EnterBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/EnterBuilding", e)
             }
         })
     }
@@ -2882,7 +2904,25 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "GetResourcesFormBuilding", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetResourcesFormBuilding", e)
+            }
+        })
+    }
+
+    async GetChangeSilverInMintBuilding(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                
+                await Data.AddPlayerResources(context.player.id, playerBalance)
+                context.player.inBuild.lastActivityTime = time
+                await context.send("Собрано: " + NameLibrary.GetPrice(NameLibrary.ReversePrice(playerBalance)) + "\nНалог составил: " + NameLibrary.GetPrice(cityBalance) + "(" + extractionTax + "%)", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetChangeSilverInMintBuilding", e)
             }
         })
     }
@@ -2939,7 +2979,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "RelaxInTheHouse", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RelaxInTheHouse", e)
             }
         })
     }
@@ -2969,7 +3009,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "FillingOutTheRoad", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/FillingOutTheRoad", e)
             }
         })
     }
@@ -3003,7 +3043,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "SQLSession", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SQLSession", e)
             }
         })
     }
@@ -3033,7 +3073,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "SendLog", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SendLog", e)
             }
         })
     }
@@ -3054,7 +3094,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "SendLogList", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SendLogList", e)
             }
         })
     }
@@ -3078,7 +3118,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ClearLogs", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ClearLogs", e)
             }
         })
     }
@@ -3091,7 +3131,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, "⚠Вы действительно хотите очистить кэш пользователей?\n\n⚠⚠⚠Это приведет к выбрасыванию всех игроков в главное меню, силы всех игроков обнулятся, те игроки, что спят или куда-то идут, окажутся в главном меню и не получат уведомления об окончании процесса.", current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 Data.users = {}
@@ -3100,7 +3140,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ClearUserCache", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ClearUserCache", e)
             }
         })
     }
@@ -3119,7 +3159,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeMap", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
             }
         })
     }
@@ -3149,7 +3189,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeVariables", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeVariables", e)
             }
         })
     }
@@ -3165,7 +3205,7 @@ class BuildersAndControlsScripts
                 const accept = await InputManager.InputBoolean(context, `Проверьте сообщение:\n\nТекст:\n${text}\nТихое сообщение: ${isNoisy ? "Нет" : "Да"}`, current_keyboard)
                 if(!accept)
                 {
-                    await context.send("⛔ Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 await Messages.create({
@@ -3185,7 +3225,118 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "AddMessage", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddMessage", e)
+            }
+        })
+    }
+
+    async RoadControls(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const kb = [
+                    ["➕ Создать", "create"],
+                    ["⏳ Изменить", "edit"],
+                    ["🚳 Удалить", "delete"]
+                ]
+                const action = await InputManager.KeyboardBuilder(context, "Выберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action === "create" && await this.CreateRoad(context, current_keyboard)
+                action === "edit" && await this.ChangeTheRoad(context, current_keyboard)
+                action === "delete" && await this.DeleteRoad(context, current_keyboard)
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeTheRoad", e)
+            }
+        })
+    }
+
+    async DeleteRoad(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const roads = await CountryRoads.findAll()
+                let request = "ID фракций:\n\n"
+                const roadButtons = []
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        request += "🔸 " + Data.countries[i].GetName() + "  -  " + Data.countries[i].id + "\n"
+                    }
+                }
+                request += "\nℹ Дороги удаляются попарно, если удалить дорогу A->B, то удалится и дорога B->A"
+                for(let i = 0; i < roads.length; i++)
+                {
+                    roadButtons.push([roads[i].dataValues.fromID + " -> " + roads[i].dataValues.toID, "ID" + i])
+                }
+                let road = await InputManager.KeyboardBuilder(context, request, roadButtons, current_keyboard)
+                if(!road) return resolve()
+                road = Data.ParseButtonID(road)
+                road = roads[road]
+                const accept = await InputManager.InputBoolean(context, `Удалить дорогу соединяющую ${Data.countries[road.dataValues.fromID].GetName()} и ${Data.countries[road.dataValues.toID].GetName()}`)
+                if(!accept)
+                {
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                await CountryRoads.destroy({where: {fromID: road.dataValues.fromID, toID: road.dataValues.toID}})
+                await CountryRoads.destroy({where: {fromID: road.dataValues.toID, toID: road.dataValues.fromID}})
+                await context.send("✅ Дорога удалена", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteRoad", e)
+            }
+        })
+    }
+
+    async CreateRoad(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const firstCountryButtons = Data.GetCountryButtons()
+                let firstCountry = await InputManager.KeyboardBuilder(context, "Выберите первую фракцию", firstCountryButtons, current_keyboard)
+                if(!firstCountry) return resolve()
+                firstCountry = Data.ParseButtonID(firstCountry)
+                firstCountry = Data.countries[firstCountry]
+                const secondCountryButtons = firstCountryButtons.filter(key => {return key[0] !== firstCountry.name})
+                let secondCountry = await InputManager.KeyboardBuilder(context, "Выберите вторую фракцию", secondCountryButtons, current_keyboard)
+                if(!secondCountry) return resolve()
+                secondCountry = Data.ParseButtonID(secondCountry)
+                secondCountry = Data.countries[secondCountry]
+                const road = await CountryRoads.count({where: {fromID: firstCountry.id, toID: secondCountry.id}})
+                if(road !== 0)
+                {
+                    await context.send("⚠ Такая дорога уже существует", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const time = await InputManager.InputInteger(context, "Введите в минутах новое значение времени перемещения по этой дороге", current_keyboard, 0)
+                if(time === null) return resolve()
+                await CountryRoads.create({
+                    time: time,
+                    fromID: firstCountry.id,
+                    toID: secondCountry.id,
+                    isBlocked: false
+                })
+                await CountryRoads.create({
+                    time: time,
+                    fromID: secondCountry.id,
+                    toID: firstCountry.id,
+                    isBlocked: false
+                })
+                await context.send("✅ Дорога создана", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateRoad", e)
             }
         })
     }
@@ -3223,7 +3374,628 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "ChangeTheRoad", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeTheRoad", e)
+            }
+        })
+    }
+
+    async ChatControls(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const kb = [
+                    ["➕ Добавить чат", "add"],
+                    ["❌ Удалить чат", "delete"]
+                ]
+                const action = await InputManager.KeyboardBuilder(context, "Выберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action === "add" && await this.AddTheChat(context, current_keyboard)
+                action === "delete" && await this.DeleteChat(context, current_keyboard)
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChatControls", e)
+            }
+        })
+    }
+
+    async DeleteChat(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let buttons = []
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        buttons.push([Data.countries[i].name, "ID" + Data.countries[i].id])
+                    }
+                }
+                let country = await InputManager.KeyboardBuilder(context, "Выберите к какой фракции будет относиться чат", buttons, current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+
+                const chats = await Chats.findAll({where: {countryID: country.id}})
+                if(chats.length === 0)
+                {
+                    await context.send(`⚠ Для фракции ${country.GetName()} не добавлено чатов`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                buttons = []
+                let request = `Список чатов фракции ${country.GetName()}:\n\n`
+                for(let i = 0; i < chats.length; i++)
+                {
+                    if(chats[i])
+                    {
+                        buttons.push([chats[i].name, chats[i].link])
+                        request += "🔸" + chats[i].name + "  -  " + "https://vk.cc/" + chats[i].link + "\n"
+                    }
+                }
+                const chat = await InputManager.KeyboardBuilder(context, request + "\n\nВыберите чат, который хотите удалить", buttons, current_keyboard)
+                if(!chat) return resolve()
+                await Chats.destroy({where: {link: chat}})
+                await context.send("✅ Чат удален", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteChat", e)
+            }
+        })
+    }
+
+    async AddTheChat(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const countryButtons = []
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        countryButtons.push([Data.countries[i].name, "ID" + Data.countries[i].id])
+                    }
+                }
+                let country = await InputManager.KeyboardBuilder(context, "Выберите к какой фракции будет относиться чат", countryButtons, current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+
+                const name = await InputManager.InputString(context, "Введите название чата", current_keyboard)
+                if(!name) return resolve()
+
+                const link = await InputManager.InputString(context, "Вставьте ссылку приглашения в чат", current_keyboard)
+                if(!link) return resolve()
+                if(!link.match(/vk\.me\/join/))
+                {
+                    await context.send("🚫 Это не приглашение в беседу", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const shortLink = await api.api.utils.getShortLink({
+                    url: link,
+                    private: 0
+                })
+                await Chats.create({
+                    countryID: country.id,
+                    link: shortLink.key,
+                    name: name
+                })
+                await context.send("✅ Чат добавлен", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddTheChat", e)
+            }
+        })
+    }
+
+    async GetCountryInfo(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                await context.send("ℹ Информация о фракции " + country.GetName() + "\n\n" + await country.GetAllInfo() + "\n\n" + country.GetResources(), {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryInfo", e)
+            }
+        })
+    }
+
+    async GetCityInfo(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let city = await InputManager.KeyboardBuilder(context, "Выберите город", Data.GetCityButtons(), current_keyboard)
+                if(!city) return resolve()
+                city = Data.ParseButtonID(city)
+                city = Data.cities[city]
+                await context.send("ℹ Информация о городе " + city.name + "\n\n" + await city.GetAllInfo() + "\n\n" + city.GetResources(), {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryInfo", e)
+            }
+        })
+    }
+
+    async GetUserInfo(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let user = await InputManager.InputUser(context, "Выберите пользователя", current_keyboard)
+                if(!user) return resolve()
+                await context.send("ℹ Информация об игроке " + await NameLibrary.GetFullUserInfo(user.dataValues.id, User), {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryInfo", e)
+            }
+        })
+    }
+
+    async GetBuildingInfo(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let city = await InputManager.KeyboardBuilder(context, "Выберите город", Data.GetCityButtons(), current_keyboard)
+                if(!city) return resolve()
+                city = Data.ParseButtonID(city)
+                if(!Data.buildings[city])
+                {
+                    await context.send("🚫 В городе нет зданий", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const buttons = []
+                for(const key of Data.buildings[city])
+                {
+                    buttons.push([key.name, "ID" + key.id])
+                }
+                let build = await InputManager.KeyboardBuilder(context, "Выберите здание", buttons, current_keyboard)
+                if(!build) return resolve()
+                build = Data.ParseButtonID(build)
+                build = Data.buildings[city][build]
+                await context.send("ℹ Информация о здании " + build.name + "\n\n" + build.GetAllInfo(), {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetBuildingInfo", e)
+            }
+        })
+    }
+
+    async RemoveEffect(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let user = await InputManager.InputUser(context, "Выберите игрока, на которого хотите наложить эффект", current_keyboard)
+                if(!user) return resolve()
+                if(!Data.users[user.dataValues.id])
+                {
+                    await context.send(`⚠ Данные игрока ${user.dataValues.id}(${user.dataValues.nick}) отсутствуют в кэше, похоже что он давно не заходил`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                user = Data.users[user.dataValues.id]
+                user.effects = []
+                await context.send(`ℹ Список эффектов игрока ${user.GetName()} очищен`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveEffect", e)
+            }
+        })
+    }
+
+    async AddEffect(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let user = await InputManager.InputUser(context, "Выберите игрока, на которого хотите наложить эффект", current_keyboard)
+                if(!user) return resolve()
+                if(!Data.users[user.dataValues.id])
+                {
+                    await context.send(`⚠ Данные игрока ${user.dataValues.id}(${user.dataValues.nick}) отсутствуют в кэше, похоже что он давно не заходил`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                user = Data.users[user.dataValues.id]
+                if(user.status === "worker")
+                {
+                    await context.send("⚠ Запрещается накладывать эффекты на игроков со статусом ⚙ Работник", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const effectButtons = []
+                for(let i = 0; i < Effects.length; i++)
+                {
+                    effectButtons.push([NameLibrary.GetEffectName(Effects[i].type), "ID" + i])
+                }
+                let effect = await InputManager.KeyboardBuilder(context, "Выберите эффект", effectButtons, current_keyboard)
+                if(!effect) return resolve()
+                effect = Data.ParseButtonID(effect)
+                effect = Effects[effect]
+                let time = await InputManager.InputDefaultInteger(context, "Введите время действия эффекта (не более недели (10080 мин))", current_keyboard, 1, 10080, effect.time)
+                if(!time) return resolve()
+                user.AddEffect(effect, time)
+                await context.send(`✅ Игрок ${user.GetName()} получил эффект ${NameLibrary.GetEffectName(effect.type)}`, {keyboard: keyboard.build(current_keyboard)})
+                await api.SendMessage(user.id, "ℹ На вас был наложен эффект " + NameLibrary.GetEffectName(effect.type) + " на " + time + " минут")
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddEffect", e)
+            }
+        })
+    }
+
+    async Events(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let kb = [["➕ Начать", "start"], ["🚫 Прекратить", "stop"]]
+                let action = await InputManager.KeyboardBuilder(context, "Выберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action = action === "start"
+                kb = [
+                    ["🛣 Блокировка дороги", "block_road"],
+                    ["🌇 Осада города", "block_city"],
+                    ["🔰 Блокада фракции", "block_country"],
+                    ["🔰 Санкции для граждан", "block_country_citizen"],
+                    ["🌇 Санкции для горожан", "block_city_citizen"]
+                ]
+                const type = await InputManager.KeyboardBuilder(context, "ℹ Справка:\n\n🔸 🛣 Блокировка дороги - запрещает перемещение по дороге\n\n🔸 🌇 Осада города - блокирует переводы ресурсов из бюджета города и запрещает въезд/выезд\n\n🔸 🔰 Блокада фракции - блокирует переводы ресурсов из бюджета фракции и запрещает въезд/выезд\n\n🔸 🔰 Санкции для граждан - блокирует распоряжение ресурсами и имущества игроков имеющих гражданство конкретной фракции\n\n🔸 🌇 Санкции для горожан - блокирует распоряжение ресурсами и имущества игроков имеющих прописку конкретного города\n\nВыберите событие", kb, current_keyboard)
+                if(!type) return resolve()
+                type === "block_road" && await this.BlockRoadEvent(context, current_keyboard, action)
+                type === "block_city" && await this.BlockCityEvent(context, current_keyboard, action)
+                type === "block_country" && await this.BlockCountryEvent(context, current_keyboard, action)
+                type === "block_country_citizen" && await this.CountrySanctionsEvent(context, current_keyboard, action)
+                type === "block_city_citizen" && await this.CitySanctionsEvent(context, current_keyboard, action)
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Events", e)
+            }
+        })
+    }
+
+    async BlockRoadEvent(context, current_keyboard, action)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const roads = await CountryRoads.findAll({where: {isBlocked: !action}})
+                let request = "ID фракций:\n\n"
+                const roadButtons = []
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        request += "🔸 " + Data.countries[i].GetName() + "  -  " + Data.countries[i].id + "\n"
+                    }
+                }
+                request += `\nℹ Дороги блокируются попарно, если заблокировать дорогу A->B, то изменится и дорога B->A\n\nВыберите какую дорогу вы хотите ${action ? "заблокировать" : "разблокировать"}`
+                for(let i = 0; i < roads.length; i++)
+                {
+                    roadButtons.push([roads[i].dataValues.fromID + " -> " + roads[i].dataValues.toID, "ID" + i])
+                }
+                if(roadButtons.length === 0)
+                {
+                    await context.send(`⚠ Нет ${action ? "не заблокированных" : "заблокированных"} дорог`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let road = await InputManager.KeyboardBuilder(context, request, roadButtons, current_keyboard)
+                if(!road) return resolve()
+                road = Data.ParseButtonID(road)
+                road = roads[road].dataValues
+                await CountryRoads.update({isBlocked: action}, {where: {fromID: road.fromID, toID: road.toID}})
+                await CountryRoads.update({isBlocked: action}, {where: {fromID: road.toID, toID: road.fromID}})
+                await api.SendMessage(Data.countries[road.fromID].leaderID, `ℹ Дорога соединяющая фракции ${Data.countries[road.fromID].GetName()} и ${Data.countries[road.toID].GetName()} ${action ? "заблокирована" : "разблокирована"}`)
+                await api.SendMessage(Data.countries[road.toID].leaderID, `ℹ Дорога соединяющая фракции ${Data.countries[road.toID].GetName()} и ${Data.countries[road.fromID].GetName()} ${action ? "заблокирована" : "разблокирована"}`)
+                await context.send(`✅ Дорога ${action ? "заблокирована" : "разблокирована"}`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BlockRoadEvent", e)
+            }
+        })
+    }
+
+    async BlockCityEvent(context, current_keyboard, action)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const cities = await City.findAll({where: {isSiege: !action}})
+                const cityButtons = []
+                for(let i = 0; i < cities.length; i++)
+                {
+                    cityButtons.push([cities[i].dataValues.name, "ID" + i])
+                }
+                if(cityButtons.length === 0)
+                {
+                    await context.send(`⚠ Не осталось городов, ${action ? "не находящихся под осадой" : "находящихся под осадой"}`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let city = await InputManager.KeyboardBuilder(context, "Выберите город", cityButtons, current_keyboard)
+                if(!city) return resolve()
+                city = Data.ParseButtonID(city)
+                city = Data.cities[cities[city].dataValues.id]
+                const users = await PlayerStatus.findAll({where: {location: city.id, notifications: true}})
+                city.isSiege = action
+                await City.update({isSiege: action}, {where: {id: city.id}})
+                for(const user of users)
+                {
+                    await api.SendMessage(user.dataValues.id, `⚠ Город в котором вы находитесь ${action ? "попал в осаду, теперь вы не сможете покинуть город до конца осады" : "вышел из осады, теперь вы можете свободно перемещаться"}`)
+                }
+                await api.SendMessage(city.leaderID, `⚠ Город ${city.name} ${action ? "попал в осаду" : "больше не в осаде"}`)
+                await api.SendMessage(Data.countries[city.countryID].leaderID, `⚠ Город ${city.name} ${action ? "попал в осаду" : "больше не в осаде"}`)
+                await context.send(`✅ Город ${action ? "осажен" : "больше не в осаде"}`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BlockCityEvent", e)
+            }
+        })
+    }
+
+    async BlockCountryEvent(context, current_keyboard, action)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const countries = await Country.findAll({where: {isSiege: !action}})
+                const countryButtons = []
+                for(let i = 0; i < countries.length; i++)
+                {
+                    countryButtons.push([countries[i].dataValues.name, "ID" + i])
+                }
+                if(countryButtons.length === 0)
+                {
+                    await context.send(`⚠ Не осталось фракций, ${action ? "не находящихся в блокаде" : "находящихся в блокаде"}`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", countryButtons, current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[countries[country].dataValues.id]
+                const users = await PlayerStatus.findAll({where: {countryID: country.id, notifications: true}})
+                country.isSiege = action
+                await Country.update({isSiege: action}, {where: {id: country.id}})
+                for(const user of users)
+                {
+                    await api.SendMessage(user.dataValues.id, `⚠ Фракция в которой вы находитесь ${action ? "попала в блокаду, теперь вы не можете перемещаться до конца блокады" : "вышел из блокады, теперь вы можете свободно перемещаться"}`)
+                }
+                await api.SendMessage(country.leaderID, `⚠ Ваша фракция ${country.GetName()} ${action ? "попала в блокаду" : "больше не в блокаде"}`)
+                await context.send(`✅ Фракция ${action ? "теперь в блокаде" : "больше не в блокаде"}`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BlockCountryEvent", e)
+            }
+        })
+    }
+
+    async CitySanctionsEvent(context, current_keyboard, action)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const cities = await City.findAll({where: {isUnderSanctions: !action}})
+                const cityButtons = []
+                for(let i = 0; i < cities.length; i++)
+                {
+                    cityButtons.push([cities[i].dataValues.name, "ID" + i])
+                }
+                if(cityButtons.length === 0)
+                {
+                    await context.send(`⚠ Не осталось городов, ${action ? "не находящихся под санкциями" : "находящихся под санкциями"}`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let city = await InputManager.KeyboardBuilder(context, "Выберите город", cityButtons, current_keyboard)
+                if(!city) return resolve()
+                city = Data.ParseButtonID(city)
+                city = Data.cities[cities[city].dataValues.id]
+                const users = await PlayerStatus.findAll({where: {registration: city.id, notifications: true}})
+                city.isUnderSanctions = action
+                await City.update({isUnderSanctions: action}, {where: {id: city.id}})
+                for(const user of users)
+                {
+                    await api.SendMessage(user.dataValues.id, `⚠ Город в котором вы прописаны ${action ? "попал под санкции, теперь вы не сможете переводить ресурсы и пользоваться имуществом" : "вышел из под санкций, теперь вы можете переводить ресурсы и пользоваться имуществом"}`)
+                }
+                await api.SendMessage(city.leaderID, `⚠ Город ${city.name} ${action ? "попал под санкции" : "больше не под санкциями"}`)
+                await api.SendMessage(Data.countries[city.countryID].leaderID, `⚠ Город ${city.name} ${action ? "попал под санкции" : "больше не под санкциями"}`)
+                await context.send(`✅ Город ${action ? "под санкциями" : "больше не под санкциями"}`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CitySanctionsEvent", e)
+            }
+        })
+    }
+
+    async CountrySanctionsEvent(context, current_keyboard, action)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const countries = await Country.findAll({where: {isUnderSanctions: !action}})
+                const countryButtons = []
+                for(let i = 0; i < countries.length; i++)
+                {
+                    countryButtons.push([countries[i].dataValues.name, "ID" + i])
+                }
+                if(countryButtons.length === 0)
+                {
+                    await context.send(`⚠ Не осталось фракций, ${action ? "не находящихся под санкциями" : "находящихся под санкциями"}`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", countryButtons, current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[countries[country].dataValues.id]
+                const users = await PlayerStatus.findAll({where: {citizenship: country.id, notifications: true}})
+                country.isUnderSanctions = action
+                await Country.update({isUnderSanctions: action}, {where: {id: country.id}})
+                for(const user of users)
+                {
+                    await api.SendMessage(user.dataValues.id, `⚠ Фракция в которой вы являетесь гражданином ${action ? "попала под санкции, теперь вы не сможете переводить ресурсы и пользоваться имуществом" : "вышла из под санкций, теперь вы можете переводить ресурсы и пользоваться имуществом"}`)
+                }
+                await api.SendMessage(country.leaderID, `⚠ Ваша фракция ${country.GetName()} ${action ? "попала под санкции" : "больше не под санкциями"}`)
+                await context.send(`✅ Фракция ${action ? "теперь под санкциями" : "больше не под санкциями"}`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountrySanctionsEvent", e)
+            }
+        })
+    }
+
+    async CreateWarning(context, current_keyboard, data, scenes)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const users = data.users.split(";")
+                const reason = await InputManager.InputString(context, "Введите краткую причину (для самого игрока)", current_keyboard)
+                if(!reason) return resolve(false)
+                const explanation = await InputManager.InputString(context, "Введите полную причину (для админов)", current_keyboard)
+                if(!explanation) return resolve(false)
+                const proof = await InputManager.InputPhoto(context, "Отправьте фото-доказательство (обязательно)", current_keyboard)
+                if(!proof) return resolve(false)
+                let warnCount = 0
+                for(const i of users)
+                {
+                    await Warning.create({
+                        userID: i,
+                        reason: reason,
+                        explanation: explanation,
+                        proofImage: proof
+                    })
+                    warnCount = await Warning.count({where: {userID: i}})
+                    await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: i}})
+                    await api.SendMessage(i, `⚠ Вам выдано предупреждение:\n\n${reason}`)
+                    if(warnCount >= 3)
+                    {
+                        await api.SendMessageWithKeyboard(i, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
+                        await Ban.create({
+                            userID: i,
+                            reason: "3 предупреждения",
+                            explanation: "Игрок заблокирован потому что имеет 3 предупреждения",
+                        })
+                    }
+                }
+                await context.send("✅ Предупреждение выдано", {keyboard: keyboard.build(current_keyboard)})
+                context.player.lastReportTime = new Date()
+                context.player.state = scenes.startMenu
+                return resolve(true)
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateWarning", e)
+            }
+        })
+    }
+
+    async Ban(context, current_keyboard, data, scenes)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const user = parseInt(data.users)
+                const reason = await InputManager.InputString(context, "Введите краткую причину (для самого игрока)", current_keyboard)
+                if(!reason) return resolve(false)
+                const explanation = await InputManager.InputString(context, "Введите полную причину (для админов)", current_keyboard)
+                if(!explanation) return resolve(false)
+                await Warning.create({
+                    userID: user,
+                    reason: reason,
+                    explanation: explanation
+                })
+                await Player.update({isBanned: true}, {where: {id: user}})
+                if(Data.users[user]) Data.users[user].isBanned = true
+                await api.SendMessageWithKeyboard(user, `⚠⚠⚠ Вы получили бан по причине: ${reason}\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
+                await Ban.create({
+                    userID: user,
+                    reason: reason,
+                    explanation: explanation
+                })
+                await context.send("✅ Бан выдан", {keyboard: keyboard.build(current_keyboard)})
+                context.player.lastReportTime = new Date()
+                context.player.state = scenes.startMenu
+                return resolve(true)
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Ban", e)
+            }
+        })
+    }
+
+    async ImportUsers(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const msg = await context.send("Загрузка пользователей\n\n[----------]")
+                const updateProgress = (count) => {
+                    let rem = 10 - count
+                    let req = "Загрузка пользователей\n\n["
+                    for(let i = 0; i < count; i++)
+                    {
+                        req += "#"
+                    }
+                    for(let i = 0; i < rem; i++)
+                    {
+                        req += "-"
+                    }
+                    req += "]"
+                    api.api.messages.edit({
+                        peer_id: msg.peerId,
+                        message: req,
+                        conversation_message_id: msg.conversationMessageId,
+                        keyboard: keyboard.inlineNone
+                    })
+                }
+                console.log(msg)
+                const data = fs.readFileSync('./files/users.csv', 'utf8');
+                const rows = data.split("\n")
+                let user = null
+                for(let i = 0; i < 25; i++)
+                {
+                    user = rows[i].split(";")
+                    console.log(user)
+                }
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ImportUsers", e)
             }
         })
     }

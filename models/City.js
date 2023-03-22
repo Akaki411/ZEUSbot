@@ -13,6 +13,7 @@ class CityObject
         this.buildingsScore = city.dataValues.buildingsScore
         this.maxBuildings = city.dataValues.maxBuildings
         this.isSiege = city.dataValues.isSiege
+        this.isUnderSanctions = city.dataValues.isUnderSanctions
         this.isCapital = city.dataValues.isCapital
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone

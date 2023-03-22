@@ -9,12 +9,14 @@ const CallbackEventController = require("./controllers/CallbackEventController")
 const CacheUserMiddleware = require('./middleware/CacheUserMiddleware')
 const CacheUserCallbackMiddleware = require('./middleware/CashUserCallbackMiddleware')
 const CountStatsMiddleware = require('./middleware/CountStatsMiddleware')
+const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
 
 const bot = new VK({token: process.env.VK_BOT_TOKEN})
 const questionManager = new QuestionManager()
 
 bot.updates.use(questionManager.middleware)
 bot.updates.on('message_new', CacheUserMiddleware)
+bot.updates.on('message_new', SelectPlayerMiddleware)
 bot.updates.on('message_new', CountStatsMiddleware)
 bot.updates.on('message_event', CacheUserCallbackMiddleware)
 
@@ -44,9 +46,6 @@ const start = async () => {
         })
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
-        })
-        await Data.LoadChats().then(async () => {
-            console.log("Список бесед загружен")
         })
         bot.updates.on('message_new', async(msg) =>
         {

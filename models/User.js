@@ -1,6 +1,6 @@
-const SceneController = require("../controllers/SceneController")
 const Data = require("./CacheData")
 const NameLibrary = require("../variables/NameLibrary")
+const Effect = require("./Effect")
 class User
 {
     constructor(user, status, info, resources)
@@ -16,10 +16,10 @@ class User
         this.countryID = status.dataValues.countryID
         this.citizenship = status.dataValues.citizenship
         this.notifications = status.dataValues.notifications
+        this.registration = status.dataValues.registration
         this.marriedID = info.dataValues.marriedID
         this.nationality = info.dataValues.nationality
         this.age = info.dataValues.age
-        this.registration = info.dataValues.registration
         this.fatigue = 100
         this.effects = []
         this.money = resources.dataValues.money
@@ -33,14 +33,9 @@ class User
         this.isMarried = this.marriedID !== null
         this.inBuild = null
         this.lastActionTime = new Date()
+        this.lastReportTime = null
         this.timeout = null
-        this.state = (context) => {
-            context.send(`⚠ У вас возникла проблема со сценой. Вы автоматически перенаправлены в главное меню.`,
-                {
-                    keyboard: SceneController.GetStartMenuKeyboard(context)
-                })
-            this.state = SceneController.StartScreen
-        }
+        this.state = () => {delete this}
     }
 
     CanPay(pay)
@@ -57,6 +52,52 @@ class User
         return can
     }
 
+    CheckEffectsList = () =>
+    {
+        const validEffects = []
+        for(const effect of this.effects)
+        {
+            if(effect?.isValid)
+            {
+                validEffects.push(effect)
+            }
+        }
+        this.effects = validEffects
+    }
+
+    HasEffect(type)
+    {
+        let has = false
+        for(const effect of this.effects)
+        {
+            if(effect?.type === type)
+            {
+                has = true
+            }
+        }
+        return has
+    }
+
+    AddEffect(effect, time)
+    {
+        if(this.HasEffect(effect.type))
+        {
+            for(let i = 0; i < this.effects.length; i++)
+            {
+                if(this.effects[i]?.type === effect.type)
+                {
+                    clearTimeout(this.effects[i].timeout)
+                    this.effects[i] = null
+                    this.effects[i] = new Effect(effect, time, this.id)
+                }
+            }
+        }
+        else
+        {
+            this.effects.push(new Effect(effect, time, this.id))
+        }
+    }
+
     GetName()
     {
         return `*id${this.id}(${this.nick})`
@@ -69,7 +110,7 @@ class User
 
     GetInfo()
     {
-        return `Игрок *id${this.id}(${this.nick}):\n📅 Возраст: ${this.age}\n⚤ Пол: ${this.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${this.nationality}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${Data.GetCountryName(this.citizenship)}\n📍 Прописка: ${Data.GetCityName(this.registration)}`
+        return `📌Игрок *id${this.id}(${this.nick}):\n📅 Возраст: ${this.age}\n⚤ Пол: ${this.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}`
     }
 }
 

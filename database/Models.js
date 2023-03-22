@@ -16,6 +16,7 @@ const PlayerStatus = sequelize.define("player-status", {
     location: {type: DataTypes.INTEGER, allowNull: false},
     countryID: {type: DataTypes.INTEGER, allowNull: false},
     citizenship: {type: DataTypes.INTEGER,  allowNull: true},
+    registration: {type: DataTypes.INTEGER, allowNull: true, defaultValue: null},
     notifications: {type: DataTypes.BOOLEAN, defaultValue: true},
     isFreezing: {type: DataTypes.BOOLEAN, defaultValue: false},
     dodgeTaxScore: {type: DataTypes.INTEGER,  defaultValue: 0}
@@ -25,8 +26,7 @@ const PlayerInfo = sequelize.define("player-info", {
     description: {type: DataTypes.TEXT, allowNull: false},
     marriedID: {type: DataTypes.INTEGER, unique: true, allowNull: true, defaultValue: null},
     nationality: {type: DataTypes.STRING, allowNull: false},
-    age: {type: DataTypes.INTEGER, allowNull: false},
-    registration: {type: DataTypes.INTEGER, allowNull: true, defaultValue: null}
+    age: {type: DataTypes.INTEGER, allowNull: false}
 })
 const PlayerResources = sequelize.define("player-resources", {
     id: {type: DataTypes.INTEGER, unique: true, allowNull: false, primaryKey: true},
@@ -73,7 +73,9 @@ const Country = sequelize.define("country", {
     citizenTax: {type: DataTypes.INTEGER, defaultValue: 0},
     nonCitizenTax: {type: DataTypes.INTEGER, defaultValue: 0},
     tax: {type: DataTypes.INTEGER, defaultValue: 0},
-    entranceFee: {type: DataTypes.INTEGER, defaultValue: 0}
+    entranceFee: {type: DataTypes.INTEGER, defaultValue: 0},
+    isSiege: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
 })
 const CountryResources = sequelize.define("country-resources", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
@@ -106,7 +108,8 @@ const City = sequelize.define("city", {
     buildingsScore: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     maxBuildings: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 4},
     isSiege: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
-    isCapital: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+    isCapital: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
 })
 
 const CityResources = sequelize.define("city-resources", {

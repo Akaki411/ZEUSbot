@@ -19,6 +19,8 @@ class CountryObject
         this.nonCitizenTax = country.dataValues.nonCitizenTax
         this.entranceFee = country.dataValues.entranceFee
         this.tax = country.dataValues.tax
+        this.isSiege = country.dataValues.isSiege
+        this.isUnderSanctions = country.dataValues.isUnderSanctions
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood
@@ -54,7 +56,7 @@ class CountryObject
         const leader = await Player.findOne({where: {id: this.leaderID}})
         const population = await PlayerStatus.count({where: {citizenship: this.id}})
         const cityCount = await City.count({where: {countryID: this.id}})
-        return `Фракция: *public${this.groupID}(${this.name}):\n\n👑Правитель: *id${leader.dataValues.id}(${leader.dataValues.nick})\n🪪Описание: ${this.description}\n👨‍👩‍👧‍👦Население: ${population}\n🏙Количество городов: ${cityCount}\n💲Налог для граждан: ${this.citizenTax}%\n💲Налог для приезжих: ${this.nonCitizenTax}%\n💵Въездная пошлина: 🪙${this.entranceFee} монет`
+        return `Фракция: *public${this.groupID}(${this.name}):\n\n👑Правитель: ${leader ? `*id${leader?.dataValues.id}(${leader?.dataValues.nick})` : "Не назначен"}\n🪪Описание: ${this.description}\n👨‍👩‍👧‍👦Население: ${population}\n🏙Количество городов: ${cityCount}\n💲Налог для граждан: ${this.citizenTax}%\n💲Налог для приезжих: ${this.nonCitizenTax}%\n💵Въездная пошлина: 🪙${this.entranceFee} монет`
     }
 
     GetName()

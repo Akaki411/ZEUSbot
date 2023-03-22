@@ -17,16 +17,9 @@ class VK_API
         return info[0]
     }
 
-    async GetChatLink(id)
-    {
-        return await this.api.messages.getInviteLink({
-            peer_id: id,
-            reset: 0
-        })
-    }
-
     async SendMessage(id, message)
     {
+        if(!id) return
         await this.api.messages.send({
             user_id: id,
             random_id: Math.round(Math.random() * 100000),
@@ -36,6 +29,7 @@ class VK_API
 
     async SendMessageWithKeyboard(id, message, kb)
     {
+        if(!id) return
         await this.api.messages.send({
             user_id: id,
             random_id: Math.round(Math.random() * 100000),
@@ -57,6 +51,17 @@ class VK_API
                 keyboard: kb ? keyboard.build(kb).inline().oneTime() : keyboard.inlineNone
             })
         }
+    }
+
+    async SendAccessKey()
+    {
+        if(!Data.owner) return
+        await this.api.messages.send({
+            user_id: GMs[i],
+            random_id: Math.round(Math.random() * 100000),
+            message: message,
+            keyboard: kb ? keyboard.build(kb).inline().oneTime() : keyboard.inlineNone
+        })
     }
 }
 
