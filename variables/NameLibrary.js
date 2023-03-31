@@ -102,7 +102,7 @@ class NameLibrary
 
     GetGender(sex)
     {
-        return sex ? "Мужчина" : "Женщина"
+        return sex ? "Мужской" : "Женский"
     }
 
     RoleEstimator(role)
@@ -117,12 +117,12 @@ class NameLibrary
                 return 2
             case "admin":
                 return 3
-            case "project_head":
-                return 4
             case "support":
                 return 4
-            case "owner":
+            case "project_head":
                 return 5
+            case "owner":
+                return 6
         }
     }
 
@@ -195,13 +195,13 @@ class NameLibrary
         switch (role)
         {
             case "player":
-                return "👶 Игрок"
+                return "😸 Игрок"
             case "moder":
-                return "🧒 Модератор"
+                return "🪄 Модератор"
             case "GM":
-                return "🧑 Гейм-мастер"
+                return "🕹 Гейм-мастер"
             case "admin":
-                return "👨‍🦳 Администратор"
+                return "🐓 Администратор"
             case "support":
                 return "🔧 Тех-поддержка"
             case "project_head":
@@ -221,7 +221,7 @@ class NameLibrary
             case "candidate":
                 return "Кандидат на гражданство"
             case "citizen":
-                return "🪪 Гражданин"
+                return "💳 Гражданин"
             case "official":
                 return "🧐 Чиновник"
             case "leader":
@@ -257,7 +257,9 @@ class NameLibrary
             case "building_of_iron":
                 return "🌑 Железный рудник"
             case "building_of_silver":
-                return "🥈 Серебрянный рудник"
+                return "🥈 Серебряный рудник"
+            case "building_of_monument":
+                return "🗿 Памятник"
         }
         return "Новый, еще не добавленный тип"
     }
@@ -342,6 +344,7 @@ class NameLibrary
     async GetPlayerNick(id)
     {
         const user = await Player.findOne({where: {id: id}})
+        if(!user) return "Не зарегистрирован"
         return `*id${user.dataValues.id}(${user.dataValues.nick})`
     }
 

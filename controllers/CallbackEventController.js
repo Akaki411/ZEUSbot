@@ -1,5 +1,5 @@
 const api = require("../middleware/API")
-const {PlayerInfo, PlayerStatus, Country, Player, Buildings, Keys, City, CountryRoads, Warning, Ban} = require("../database/Models");
+const {PlayerInfo, PlayerStatus, Country, Player, Buildings, Keys, City, Warning, Ban, CityRoads} = require("../database/Models");
 const Data = require("../models/CacheData");
 const ErrorHandler = require("../error/ErrorHandler")
 const keyboard = require("../variables/Keyboards")
@@ -69,7 +69,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие принятия брака", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/Merry", e)
         }
     }
 
@@ -93,7 +93,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие отвержения брака", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineMerry", e)
         }
     }
 
@@ -130,7 +130,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие принятия расторжения брака", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/Divorce", e)
         }
     }
 
@@ -153,7 +153,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие отвержения расторжения брака", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineDivorce", e)
         }
     }
 
@@ -200,7 +200,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие одобрения гражданства", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/GiveCitizenship", e)
         }
     }
 
@@ -237,7 +237,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие отвержения гражданства", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineCitizenship", e)
         }
     }
 
@@ -272,7 +272,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие одобрения прописки", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/GiveRegistration", e)
         }
     }
 
@@ -305,7 +305,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие отвержения прописки", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineRegistration", e)
         }
     }
 
@@ -400,7 +400,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие одобрения строительства", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/AllowUserBuilding", e)
         }
     }
 
@@ -465,7 +465,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие отклонения строительства", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineUserBuilding", e)
         }
     }
 
@@ -475,7 +475,7 @@ class CallbackEventController
         const roadFromID = context.eventPayload.addition
         try
         {
-            const road = await CountryRoads.findOne({where: {id: roadFromID}})
+            const road = await CityRoads.findOne({where: {id: roadFromID}})
             if(road?.dataValues.time === 0 && road?.dataValues.isBlocked)
             {
                 await api.api.messages.edit({
@@ -484,7 +484,7 @@ class CallbackEventController
                     conversation_message_id: context.conversationMessageId,
                     keyboard: keyboard.inlineNone
                 })
-                await api.SendMessageWithKeyboard(context.peerId, "Вы направлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" для того чтобы начать ввод информации о новой дороге", [[keyboard.startButton({type: "build_the_road", roadFromID: roadFromID, roadToID: roadToID})]])
+                await api.SendMessageWithKeyboard(context.peerId, "ℹ Вы направлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" для того чтобы начать ввод информации о новой дороге", [[keyboard.startButton({type: "build_the_road", roadFromID: roadFromID, roadToID: roadToID})]])
                 Data.users[context.peerId].state = Scenes.FillingOutTheForm
             }
             else
@@ -499,7 +499,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие начала ввода информации о новой дороге", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/HideRoadDistance", e)
         }
     }
 
@@ -520,7 +520,7 @@ class CallbackEventController
                     await Player.update({warningScore: warnCount, isBanned: false}, {where: {id: user.dataValues.id}})
                     await Ban.destroy({where: {userID: user.dataValues.id}})
                     if(Data.users[user.dataValues.id]) delete Data.users[user.dataValues.id]
-                    request += "\n\n✅ Теперь у вас менее 3-х предупреждений, поэтому вы получаете разбан в пректе"
+                    request += "\n\n✅ Теперь у вас менее 3-х предупреждений, поэтому вы получаете разбан в проекте"
                 }
                 else
                 {
@@ -547,7 +547,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие начала ввода информации о новой дороге", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/AppealWarning", e)
         }
     }
 
@@ -584,7 +584,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "Событие начала ввода информации о новой дороге", e)
+            await ErrorHandler.SendLogs(context, "CallbackEventController/AppealBan", e)
         }
     }
 }

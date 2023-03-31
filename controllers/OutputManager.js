@@ -66,7 +66,7 @@ class OutputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "Отправка карусели государств", e)
+                await ErrorHandler.SendLogs(context, "OutputManager/SendCountryCarousel", e)
             }
         })
     }
@@ -97,7 +97,7 @@ class OutputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "Отправка предупреждений", e)
+                await ErrorHandler.SendLogs(context, "OutputManager/GetUserWarnings", e)
             }
         })
     }

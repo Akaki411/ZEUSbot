@@ -1,4 +1,4 @@
-const {Player, Country, PlayerInfo, City} = require("../database/Models");
+const {Player, Country, City, PlayerStatus} = require("../database/Models");
 
 class CityObject
 {
@@ -15,6 +15,7 @@ class CityObject
         this.isSiege = city.dataValues.isSiege
         this.isUnderSanctions = city.dataValues.isUnderSanctions
         this.isCapital = city.dataValues.isCapital
+        this.notifications = city.dataValues.notifications
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood
@@ -48,7 +49,7 @@ class CityObject
     {
         const leader = await Player.findOne({where: {id: this.leaderID}})
         const country = await Country.findOne({where: {id: this.countryID}})
-        const population = await PlayerInfo.count({where: {registration: this.id}})
+        const population = await PlayerStatus.count({where: {registration: this.id}})
         return `Город "${this.name}":\n\nФракция: *public${country.dataValues.groupID}(${country.dataValues.name})\n${this.isCapital ? "🏛Столица фракции🏛\n" : ""}Градоначальник: *id${leader.dataValues.id}(${leader.dataValues.nick})\nОписание: ${this.description}\nНаселение: ${population}\nПостроено зданий: ${this.buildingsScore} / ${this.maxBuildings}`
     }
 

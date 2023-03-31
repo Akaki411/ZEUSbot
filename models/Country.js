@@ -1,4 +1,4 @@
-const {Player, Country, PlayerInfo, City, PlayerStatus} = require("../database/Models");
+const {Player, City, PlayerStatus} = require("../database/Models");
 
 class CountryObject
 {
@@ -19,8 +19,13 @@ class CountryObject
         this.nonCitizenTax = country.dataValues.nonCitizenTax
         this.entranceFee = country.dataValues.entranceFee
         this.tax = country.dataValues.tax
+        this.roadMap = country.dataValues.map
         this.isSiege = country.dataValues.isSiege
         this.isUnderSanctions = country.dataValues.isUnderSanctions
+        this.notifications = country.dataValues.notifications
+        this.chatID = country.dataValues.chatID
+        this.rating = country.dataValues.rating
+        this.warnings = country.dataValues.warnings
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood
@@ -30,6 +35,7 @@ class CountryObject
         this.silver = resources.dataValues.silver
         this.diamond = resources.dataValues.diamond
         this.lastTaxTime = new Date()
+        this.active = 0
     }
 
     CanPay(pay)

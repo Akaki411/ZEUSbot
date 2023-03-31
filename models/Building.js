@@ -28,7 +28,7 @@ class Building
     }
     GetAllInfo()
     {
-        return `${this.GetBuildingType(this.type)} \"${this.name}\"\n\nВладелец: ${this.ownerType === "user" ? "*id" + this.ownerID + "(Владелец)" : this.ownerType === "city" ? "Город" : "Государство"}\nУровень: ${this.level}`
+        return `${this.GetBuildingType(this.type)} \"${this.name}\"\n\n🙎‍♂ Владелец: ${this.ownerType === "user" ? "*id" + this.ownerID + "(Владелец)" : this.ownerType === "city" ? "Город" : "Государство"}\n⬆ Уровень: ${this.level}`
     }
 
     GetBuildingType(type)
@@ -56,7 +56,7 @@ class Building
             case "building_of_iron":
                 return "🌑 Железный рудник"
             case "building_of_silver":
-                return "🥈 Серебрянный рудник"
+                return "🥈 Серебряный рудник"
         }
         return "Новый, еще не добавленный тип"
     }

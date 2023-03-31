@@ -3,55 +3,62 @@ const Commands = require("../variables/Commands")
 
 module.exports = async (context, next) =>
 {
-    if(context.peerType === "chat")
+    try
     {
-        if(Data.users[context.senderId])
+        if(context.peerType === "chat")
         {
-            if(Data.activity[context.senderId])
+            if(context.player)
             {
-                Data.activity[context.senderId]++
-            }
-            else
-            {
-                Data.activity[context.senderId] = 1
-            }
-            if(context.command?.match(Commands.censorship))
-            {
-                if(Data.uncultured[context.senderId])
+                if(Data.activity[context.player.id])
                 {
-                    Data.uncultured[context.senderId]++
+                    Data.activity[context.player.id]++
                 }
                 else
                 {
-                    Data.uncultured[context.senderId] = 1
+                    Data.activity[context.player.id] = 1
                 }
-            }
-            for(let i = 0; i < context.attachments?.length; i++)
-            {
-                if(context.attachments[i]?.type === "sticker")
+                if(context.command?.match(Commands.censorship))
                 {
-                    if(Data.stickermans[context.senderId])
+                    if(Data.uncultured[context.player.id])
                     {
-                        Data.stickermans[context.senderId]++
+                        Data.uncultured[context.player.id]++
                     }
                     else
                     {
-                        Data.stickermans[context.senderId] = 1
+                        Data.uncultured[context.player.id] = 1
                     }
                 }
-                if(context.attachments[i]?.type === "audio")
+                for(let i = 0; i < context.attachments?.length; i++)
                 {
-                    if(Data.musicLovers[context.senderId])
+                    if(context.attachments[i]?.type === "sticker")
                     {
-                        Data.musicLovers[context.senderId]++
+                        if(Data.stickermans[context.player.id])
+                        {
+                            Data.stickermans[context.player.id]++
+                        }
+                        else
+                        {
+                            Data.stickermans[context.player.id] = 1
+                        }
                     }
-                    else
+                    if(context.attachments[i]?.type === "audio")
                     {
-                        Data.musicLovers[context.senderId] = 1
+                        if(Data.musicLovers[context.player.id])
+                        {
+                            Data.musicLovers[context.player.id]++
+                        }
+                        else
+                        {
+                            Data.musicLovers[context.player.id] = 1
+                        }
                     }
                 }
             }
         }
+        next()
     }
-    next()
+    catch (e)
+    {
+        console.log(e)
+    }
 }

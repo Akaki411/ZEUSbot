@@ -85,7 +85,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/InputInteger", e)
+                await ErrorHandler.SendLogs(context, "InputManager/InputDefaultInteger", e)
             }
         })
     }
@@ -306,7 +306,7 @@ class InputManager
                     {
                         kb[i] = arr.slice((i * 4), (i * 4) + 4)
                     }
-                    kb.push([keyboard.greyCancelButton, keyboard.nextButton])
+                    kb.push([keyboard.cancelButton, keyboard.nextButton])
                     return kb
                 }
                 const convertKeyboard = (kb, choice) => {
@@ -368,28 +368,55 @@ class InputManager
     // KeyboardBuilder строит многостраничную клавиатуру с возможностью переключения между страницами
     // Формат входного массива [[Имя(STRING), Значение(STRING)],[Имя(STRING), Значение(STRING)]...]
     // Возвращает значение выбранной кнопки (STRING)
-    // Примечание: ВК не любит принимать в качестве значения тип INTEGER, поэтому если надо отправить в значении id чего-нибудь
-    // прилепи его к строке "ID" + <id>, после этого полученое после выбора значение id можно спарсит через Data.ParseButtonID(<"ID" + id>)
+    // Примечание: ВК не любит принимать в качестве значения тип INTEGER, поэтому если надо отправить в значении id чего-нибудь,
+    // прилепи его к строке "ID" + <id>, после этого полученное после выбора значение id можно спарсить через Data.ParseButtonID(<"ID" + id>)
     static async KeyboardBuilder(context, message, array, current_keyboard)
     {
         return new Promise(async (resolve) =>
         {
             try
             {
-                let pageSize = 12
                 let page = 0
-                let end = Math.ceil(array.length/pageSize)
+                let end = Math.ceil(array.length/12)
                 let pages = []
                 let answer = null
                 let kb = [[]]
-
                 for(let i = 0; i < end; i++)
                 {
-                    pages[i] = array.slice((i * pageSize), (i * pageSize) + pageSize)
+                    pages[i] = array.slice((i * 12), (i * 12) + 12)
+                }
+                const endKB = {
+                    one: [keyboard.backButton],
+                    end: [keyboard.leftButton, keyboard.backButton],
+                    start: [keyboard.backButton, keyboard.rightButton],
+                    center: [keyboard.leftButton, keyboard.backButton, keyboard.rightButton]
+                }
+                const renderPage = (id) =>
+                {
+                    let columns = []
+                    const kb = [[], [], []]
+                    for(let i = 0; i < Math.ceil(pages[id].length / 3); i++)
+                    {
+                        columns[i] = pages[id].slice((i * 3), (i * 3) + 3)
+                    }
+                    for(let key of columns)
+                    {
+                        for(let i = 0; i < key.length; i++)
+                        {
+                            if(key[i])
+                            {
+                                kb[i].push(keyboard.secondaryButton(key[i]))
+                            }
+                        }
+                    }
+                    if(pages[id-1] && pages[id+1]) kb.push(endKB["center"])
+                    else if(pages[id+1]) kb.push(endKB["start"])
+                    else if(pages[id-1]) kb.push(endKB["end"])
+                    else kb.push(endKB["one"])
+                    return kb
                 }
                 do
                 {
-                    kb = [[]]
                     if(answer?.payload?.choice === "right")
                     {
                         page = Math.min(page + 1, end)
@@ -398,19 +425,7 @@ class InputManager
                     {
                         page = Math.max(page - 1, 0)
                     }
-                    for(let i = 0; i < Math.ceil(pages[page].length/4); i++)
-                    {
-                        kb[i] = []
-                        for(let j = 0; j < Math.min(pages[page].length - (i * 4), 4); j++)
-                        {
-                            kb[i].push(keyboard.secondaryButton(pages[page][(i * 4) + j]))
-                        }
-                    }
-                    if(page === 0 && pages.length > 1) kb.push([keyboard.backButton, keyboard.rightButton])
-                    if(page === end && end > 1) kb.push([keyboard.leftButton, keyboard.backButton])
-                    if(page !== 0 && page !== end) kb.push([keyboard.leftButton, keyboard.backButton, keyboard.rightButton])
-                    if(page === end-1) kb.push([keyboard.backButton])
-
+                    kb = renderPage(page)
                     answer = await context.question(message, {
                         keyboard: keyboard.build(kb),
                         answerTimeLimit: 300_000

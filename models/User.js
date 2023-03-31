@@ -20,6 +20,10 @@ class User
         this.marriedID = info.dataValues.marriedID
         this.nationality = info.dataValues.nationality
         this.age = info.dataValues.age
+        this.msgs = info.dataValues.msgs
+        this.audios = info.dataValues.audios
+        this.stickers = info.dataValues.stickers
+        this.swords = info.dataValues.swords
         this.fatigue = 100
         this.effects = []
         this.money = resources.dataValues.money
@@ -30,10 +34,14 @@ class User
         this.copper = resources.dataValues.copper
         this.silver = resources.dataValues.silver
         this.diamond = resources.dataValues.diamond
+        this.lastWill = undefined
         this.isMarried = this.marriedID !== null
         this.inBuild = null
+        this.isFreezed = false
+        this.isRelaxing = false
+        this.relaxingEndTime = null
+        this.relaxingEndTimeout = null
         this.lastActionTime = new Date()
-        this.lastReportTime = null
         this.timeout = null
         this.state = () => {delete this}
     }
@@ -105,12 +113,63 @@ class User
 
     GetResources()
     {
-        return `*id${this.id}(Ваш) инвентарь:\n💰 Монеты:  ${this.money}\n🪨 Камень:${this.stone}\n🌾 Зерно:${this.wheat}\n🪵 Дерево:${this.wood}\n🌑 Железо:${this.iron}\n🥉 Бронза:${this.copper}\n🥈 Серебро:${this.silver}\n💎 Алмазы:${this.diamond}`
+        return `*id${this.id}(Ваш) инвентарь:\n💰 Монеты: ${this.money}\n🪨 Камень: ${this.stone}\n🌾 Зерно: ${this.wheat}\n🪵 Дерево: ${this.wood}\n🌑 Железо: ${this.iron}\n🥉 Бронза: ${this.copper}\n🥈 Серебро: ${this.silver}\n💎 Алмазы: ${this.diamond}`
     }
 
     GetInfo()
     {
-        return `📌Игрок *id${this.id}(${this.nick}):\n📅 Возраст: ${this.age}\n⚤ Пол: ${this.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}`
+        try
+        {
+            return `👤 *id${this.id}(${this.nick}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}`
+        }
+        catch (e)
+        {
+            return "Проблема с кэшем: " + e.message
+        }
+    }
+
+    CantTransact()
+    {
+        return this.isRelaxing || this.HasEffect("block_transfer") || this.isFreezed || Data.countries[this.countryID].isUnderSanctions || Data.cities[this.location].isUnderSanctions
+    }
+
+    WhyCantTransact()
+    {
+        if(this.isRelaxing) return "💤 Вы находитесь в режиме отдыха 💤"
+        if(this.HasEffect("block_transfer")) return "На вас наложен эффект ⛔ Блокировка счета"
+        if(this.isFreezed) return "☃ Вы заморожены ☃"
+        if(Data.countries[this.countryID].isUnderSanctions) return "‼ Фракция, гражданином которой вы являетесь попала под санкции"
+        if(Data.cities[this.location].isUnderSanctions) return "‼ Город, в котором вы прописаны попал под санкции"
+        return "❓ Неизвестно ❓"
+    }
+
+    CantMove()
+    {
+        return this.isRelaxing || this.HasEffect("block_moving") || this.isFreezed || Data.cities[this.location].isSiege || Data.countries[this.countryID].isSiege
+    }
+
+    WhyCantMove()
+    {
+        if(this.isRelaxing) return "💤 Вы находитесь в режиме отдыха 💤"
+        if(this.HasEffect("block_moving")) return "На вас наложен эффект 🔗 Кандалы"
+        if(this.isFreezed) return "☃ Вы заморожены ☃"
+        if(Data.cities[this.location].isSiege) return "‼ Город, в котором вы находитесь осажен"
+        if(Data.countries[this.countryID].isSiege) return "‼ Фракция, в которой вы находитесь, сейчас под блокадой"
+        return "❓ Неизвестно ❓"
+    }
+
+    CantExtraction()
+    {
+        return this.isRelaxing || this.HasEffect("block_extracting") || this.isFreezed || Data.cities[this.location].isSiege
+    }
+
+    WhyCantExtraction()
+    {
+        if(this.isRelaxing) return "💤 Вы находитесь в режиме отдыха 💤"
+        if(this.HasEffect("block_extracting")) return "На вас наложен эффект 😳 Усталость"
+        if(this.isFreezed) return "☃ Вы заморожены ☃"
+        if(Data.cities[this.location].isSiege) return "‼ Город, в котором вы находитесь осажен"
+        return "❓ Неизвестно ❓"
     }
 }
 

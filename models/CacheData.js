@@ -3,7 +3,6 @@ const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
-const api = require("../middleware/API");
 
 class CacheData
 {
@@ -26,10 +25,58 @@ class CacheData
         this.uncultured = {}
         this.stickermans = {}
         this.musicLovers = {}
-
-        this.allChats = []
         this.countryChats = {}
+
+        this.accessKey = this.GenerateString(8)
+        this.StartLoop()
     }
+
+    StartLoop()
+    {
+        setInterval(() => {
+            this.accessKey = this.GenerateString(8)
+        }, 21600000)
+    }
+
+    GenerateString(length)
+    {
+        const lib = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        let request = ""
+        for(let i = 0; i < length; i++)
+        {
+            request += lib[Math.round(Math.random() * (lib.length - 1))]
+        }
+        return request
+    }
+
+    async PlayersAreNearby(firID, secID)
+    {
+        let firstLocation = null
+        let secondLocation = null
+        if(this.users[firID])
+        {
+            firstLocation = parseInt(this.users[firID].location)
+        }
+        else
+        {
+            const fUser = await PlayerStatus.findOne({where: {id: firID}})
+            if(!fUser) return false
+            firstLocation = parseInt(fUser.dataValues.location)
+        }
+        if(this.users[secID])
+        {
+            secondLocation = parseInt(this.users[secID].location)
+        }
+        else
+        {
+            const sUser = await PlayerStatus.findOne({where: {id: secID}})
+            if(!sUser) return false
+            secondLocation = parseInt(sUser.dataValues.location)
+        }
+        return firstLocation === secondLocation
+    }
+
+
 
     GetCountryButtons()
     {
@@ -41,6 +88,21 @@ class CacheData
             }
         })
         return buttons
+    }
+
+    GetCountryCities(countryID)
+    {
+        const cities = []
+        this.cities.forEach((key) => {
+            if(key)
+            {
+                if(key.countryID === countryID)
+                {
+                    cities.push(key)
+                }
+            }
+        })
+        return cities
     }
 
     GetCityForCountryButtons(countryID)
@@ -61,12 +123,13 @@ class CacheData
     GetCityButtons()
     {
         const buttons = []
-        this.cities.forEach((key) => {
-            if(key)
+        for(const city of this.cities)
+        {
+            if(city)
             {
-                buttons.push([key.name, "ID" + key.id])
+                buttons.push([city.name, "ID" + city.id])
             }
-        })
+        }
         return buttons
     }
 
@@ -122,14 +185,7 @@ class CacheData
 
     GetCountryForCity(id)
     {
-        let city = null
-        this.cities.forEach(key => {
-            if(key?.id === id)
-            {
-                city = key
-            }
-        })
-        return this.countries[city?.countryID]
+        return this.countries[this.cities[id]?.countryID]
     }
 
     ParseButtonID(id)
@@ -171,8 +227,10 @@ class CacheData
 
         //Загрузка с базы данных
         return new Promise(async (resolve) => {
-            this.owner = await Player.findOne({where: {role: "owner"}})?.dataValues
-            this.projectHead = await Player.findOne({where: {role: "project_head"}})?.dataValues
+            const owner = await Player.findOne({where: {role: "owner"}})
+            this.owner = owner?.dataValues
+            const projectHead = await Player.findOne({where: {role: "project_head"}})
+            this.projectHead = projectHead?.dataValues
             const supports = await Player.findAll({where: {role: "support"}})
             supports.forEach(key => {
                 this.supports[key.dataValues.id] = key.dataValues
@@ -204,6 +262,7 @@ class CacheData
                 {
                     let res = await CountryResources.findOne({where: {id: key.dataValues.id}})
                     this.countries[key.dataValues.id] = new CountryObject(key, res)
+                    if(key.dataValues.chatID) this.countryChats[key.dataValues.chatID] = this.countries[key.dataValues.id]
                 }
             }
             return resolve()

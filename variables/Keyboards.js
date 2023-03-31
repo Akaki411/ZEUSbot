@@ -30,15 +30,7 @@ class KeyboardButtons
     }
 
     cancelButton = Keyboard.textButton({
-        label: '⛔ Отмена',
-        color: Keyboard.NEGATIVE_COLOR,
-        payload: {
-            choice: 'cancel'
-        }
-    })
-
-    greyCancelButton = Keyboard.textButton({
-        label: '⛔ Отмена',
+        label: '🚫 Отмена',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'cancel'
@@ -78,16 +70,16 @@ class KeyboardButtons
     })
 
     leftButton = Keyboard.textButton({
-        label: '◀',
-        color: Keyboard.PRIMARY_COLOR,
+        label: '⏪',
+        color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'left'
         }
     })
 
     rightButton = Keyboard.textButton({
-        label: '▶',
-        color: Keyboard.PRIMARY_COLOR,
+        label: '⏩',
+        color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'right'
         }
@@ -126,7 +118,7 @@ class KeyboardButtons
     })
 
     menuButton = Keyboard.textButton({
-        label: '🚩 Меню',
+        label: '🧭 Меню',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'menu'
@@ -186,6 +178,14 @@ class KeyboardButtons
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'create_country'
+        }
+    })
+
+    removeCountryButton = Keyboard.textButton({
+        label: '✖ Удалить фракцию',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'remove_country'
         }
     })
 
@@ -375,7 +375,7 @@ class KeyboardButtons
     })
 
     chatListButton = Keyboard.textButton({
-        label: '💬 Список чатов',
+        label: '🚩 Фракции',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'chat_list'
@@ -383,7 +383,7 @@ class KeyboardButtons
     })
 
     locationButton = Keyboard.textButton({
-        label: '🌲 Локация',
+        label: '🌐 Мир',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'location'
@@ -569,10 +569,18 @@ class KeyboardButtons
     })
 
     wakeupButton = Keyboard.textButton({
-        label: '☕ Проснуться',
+        label: '☕ Взбодриться',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'wakeup'
+        }
+    })
+
+    richButton = Keyboard.textButton({
+        label: '💰 Богачи',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'rich'
         }
     })
 
@@ -583,6 +591,15 @@ class KeyboardButtons
             choice: 'most_active'
         }
     })
+
+    playersListButton = Keyboard.textButton({
+        label: '📍 Список людей',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'players_list'
+        }
+    })
+
 
     mostUnculturedButton = Keyboard.textButton({
         label: '🤬 Некультурные',
@@ -688,14 +705,6 @@ class KeyboardButtons
         }
     })
 
-    changeButton = Keyboard.textButton({
-        label: '♻ Изменить',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'change'
-        }
-    })
-
     expandButton = Keyboard.textButton({
         label: '↔ Расширить',
         color: Keyboard.SECONDARY_COLOR,
@@ -713,7 +722,7 @@ class KeyboardButtons
     })
 
     nameButton= Keyboard.textButton({
-        label: '⏏ Название',
+        label: '⏏ Изменить название',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'name'
@@ -721,7 +730,7 @@ class KeyboardButtons
     })
 
     descriptionButton= Keyboard.textButton({
-        label: '⏏ Описание',
+        label: '⏏ Изменить описание',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'description'
@@ -729,7 +738,7 @@ class KeyboardButtons
     })
 
     publicButton= Keyboard.textButton({
-        label: '⏏ Группа',
+        label: '⏏ Изменить группу',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'public'
@@ -737,7 +746,7 @@ class KeyboardButtons
     })
 
     photoButton = Keyboard.textButton({
-        label: '⏏ Фото',
+        label: '⏏ Изменить фото',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'photo'
@@ -745,7 +754,7 @@ class KeyboardButtons
     })
 
     welcomePictureButton = Keyboard.textButton({
-        label: '⏏ Приветственное фото',
+        label: '⏏ Изменить приветственное фото',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'welcome_picture'
@@ -816,6 +825,14 @@ class KeyboardButtons
         }
     })
 
+    removeCityButton = Keyboard.textButton({
+        label: '✖ Удалить город',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'remove_city'
+        }
+    })
+
     setTaxButton = Keyboard.textButton({
         label: '📊 Установить налог',
         color: Keyboard.SECONDARY_COLOR,
@@ -873,7 +890,7 @@ class KeyboardButtons
     })
 
     usersButton = Keyboard.textButton({
-        label: '🧑 Пользователи',
+        label: '🧑 Игроки',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'users'
@@ -888,27 +905,19 @@ class KeyboardButtons
         }
     })
 
-    cheatingUserResourcesButton = Keyboard.textButton({
-        label: '⤴ Накрутить пользователю',
+    cheatingResourceButton = Keyboard.textButton({
+        label: '⤴ Накрутить ресурс',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'cheating_user_resources'
+            choice: 'cheating_resource'
         }
     })
 
-    cheatingCityResourcesButton = Keyboard.textButton({
-        label: '⤴ Накрутить городу',
+    cheatingDiamondsButton = Keyboard.textButton({
+        label: '💎 Накрутить алмазы',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'cheating_city_resources'
-        }
-    })
-
-    cheatingCountryResourcesButton = Keyboard.textButton({
-        label: '⤴ Накрутить фракции',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'cheating_country_resources'
+            choice: 'cheating_diamonds'
         }
     })
 
@@ -1025,6 +1034,22 @@ class KeyboardButtons
         }
     })
 
+    teleportButton = Keyboard.textButton({
+        label: '✨ Телепортировать',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'teleport'
+        }
+    })
+
+    changeNickButton = Keyboard.textButton({
+        label: '⏏ Изменить ник',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_nick'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null
@@ -1083,6 +1108,40 @@ class KeyboardButtons
             color: Keyboard.SECONDARY_COLOR,
             payload: {
                 command: "hide_message"
+            }
+        })
+    }
+
+    //Chat buttons
+    greenButton = (context) => {
+        return Keyboard.textButton({
+            label: context.name,
+            color: Keyboard.POSITIVE_COLOR,
+            payload: {
+                type: context.type,
+                action: context.action
+            }
+        })
+    }
+
+    greyButton = (context) => {
+        return Keyboard.textButton({
+            label: context.name,
+            color: Keyboard.SECONDARY_COLOR,
+            payload: {
+                type: context.type,
+                action: context.action
+            }
+        })
+    }
+
+    lightButton = (context) => {
+        return Keyboard.textButton({
+            label: context.name,
+            color: Keyboard.PRIMARY_COLOR,
+            payload: {
+                type: context.type,
+                action: context.action
             }
         })
     }

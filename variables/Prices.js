@@ -69,6 +69,10 @@ module.exports = {
         stone: -2750,
         wood: -2750
     },
+    new_monument: {
+        money: -500,
+        diamond: -1
+    },
     copy_key: {
         money: -100
     },

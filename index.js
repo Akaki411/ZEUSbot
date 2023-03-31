@@ -7,18 +7,32 @@ const Data = require('./models/CacheData')
 const ChatController = require("./controllers/ChatController")
 const CallbackEventController = require("./controllers/CallbackEventController")
 const CacheUserMiddleware = require('./middleware/CacheUserMiddleware')
-const CacheUserCallbackMiddleware = require('./middleware/CashUserCallbackMiddleware')
+const CacheUserCallbackMiddleware = require('./middleware/CacheUserCallbackMiddleware')
 const CountStatsMiddleware = require('./middleware/CountStatsMiddleware')
 const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
+const Builders = require("./controllers/BuildersAndControlsScripts")
 
 const bot = new VK({token: process.env.VK_BOT_TOKEN})
 const questionManager = new QuestionManager()
+
+// USER_IMPORT - импорт старой базы игроков при старте бота
+// Файл должен иметь название users.csv и находиться в папке files
+const USER_IMPORT = false
 
 bot.updates.use(questionManager.middleware)
 bot.updates.on('message_new', CacheUserMiddleware)
 bot.updates.on('message_new', SelectPlayerMiddleware)
 bot.updates.on('message_new', CountStatsMiddleware)
 bot.updates.on('message_event', CacheUserCallbackMiddleware)
+
+// Памятка для кодеров:
+// Архитектура бота построена на реализации паттерна state, у каждого игрока есть сцена, на которой он сейчас находится.
+// Весь кэш бота находится в файле models/CacheData.js, там еще и прописаны методы загрузки кэша и быстрого нахождения кэшированной информации.
+// Краткая карта кода:
+// В файле controllers/BuildersAndControlsScripts.js находятся все исполняемые скрипты
+// Файл controllers/SceneController.js содержит в себе все сцены
+// controllers/CallbackEventController.js отвечает за обработку событий с callback кнопок
+// controllers/ChatController.js отвечает за проверку команд вводимых в чатах
 
 const start = async () => {
     try
@@ -46,6 +60,7 @@ const start = async () => {
         })
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
+            USER_IMPORT && await Builders.ImportUsers()
         })
         bot.updates.on('message_new', async(msg) =>
         {
@@ -55,6 +70,11 @@ const start = async () => {
         bot.updates.on('message_event', (context) =>
         {
             CallbackEventController.Handler(context)
+        })
+
+        bot.updates.on('group_join', (context) =>
+        {
+            console.log(context)
         })
 
         bot.updates.start().then(() => console.log("Бот запущен"))

@@ -4,7 +4,7 @@ const {DataTypes} = require('sequelize')
 //Характеристики игрока
 const Player = sequelize.define("player", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
-    nick: {type: DataTypes.STRING, unique: true, allowNull: false},
+    nick: {type: DataTypes.STRING, unique: false, allowNull: false},
     gender: {type: DataTypes.BOOLEAN, allowNull: false},
     isBanned: {type: DataTypes.BOOLEAN, defaultValue: false},
     warningScore: {type: DataTypes.INTEGER, defaultValue: 0},
@@ -26,7 +26,11 @@ const PlayerInfo = sequelize.define("player-info", {
     description: {type: DataTypes.TEXT, allowNull: false},
     marriedID: {type: DataTypes.INTEGER, unique: true, allowNull: true, defaultValue: null},
     nationality: {type: DataTypes.STRING, allowNull: false},
-    age: {type: DataTypes.INTEGER, allowNull: false}
+    age: {type: DataTypes.INTEGER, allowNull: false},
+    msgs: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    audios: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    stickers: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    swords: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
 })
 const PlayerResources = sequelize.define("player-resources", {
     id: {type: DataTypes.INTEGER, unique: true, allowNull: false, primaryKey: true},
@@ -75,7 +79,11 @@ const Country = sequelize.define("country", {
     tax: {type: DataTypes.INTEGER, defaultValue: 0},
     entranceFee: {type: DataTypes.INTEGER, defaultValue: 0},
     isSiege: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
-    isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+    isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    notifications: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true},
+    chatID: {type: DataTypes.INTEGER, allowNull: true, defaultValue: null},
+    warnings: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    rating: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
 })
 const CountryResources = sequelize.define("country-resources", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
@@ -109,7 +117,8 @@ const City = sequelize.define("city", {
     maxBuildings: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 4},
     isSiege: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
     isCapital: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
-    isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+    isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    notifications: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true}
 })
 
 const CityResources = sequelize.define("city-resources", {
@@ -124,11 +133,20 @@ const CityResources = sequelize.define("city-resources", {
     diamond: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
 })
 
+const CityRoads = sequelize.define("city-roads", {
+    id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
+    fromID: {type: DataTypes.INTEGER, primaryKey: true, allowNull: false},
+    toID : {type: DataTypes.INTEGER, allowNull: false},
+    isBlocked: {type: DataTypes.BOOLEAN, defaultValue: false},
+    time: {type: DataTypes.INTEGER, defaultValue: 0}
+})
+
 //Строения
 const Buildings = sequelize.define("buildings", {
     id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
     cityID: {type: DataTypes.INTEGER, allowNull: false},
     name: {type: DataTypes.STRING, allowNull: false},
+    description: {type: DataTypes.TEXT, allowNull: true},
     type: {type: DataTypes.STRING, allowNull: false},
     ownerID: {type: DataTypes.INTEGER, allowNull: false},
     ownerType: {type: DataTypes.STRING, allowNull: false, defaultValue: "user"},
@@ -155,22 +173,15 @@ const Warning = sequelize.define("warnings", {
     userID: {type: DataTypes.INTEGER, allowNull: false},
     reason: {type: DataTypes.STRING, allowNull: false},
     explanation: {type: DataTypes.STRING, allowNull: true},
-    proofImage: {type: DataTypes.STRING, allowNull: true}
+    proofImage: {type: DataTypes.STRING, allowNull: true},
+    time: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 90},
+    banned: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
 })
 const Ban = sequelize.define("ban", {
     id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
     userID: {type: DataTypes.INTEGER, allowNull: false},
     reason: {type: DataTypes.STRING, allowNull: false},
     explanation: {type: DataTypes.STRING, allowNull: true},
-})
-
-//Сбор статистики
-const Stats = sequelize.define("stats", {
-    messages: {type: DataTypes.INTEGER, allowNull: false},
-    swearWordsLeader: {type: DataTypes.STRING, allowNull: false},
-    mostActivity: {type: DataTypes.STRING, allowNull: false},
-    stickerman: {type: DataTypes.STRING, allowNull: false},
-    musician: {type: DataTypes.STRING, allowNull: false}
 })
 
 const Chats = sequelize.define("chats", {
@@ -195,12 +206,12 @@ module.exports = {
     CountryRoads,
     City,
     CityResources,
+    CityRoads,
     Buildings,
     BuildingAddon,
     Warning,
     Ban,
     Keys,
-    Stats,
     LastWills,
     Chats,
     Messages
