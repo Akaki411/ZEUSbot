@@ -410,7 +410,8 @@ class ChatController
                     population = await PlayerStatus.count({where: {citizenship: country.id}})
                     request += `🔰 Фракция ${country.GetName()}\n`
                     request += `👥 Население - ${population} чел.\n`
-                    request += `👑 Правитель - ${user ? `${user.dataValues.nick}` : "Не назначен"}\n`
+                    request += `👑 Правитель - ${user ? `*id${country.leaderID}(${user.dataValues.nick})` : "Не назначен"}\n`
+                    request += `🌆 Столица - ${Data.cities[country.capitalID].name}\n\n`
                 }
             }
             await context.send(request)
@@ -464,11 +465,12 @@ class ChatController
                     }
                 }
             }
+            let command = new RegExp(context.command, "i")
             for(let i = 0; i < Data.countries.length; i++)
             {
                 if(Data.countries[i])
                 {
-                    if(Data.countries[i].name.toLowerCase() === context.command)
+                    if(Data.countries[i].name.toLowerCase().match(command))
                     {
                         country = Data.countries[i]
                         break

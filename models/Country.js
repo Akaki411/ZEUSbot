@@ -54,7 +54,7 @@ class CountryObject
 
     GetResources()
     {
-        return `Бюджет фракции *public${this.groupID}(${this.name}):\n\n💰 Монеты:  ${this.money}\n🪨 Камень:${this.stone}\n🌾 Зерно:${this.wheat}\n🪵 Дерево:${this.wood}\n🌑 Железо:${this.iron}\n🥉 Бронза:${this.copper}\n🥈 Серебро:${this.silver}\n💎 Алмазы:${this.diamond}`
+        return `Бюджет фракции *public${this.groupID}(${this.name}):\n\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
     }
 
     async GetAllInfo()

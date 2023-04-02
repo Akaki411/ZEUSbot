@@ -113,7 +113,7 @@ class User
 
     GetResources()
     {
-        return `*id${this.id}(Ваш) инвентарь:\n💰 Монеты: ${this.money}\n🪨 Камень: ${this.stone}\n🌾 Зерно: ${this.wheat}\n🪵 Дерево: ${this.wood}\n🌑 Железо: ${this.iron}\n🥉 Бронза: ${this.copper}\n🥈 Серебро: ${this.silver}\n💎 Алмазы: ${this.diamond}`
+        return `*id${this.id}(Ваш) инвентарь:\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
     }
 
     GetInfo()
