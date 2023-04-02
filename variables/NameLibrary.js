@@ -343,7 +343,7 @@ class NameLibrary
 
     async GetPlayerNick(id)
     {
-        const user = await Player.findOne({where: {id: id}})
+        const user = await Player.findOne({where: {id: id}, attributes: ["id", "nick"]})
         if(!user) return "Не зарегистрирован"
         return `*id${user.dataValues.id}(${user.dataValues.nick})`
     }

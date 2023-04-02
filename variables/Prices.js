@@ -18,7 +18,7 @@ module.exports = {
     expand_city: {
         money: -6000,
         stone: -18750,
-        wood: -18500
+        wood: -18750
     },
     delete_building: {
         money: -200,
@@ -33,8 +33,8 @@ module.exports = {
         wood: -15000
     },
     new_mint: {
-        stone: -3000,
-        wood: -2500
+        stone: -2750,
+        wood: -2750
     },
     new_church: {
         stone: -13000,
@@ -77,57 +77,56 @@ module.exports = {
         money: -100
     },
     new_barracks: {
-        money: -5000,
-        stone: -15000,
-        wood: -14000
+        money: 0
     },
     barracks_lvl2: {
         money: -7000,
-        stone: -22000,
-        wood: -20000
+        stone: -21000,
+        wood: -21000
     },
     barracks_lvl3: {
         money: -8500,
-        stone: -26000,
-        wood: -25000,
+        stone: -25500,
+        wood: -25500,
         iron: -8500
     },
     barracks_lvl4: {
         money: -10500,
-        wheat: -40500,
-        stone: -31000,
-        wood: -30000,
+        wheat: -42000,
+        stone: -31500,
+        wood: -31500,
         iron: -10500
     },
     port_lvl2: {
         money: -7000,
-        stone: -22000,
-        wood: -20000
+        stone: -21000,
+        wood: -21000
     },
     port_lvl3: {
         money: -8500,
-        stone: -26000,
-        wood: -25000,
+        stone: -25500,
+        wood: -25500,
         iron: -8500
     },
     port_lvl4: {
         money: -10500,
-        stone: -31000,
-        wood: -25000,
+        wheat: -42000,
+        stone: -31500,
+        wood: -31500,
         iron: -10500
     },
     mint_lvl2: {
-        stone: -6000,
-        wood: -5000
+        stone: -5500,
+        wood: -5500
     },
     mint_lvl3: {
-        stone: -12000,
-        wood: -10000
+        stone: -11000,
+        wood: -11000
     },
     mint_lvl4: {
         money: -2000,
-        stone: -24000,
-        wood: -20000,
+        stone: -22000,
+        wood: -22000,
         diamond: -3
     },
     house_lvl2: {
@@ -143,81 +142,81 @@ module.exports = {
         wood: -6500
     },
     stone_lvl2: {
-        stone: -6000,
-        wood: -5000
+        stone: -5500,
+        wood: -5500
     },
     stone_lvl3: {
-        stone: -12000,
-        wood: -10000
+        stone: -11000,
+        wood: -11000
     },
     stone_lvl4: {
         money: -2000,
-        stone: -24000,
-        wood: -20000
+        stone: -22000,
+        wood: -22000
     },
     wheat_lvl2: {
-        stone: -6000,
-        wood: -5000
+        stone: -5500,
+        wood: -5500
     },
     wheat_lvl3: {
-        stone: -12000,
-        wood: -10000
+        stone: -11000,
+        wood: -11000
     },
     wheat_lvl4: {
         money: -2000,
-        stone: -24000,
-        wood: -20000
+        stone: -22000,
+        wood: -22000
     },
     wood_lvl2: {
-        stone: -6000,
-        wood: -5000
+        stone: -5500,
+        wood: -5500
     },
     wood_lvl3: {
-        stone: -12000,
-        wood: -10000
+        stone: -11000,
+        wood: -11000
     },
     wood_lvl4: {
         money: -2000,
-        stone: -24000,
-        wood: -20000
+        stone: -22000,
+        wood: -22000
     },
     iron_lvl2: {
-        stone: -6000,
-        wood: -5000
+        stone: -5500,
+        wood: -5500
     },
     iron_lvl3: {
-        stone: -12000,
-        wood: -10000
+        stone: -11000,
+        wood: -11000
     },
     iron_lvl4: {
         money: -2000,
-        stone: -24000,
-        wood: -20000
+        stone: -22000,
+        wood: -22000
     },
     silver_lvl2: {
-        stone: -6000,
-        wood: -5000
+        stone: -5500,
+        wood: -5500
     },
     silver_lvl3: {
-        stone: -12000,
-        wood: -10000
+        stone: -11000,
+        wood: -11000
     },
     silver_lvl4: {
         money: -2000,
-        stone: -24000,
-        wood: -20000
+        stone: -22000,
+        wood: -22000
     },
     bank_lvl2: {
-        stone: -10000,
-        wood: -8000
+        stone: -9000,
+        wood: -9000
     },
     bank_lvl3: {
-        stone: -13000,
-        wood: -11000
+        stone: -12000,
+        wood: -12000
     },
     bank_lvl4: {
         money: -2000,
-        stone: -16000,
-        wood: -14000
+        stone: -15000,
+        wood: -15000
     },
 }

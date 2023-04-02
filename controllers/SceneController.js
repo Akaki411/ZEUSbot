@@ -493,7 +493,12 @@ class SceneController
         try
         {
             const current_keyboard = this.GetAdminMenuKeyboard(context)
-
+            if(NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
             if(context.messagePayload?.choice.match(/back|chat_list|users|technical|cities/))
             {
                 if(context.messagePayload?.choice.match(/back/))
@@ -550,25 +555,20 @@ class SceneController
         try
         {
             const current_keyboard = this.GetAdminTechnicalMenuKeyboard()
-
+            if(NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
             if(context.messagePayload?.choice.match(/back|sql|upload_log|log_list|clear_logs|clear_user_cache|upload_map|variables/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
-                    if(context.player.role.match(context.player.role.match(/owner|project_head|admin|support/)))
-                    {
-                        context.send("↪ Назад",{
-                            keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
-                        })
-                        context.player.state = this.AdminPanel
-                    }
-                    else
-                    {
-                        context.send("👉🏻 Главное меню",{
-                            keyboard: keyboard.build([[keyboard.menuButton]])
-                        })
-                        context.player.state = this.StartScreen
-                    }
+                    await context.send("↪ Назад",{
+                        keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
+                    })
+                    context.player.state = this.AdminPanel
                 }
                 if(context.messagePayload?.choice.match(/sql/))
                 {
@@ -617,24 +617,20 @@ class SceneController
         try
         {
             const current_keyboard = this.GetAdminCountriesMenuKeyboard()
+            if(NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
             if(context.messagePayload?.choice.match(/back|create_country|remove_country|appoint_leader|add_the_chat/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
-                    if(context.player.role.match(context.player.role.match(/owner|project_head|admin|support/)))
-                    {
-                        context.send("↪ Назад",{
-                            keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
-                        })
-                        context.player.state = this.AdminPanel
-                    }
-                    else
-                    {
-                        context.send("👉🏻 Главное меню",{
-                            keyboard: keyboard.build([[keyboard.menuButton]])
-                        })
-                        context.player.state = this.StartScreen
-                    }
+                    await context.send("↪ Назад",{
+                        keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
+                    })
+                    context.player.state = this.AdminPanel
                 }
                 if(context.messagePayload.choice.match(/create_country/))
                 {
@@ -671,24 +667,20 @@ class SceneController
         try
         {
             const current_keyboard = this.GetAdminsCitiesMenuKeyboard()
+            if(NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
             if(context.messagePayload?.choice.match(/back|set_mayor|build_city|remove_city/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
-                    if(context.player.role.match(context.player.role.match(/owner|project_head|admin|support/)))
-                    {
-                        context.send("↪ Назад",{
-                            keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
-                        })
-                        context.player.state = this.AdminPanel
-                    }
-                    else
-                    {
-                        context.send("👉🏻 Главное меню",{
-                            keyboard: keyboard.build([[keyboard.menuButton]])
-                        })
-                        context.player.state = this.StartScreen
-                    }
+                    await context.send("↪ Назад",{
+                        keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
+                    })
+                    context.player.state = this.AdminPanel
                 }
                 if(context.messagePayload.choice.match(/build_city/))
                 {
@@ -721,25 +713,20 @@ class SceneController
         try
         {
             const current_keyboard = this.GetAdminUsersMenuKeyboard()
-
+            if(NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
             if(context.messagePayload?.choice.match(/back|warnings|bans|add_message|give_role|cheating_diamonds/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
-                    if(context.player.role.match(context.player.role.match(/owner|project_head|admin|support/)))
-                    {
-                        context.send("↪ Назад",{
-                            keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
-                        })
-                        context.player.state = this.AdminPanel
-                    }
-                    else
-                    {
-                        context.send("👉🏻 Главное меню",{
-                            keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                        })
-                        context.player.state = this.StartScreen
-                    }
+                    await context.send("↪ Назад",{
+                        keyboard: keyboard.build(this.GetAdminMenuKeyboard(context))
+                    })
+                    context.player.state = this.AdminPanel
                 }
                 if (context.messagePayload.choice.match(/warnings/))
                 {
@@ -928,10 +915,9 @@ class SceneController
             }
             if(!context.country)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|official_list|set|change_rights|take_away/))
             {
@@ -984,10 +970,9 @@ class SceneController
             }
             if(!context.country)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|set_mayor|build_city|set_tax|buildings|take_away_citizenship/))
             {
@@ -1047,10 +1032,9 @@ class SceneController
             }
             if(!context.country)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|new_building|upgrade/))
             {
@@ -1095,10 +1079,9 @@ class SceneController
             }
             if(!context.country)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|get_tax|transaction|get_resource/))
             {
@@ -1152,10 +1135,9 @@ class SceneController
             }
             if(!context.country)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|name|description|public|photo|welcome_picture|notifications_off|notifications_on/))
             {
@@ -1226,10 +1208,9 @@ class SceneController
             }
             if(!context.country)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|resources|cities|country_info|players_list/))
             {
@@ -1393,10 +1374,9 @@ class SceneController
             }
             if(context.cityID === null)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetCityControlsKeyboard())
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|get_resource|transaction|build_road/))
             {
@@ -1450,10 +1430,9 @@ class SceneController
             }
             if(!context.city)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetCityControlsKeyboard())
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|name|description|photo|notifications_off|notifications_on/))
             {
@@ -1516,10 +1495,9 @@ class SceneController
             }
             if(context.cityID === null)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetCityControlsKeyboard())
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|new_building|delete_building|upgrade|expand/))
             {
@@ -1572,10 +1550,9 @@ class SceneController
             }
             if(context.cityID === null)
             {
-                context.send("↪ Вы не имеете права здесь находиться",{
-                    keyboard: keyboard.build(this.GetCityControlsKeyboard())
-                })
                 context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
             }
             if(context.messagePayload?.choice.match(/back|buildings|resources|city_info|players_list/))
             {
@@ -1999,113 +1976,77 @@ class SceneController
                 }
                 if(context.messagePayload.choice.match(/most_active/))
                 {
-                    let array = {}
+                    let array = []
                     Object.keys(Data.activity).forEach(key => {
-                        array[key] = Data.activity[key]
+                        array.push([Data.activity[key], key])
                     })
-                    let request = "🎆 Самые активные за сегодня:\n"
-                    let max = 0
-                    let index = null
-                    for(let i = 0; i < Math.min(10, Object.keys(array).length); i++)
+                    if(array.length === 0)
                     {
-                        max = 0
-                        index = null
-                        Object.keys(array).forEach(key => {
-                            if(array[key] > max)
-                            {
-                                max = array[key]
-                                index = key
-                            }
-                        })
-                        if(index)
-                        {
-                            request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(index) + " - " + max + " сообщений\n"
-                            delete array[index]
-                        }
+                        await context.send("😴 За сегодня никто ничего не успел написать в чат")
+                        return
+                    }
+                    array = array.sort()
+                    let request = "🎆 Самые активные за сегодня:\n"
+                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    {
+                        request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " сообщений\n"
                     }
                     await context.send(request)
                 }
                 if(context.messagePayload.choice.match(/uncultured/))
                 {
-                    let array = {}
+                    let array = []
                     Object.keys(Data.uncultured).forEach(key => {
-                        array[key] = Data.activity[key]
+                        array.push([Data.uncultured[key], key])
                     })
-                    let request = "🤬 Сегодня больше всех матерились:\n"
-                    let max = 0
-                    let index = null
-                    for(let i = 0; i < Math.min(10, Object.keys(array).length); i++)
+                    if(array.length === 0)
                     {
-                        max = 0
-                        index = null
-                        Object.keys(array).forEach(key => {
-                            if(array[key] > max)
-                            {
-                                max = array[key]
-                                index = key
-                            }
-                        })
-                        if(index)
-                        {
-                            request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(index) + " - " + max + " раз\n"
-                            delete array[index]
-                        }
+                        await context.send("😸 У нас сегодня никто не матерился!")
+                        return
+                    }
+                    array = array.sort()
+                    let request = "🤬 Сегодня больше всех матерились:\n"
+                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    {
+                        request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }
                     await context.send(request)
                 }
                 if(context.messagePayload.choice.match(/stickermans/))
                 {
-                    let array = {}
+                    let array = []
                     Object.keys(Data.stickermans).forEach(key => {
-                        array[key] = Data.activity[key]
+                        array.push([Data.stickermans[key], key])
                     })
-                    let request = "💩 Отправили больше всех стикеров на сегодня:\n"
-                    let max = 0
-                    let index = null
-                    for(let i = 0; i < Math.min(10, Object.keys(array).length); i++)
+                    if(array.length === 0)
                     {
-                        max = 0
-                        index = null
-                        Object.keys(array).forEach(key => {
-                            if(array[key] > max)
-                            {
-                                max = array[key]
-                                index = key
-                            }
-                        })
-                        if(index)
-                        {
-                            request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(index) + " - " + max + " раз\n"
-                            delete array[index]
-                        }
+                        await context.send("👽 Сегодня у нас никто не отправлял стикеры")
+                        return
+                    }
+                    array = array.sort()
+                    let request = "💩 Отправили больше всех стикеров на сегодня:\n"
+                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    {
+                        request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }
                     await context.send(request)
                 }
                 if(context.messagePayload.choice.match(/music_lovers/))
                 {
-                    let array = {}
+                    let array = []
                     Object.keys(Data.musicLovers).forEach(key => {
-                        array[key] = Data.activity[key]
+                        array.push([Data.musicLovers[key], key])
                     })
-                    let request = "🎵 Больше всех сегодня делились музыкой:\n"
-                    let max = 0
-                    let index = null
-                    for(let i = 0; i < Math.min(10, Object.keys(array).length); i++)
+                    if(array.length === 0)
                     {
-                        max = 0
-                        index = null
-                        Object.keys(array).forEach(key => {
-                            if(array[key] > max)
-                            {
-                                max = array[key]
-                                index = key
-                            }
-                        })
-                        if(index)
-                        {
-                            request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(index) + " - " + max + " раз\n"
-                            delete array[index]
-                        }
+                        await context.send("🔇 Сегодня никто не делился музыкой")
+                        return
+                    }
+                    array = array.sort()
+                    let request = "🎵 Больше всех сегодня делились музыкой:\n"
+                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    {
+                        request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }
                     await context.send(request)
                 }

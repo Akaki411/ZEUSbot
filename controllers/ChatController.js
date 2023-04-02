@@ -111,12 +111,12 @@ class ChatController
             let request = "↖ Статистика:\n\n" +
                 "💬 Всего сообщений: " + activity.allMessages + "\n" +
                 "💩 Всего стикеров: " + activity.allStickers + "\n" +
-                "🎶 Всего аудио: " + activity.allAudios + "\n" +
+                "🎶 Всего музыки: " + activity.allAudios + "\n" +
                 "🤬 Всего матов: " + activity.allSwords + "\n" +
                 "⚠ Всего предупреждений: " + context.player.warningScore + "\n\n" +
                 "💬 Сообщений сегодня: " + activity.todayMessages + "\n" +
                 "💩 Стикеров сегодня: " + activity.todayStickers + "\n" +
-                "🎶 Аудио сегодня: " + activity.todayAudios + "\n" +
+                "🎶 Музыки сегодня: " + activity.todayAudios + "\n" +
                 "🤬 Матов сегодня: " + activity.todaySwords
             await context.reply(request)
         }

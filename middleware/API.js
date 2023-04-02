@@ -96,35 +96,35 @@ class VK_API
     async KickUser(chatID, userID)
     {
         if(!chatID || !userID) return
-        // await this.api.messages.removeChatUser({
-        //     chat_id: chatID - 2000000000,
-        //     user_id: userID
-        // })
+        await this.api.messages.removeChatUser({
+            chat_id: chatID - 2000000000,
+            user_id: userID
+        })
     }
 
     async BanUser(userID)
     {
         if(!userID) return
-        // for(const country of Data.countries)
-        // {
-        //     if(country)
-        //     {
-        //         if(country.chatID)
-        //         {
-        //             try
-        //             {
-        //                 await this.api.messages.removeChatUser({
-        //                     chat_id: country.chatID - 2000000000,
-        //                     user_id: userID
-        //                 })
-        //             }
-        //             catch (e)
-        //             {
-        //                 console.log(e.message)
-        //             }
-        //         }
-        //     }
-        // }
+        for(const country of Data.countries)
+        {
+            if(country)
+            {
+                if(country.chatID)
+                {
+                    try
+                    {
+                        await this.api.messages.removeChatUser({
+                            chat_id: country.chatID - 2000000000,
+                            user_id: userID
+                        })
+                    }
+                    catch (e)
+                    {
+                        console.log(e.message)
+                    }
+                }
+            }
+        }
     }
 
     async GetUserData(id)

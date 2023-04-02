@@ -135,10 +135,9 @@ class BuildersAndControlsScripts
 
                 let leader = await InputManager.InputUser(context, "6️⃣ Теперь нужно указать правителя.")
                 if(!leader) return resolve()
-                while(leader.dataValues.status.match(/leader|worker/))
+                while(leader.dataValues.status.match(/leader/))
                 {
                     if(leader.dataValues.status.match(/leader/)) leader = await InputManager.InputUser(context, `⚠ *id${leader.dataValues.id}(${leader.dataValues.nick}) уже является правителем. Заберите у него статус или выберите другого игрока.`, current_keyboard)
-                    if(leader.dataValues.status.match(/worker/)) leader = await InputManager.InputUser(context, `⚠ *id${leader.dataValues.id}(${leader.dataValues.nick}) имеет статус ⚙ Работник`, current_keyboard)
                     if(!leader) return resolve()
                 }
                 let groupId = await InputManager.InputGroup(context, `7️⃣ Укажите группу этой фракции.`, current_keyboard)
@@ -217,7 +216,7 @@ class BuildersAndControlsScripts
                 await Data.LoadCities()
                 await Data.LoadOfficials()
                 await api.SendMessage(leader.dataValues.id,`👑 Вы были назначены правителем только что созданной фракции ${name}\nВаш статус изменен на "👑 Правитель"`)
-                context.send("✅ Фракция создана!\nТеперь можно построить дороги через ГМ-меню", {keyboard: keyboard.build(current_keyboard)})
+                await context.send("✅ Фракция создана!\nТеперь можно построить дороги через ГМ-меню", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
@@ -236,7 +235,7 @@ class BuildersAndControlsScripts
                 if (!user) return resolve()
                 if(NameLibrary.RoleEstimator(context.player.role) <= NameLibrary.RoleEstimator(user.dataValues.role))
                 {
-                    context.send(`🚫 Вы не имеете права изменять роль игрока *id${user.dataValues.id}(${user.dataValues.nick}).`, {
+                    await context.send(`🚫 Вы не имеете права изменять роль игрока *id${user.dataValues.id}(${user.dataValues.nick}).`, {
                         keyboard: keyboard.build(current_keyboard)
                     })
                     return resolve()
@@ -5064,6 +5063,7 @@ class BuildersAndControlsScripts
                     }
                 }
             }
+
             return resolve()
         })
     }
