@@ -16,13 +16,13 @@ class InputManager
 
                 let answer = await context.question(message, {
                     keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 900_000
                 })
                 while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.isTimeout && !answer.payload)
                 {
                     answer = await context.question("⚠ Введите корректное значение.", {
                         keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 900_000
                     })
                 }
                 if(answer.isTimeout)
@@ -61,13 +61,13 @@ class InputManager
 
                 let answer = await context.question(message + "\n\nℹ Значение по умолчанию = " + def, {
                     keyboard: keyboard.build([[keyboard.defaultsButton]]),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 900_000
                 })
                 while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.isTimeout && !answer.payload)
                 {
                     answer = await context.question("⚠ Введите корректное значение." + "\n\nℹ Значение по умолчанию = " + def, {
                         keyboard: keyboard.build([[keyboard.defaultsButton]]),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 900_000
                     })
                 }
                 if(answer.isTimeout)
@@ -101,13 +101,13 @@ class InputManager
 
                 let answer = await context.question(message, {
                     keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 900_000
                 })
                 while ((answer.text?.length <= min || answer.text?.length >= max) && !answer.isTimeout && !answer.payload && !isNaN(answer.text))
                 {
                     answer = await context.question("⚠ Введите корректное значение.", {
                         keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 900_000
                     })
                 }
 
@@ -147,13 +147,13 @@ class InputManager
 
                 let answer = await context.question(message, {
                     keyboard: keyboard.build([[yesButton, noButton]]),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 900_000
                 })
                 while (!answer.payload && !answer.isTimeout)
                 {
                     answer = await context.question("⚠ Выберите из предложенного снизу.", {
                         keyboard: keyboard.build([[yesButton, noButton]]),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 900_000
                     })
                 }
                 if(answer.isTimeout)
@@ -222,7 +222,7 @@ class InputManager
             {
                 let answer = await context.question(message + "\n\nℹ Перешлите в диалог пост из группы, которую хотите выбрать", {
                     keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 900_000
                 })
 
                 let id = answer.attachments[0]?.type === "wall" ? answer.attachments[0]?.ownerId : null
@@ -230,7 +230,7 @@ class InputManager
                 {
                     answer = await context.question("⚠ Перешлите пост", {
                         keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 600_000
+                        answerTimeLimit: 900_000
                     })
                     id = answer.attachments[0]?.largeSizeUrl
                 }
@@ -265,13 +265,13 @@ class InputManager
             {
                 let answer = await context.question(message, {
                     keyboard: keyboard.build(kb),
-                    answerTimeLimit: 300_000
+                    answerTimeLimit: 900_000
                 })
                 while (!answer.payload && !answer.isTimeout)
                 {
                     answer = await context.question("⚠ Выберите из предложенного снизу.", {
                         keyboard: keyboard.build(kb),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 900_000
                     })
                 }
                 if(answer.isTimeout)
@@ -331,7 +331,7 @@ class InputManager
                 {
                     answer = await context.question(request, {
                         keyboard: keyboard.build(arrayToKeyboard(radioKeyboard)),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 900_000
                     })
                     request = "Ок"
                     if(answer.payload) radioKeyboard = convertKeyboard(radioKeyboard, answer.payload.choice)
@@ -428,7 +428,7 @@ class InputManager
                     kb = renderPage(page)
                     answer = await context.question(message, {
                         keyboard: keyboard.build(kb),
-                        answerTimeLimit: 300_000
+                        answerTimeLimit: 900_000
                     })
                 }
                 while ((!answer.payload || answer.payload.choice.match(/left|right/)) && !answer.isTimeout)
@@ -464,7 +464,7 @@ class InputManager
                 let user
                 let answer = await context.question(message + "\n\nℹ Введите ник, ID игрока или перешлите сюда его сообщение. (Именно перешлите, ответ на сообщение не сработает)", {
                     keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 600_000
+                    answerTimeLimit: 900_000
                 })
                 if(answer.isTimeout)
                 {
@@ -488,7 +488,7 @@ class InputManager
                 {
                     answer = await context.question("⚠ Игрок не найден", {
                         keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 600_000
+                        answerTimeLimit: 900_000
                     })
                     if(answer.forwards.length > 0) user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
                     else if (answer.text?.match(/\d/)) user = await Player.findOne({where: {id: answer.text}})

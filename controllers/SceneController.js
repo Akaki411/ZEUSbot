@@ -537,6 +537,10 @@ class SceneController
                     context.player.state = this.AdminCitiesMenu
                 }
             }
+            else if(context.command.match(/карусель/))
+            {
+                await Builders.TestCorusel()
+            }
             else
             {
                 context.send("👉🏻 Админка",{
@@ -911,7 +915,7 @@ class SceneController
             context.country = null
             if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
             {
-                context.country = Data.GetCountryForCity(context.player.location)
+                context.country = Data.countries[context.player.countryID]
             }
             if(!context.country)
             {
@@ -966,7 +970,7 @@ class SceneController
             context.country = null
             if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
             {
-                context.country = Data.GetCountryForCity(context.player.location)
+                context.country = Data.countries[context.player.countryID]
             }
             if(!context.country)
             {
@@ -1002,7 +1006,7 @@ class SceneController
                     })
                     context.player.state = this.CountryBuildingsMenu
                 }
-                if (context.messagePayload.choice.match(/take_away_citizenship/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id) || context.official?.canBeDelegate)
+                if (context.messagePayload.choice.match(/take_away_citizenship/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBeDelegate))
                 {
                     await Builders.TakeAwayCitizenship(context, current_keyboard)
                 }
@@ -1028,7 +1032,7 @@ class SceneController
             context.country = null
             if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
             {
-                context.country = Data.GetCountryForCity(context.player.location)
+                context.country = Data.countries[context.player.countryID]
             }
             if(!context.country)
             {
@@ -1075,7 +1079,7 @@ class SceneController
             context.country = null
             if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
             {
-                context.country = Data.GetCountryForCity(context.player.location)
+                context.country = Data.countries[context.player.countryID]
             }
             if(!context.country)
             {
@@ -1131,7 +1135,7 @@ class SceneController
             context.country = null
             if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
             {
-                context.country = Data.GetCountryForCity(context.player.location)
+                context.country = Data.countries[context.player.countryID]
             }
             if(!context.country)
             {
@@ -1204,7 +1208,7 @@ class SceneController
             context.country = null
             if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
             {
-                context.country = Data.GetCountryForCity(context.player.location)
+                context.country = Data.countries[context.player.countryID]
             }
             if(!context.country)
             {
@@ -2365,7 +2369,7 @@ class SceneController
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
                         }
                         await Data.AddPlayerResources(context.player.id, {wheat: extraction, diamonds: diamonds})
-                        context.send(`🌾 Вы добыли ${extraction} зерна`)
+                        context.send(`🌾 Вы добыли ${extraction} зерна`, {attachment: "photo565472458_457240622_c245972e88cb05d4ec"})
                     }
                     else
                     {
@@ -2391,7 +2395,7 @@ class SceneController
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
                         }
                         await Data.AddPlayerResources(context.player.id, {stone: extraction, diamonds: diamonds})
-                        context.send(`🪨 Вы добыли ${extraction} камня`)
+                        context.send(`🪨 Вы добыли ${extraction} камня`, {attachment: "photo565472458_457240628_68cde51b5783682f79"})
                     }
                     else
                     {
@@ -2417,7 +2421,7 @@ class SceneController
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
                         }
                         await Data.AddPlayerResources(context.player.id, {wood: extraction, diamonds: diamonds})
-                        context.send(`🪵 Вы добыли ${extraction} дерева`)
+                        context.send(`🪵 Вы добыли ${extraction} дерева`, {attachment: "photo565472458_457240621_da59ab56e0b4759369"})
                     }
                     else
                     {
@@ -2443,7 +2447,7 @@ class SceneController
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
                         }
                         await Data.AddPlayerResources(context.player.id, {iron: extraction, diamonds: diamonds})
-                        context.send(`🌑 Вы добыли ${extraction} железа`)
+                        context.send(`🌑 Вы добыли ${extraction} железа`, {attachment: "photo565472458_457240629_1c30668d6937ddbc82"})
                     }
                     else
                     {
@@ -2469,7 +2473,7 @@ class SceneController
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
                         }
                         await Data.AddPlayerResources(context.player.id, {copper: extraction, diamonds: diamonds})
-                        context.send(`🪙 Вы добыли ${extraction} бронзы`)
+                        context.send(`🪙 Вы добыли ${extraction} бронзы`, {attachment: "photo565472458_457240627_0163551e74f37a1633"})
                     }
                     else
                     {
@@ -2495,7 +2499,7 @@ class SceneController
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
                         }
                         await Data.AddPlayerResources(context.player.id, {silver: extraction, diamonds: diamonds})
-                        context.send(`🥈 Вы добыли ${extraction} серебра`)
+                        context.send(`🥈 Вы добыли ${extraction} серебра`, {attachment: "photo565472458_457240630_020e0b0f3eaee322a7"})
                     }
                     else
                     {

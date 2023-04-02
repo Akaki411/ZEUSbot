@@ -336,10 +336,11 @@ class BuildersAndControlsScripts
                 }
                 await Country.update({leaderID: user.dataValues.id}, {where: {id: country.id}})
                 await PlayerStatus.update({citizenship: country.id},{where: {id: user.dataValues.id}})
-                await Player.update({status: "official"}, {where: {id: country.leaderID}})
-                if(Data.users[country.leaderID]) Data.users[country.leaderID].status = "official"
-                if(country.leaderID)
+                const oldLeader = await Player.findOne({where: {id: country.leaderID}, attributes: ["status"]})
+                if(oldLeader?.dataValues.status !== "worker")
                 {
+                    await Player.update({status: "official"}, {where: {id: country.leaderID}})
+                    if(Data.users[country.leaderID]) Data.users[country.leaderID].status = "official"
                     await api.SendMessage(country.leaderID, `⚠ Вы были сняты с должности правителя фракции ${country.name}\n\n🪪 Ваш статус изменен на "Чиновник"`)
                 }
                 if(user.dataValues.status !== "worker")
@@ -349,6 +350,7 @@ class BuildersAndControlsScripts
                     if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "leader"
                 }
                 await api.SendMessage(user.dataValues.id,`✅ Вы были назначены правителем фракции ${country.name}\n\n👑 Ваш статус изменен на "Правитель"`)
+                await Data.LoadCountries()
                 await context.send(`✅ *id${user.dataValues.id}(${user.dataValues.nick}) назначен правителем фракции ${country.name}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
@@ -569,7 +571,7 @@ class BuildersAndControlsScripts
                 }
                 let objIN = {}
                 objIN[resource] = count
-                await Data.AddCountryResources(country, objIN)
+                await Data.AddCountryResources(country.id, objIN)
                 await api.SendMessage(Data.GetCountryForCity(context.cityID).leaderID, `ℹ Поступил перевод в бюджет фракции ${Data.GetCountryName(country)} в размере:\n${NameLibrary.GetResourceName(resource)}: ${count}`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
             }
@@ -1087,15 +1089,18 @@ class BuildersAndControlsScripts
                         {
                             if(Data.cities[i].countryID === Data.cities[context.cityID].countryID)
                             {
-                                for(let j = 0; j < Data.buildings[Data.cities[i].id].length; j++)
+                                if(Data.buildings[Data.cities[i].id])
                                 {
-                                    if(Data.buildings[Data.cities[i].id][j])
+                                    for(let j = 0; j < Data.buildings[Data.cities[i].id].length; j++)
                                     {
-                                        if(Data.buildings[Data.cities[i].id][j].type === "building_of_" + building)
+                                        if(Data.buildings[Data.cities[i].id][j])
                                         {
-                                            const country = Data.GetCountryForCity(context.cityID)
-                                            await context.send(`⚠ В фракции *public${country.groupID}(${country.name}) уже имеется ${NameLibrary.GetBuildingType("building_of_" + building)}`, {keyboard: keyboard.build(current_keyboard)})
-                                            return resolve()
+                                            if(Data.buildings[Data.cities[i].id][j].type === "building_of_" + building)
+                                            {
+                                                const country = Data.GetCountryForCity(context.cityID)
+                                                await context.send(`⚠ В фракции *public${country.groupID}(${country.name}) уже имеется ${NameLibrary.GetBuildingType("building_of_" + building)}`, {keyboard: keyboard.build(current_keyboard)})
+                                                return resolve()
+                                            }
                                         }
                                     }
                                 }
@@ -1794,7 +1799,7 @@ class BuildersAndControlsScripts
                 }
                 else
                 {
-                    cityButtons = Data.GetCityForCountryButtons()
+                    cityButtons = Data.GetCityForCountryButtons(context.player.countryID)
                 }
                 let city = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите город", cityButtons, current_keyboard)
                 if(!city) return resolve()
@@ -5528,6 +5533,18 @@ class BuildersAndControlsScripts
                 await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
+    }
+
+    async TestCorusel(context)
+    {
+        try
+        {
+            await OutputManager.SendCountryCarousel(context)
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TestCorusel", e)
+        }
     }
 }
 

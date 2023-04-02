@@ -66,7 +66,7 @@ class OutputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "OutputManager/SendCountryCarousel", e)
+                console.log(e)
             }
         })
     }

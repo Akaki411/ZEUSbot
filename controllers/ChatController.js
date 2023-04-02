@@ -408,7 +408,7 @@ class ChatController
                 {
                     user = await Player.findOne({where: {id: country.leaderID}, attributes: ["nick"]})
                     population = await PlayerStatus.count({where: {citizenship: country.id}})
-                    request += `🔰 Фракция ${country.GetName()}\n`
+                    request += `${country.GetName()}\n`
                     request += `👥 Население - ${population} чел.\n`
                     request += `👑 Правитель - ${user ? `*id${country.leaderID}(${user.dataValues.nick})` : "Не назначен"}\n`
                     request += `🌆 Столица - ${Data.cities[country.capitalID].name}\n\n`
@@ -427,11 +427,25 @@ class ChatController
         try
         {
             let request = "🔰 Актив фракций:\n\n"
-            for(const country of Data.countries)
+            let activeCountries = []
+            for(let i = 0; i < Data.countries.length; i++)
             {
-                if(country)
+                if(Data.countries[i])
                 {
-                    request += `🔰 ${country.GetName()} - ${country.chatID ? `⚒${country.active} сообщений` : "⚠ Чат не добавлен"} ${country.rating >= 0 ? `➕ ${country.rating}` : `➖ ${country.rating}`}❕ ${country.warnings}\n\n`
+                    activeCountries.push([Data.countries[i].active, i])
+                }
+            }
+            activeCountries = activeCountries.sort()
+            for(let i = activeCountries.length; i > 0; i--)
+            {
+                if(activeCountries[i])
+                {
+                    if(Data.countries[activeCountries[i][1]])
+                    {
+                        request += `${Data.countries[activeCountries[i][1]].GetName()}: ${Data.countries[activeCountries[i][1]].chatID ? `⚒${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
+                        request += `💪 Получено баллов: ${Data.countries[activeCountries[i][1]].rating}\n`
+                        request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                    }
                 }
             }
             await context.send(request)
