@@ -443,7 +443,7 @@ class ChatController
                     if(Data.countries[activeCountries[i][1]])
                     {
                         request += `${Data.countries[activeCountries[i][1]].GetName()}\n`
-                        request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
+                        request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
                         request += `💪 Получено баллов: ${Data.countries[activeCountries[i][1]].rating}\n`
                         request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
                     }
