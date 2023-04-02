@@ -572,7 +572,7 @@ class BuildersAndControlsScripts
                 let objIN = {}
                 objIN[resource] = count
                 await Data.AddCountryResources(country.id, objIN)
-                await api.SendMessage(Data.GetCountryForCity(context.cityID).leaderID, `ℹ Поступил перевод в бюджет фракции ${Data.GetCountryName(country)} в размере:\n${NameLibrary.GetResourceName(resource)}: ${count}`)
+                await api.SendMessage(country.leaderID, `ℹ Поступил перевод в бюджет фракции ${Data.GetCountryName(country)} в размере:\n${NameLibrary.GetResourceName(resource)}: ${count}`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
