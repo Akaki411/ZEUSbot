@@ -11,43 +11,174 @@ class ChatController
 {
     async CommandHandler(context)
     {
-        if(context.messagePayload)
+        try
         {
-            await this.ChatButtonHandler(context)
-            return
+            if(context.messagePayload)
+            {
+                await this.ChatButtonHandler(context)
+                return
+            }
+            context.command?.match(/^бот$/) && await context.reply(NameLibrary.GetRandomSample("call_request"))
+            context.command?.match(Commands.botCall) && await context.reply(NameLibrary.GetRandomSample("dungeon_master_request"))
+            context.command?.match(Commands.clearKeyboard) && await context.send("Убираю", {keyboard: keyboard.none})
+            context.command?.match(Commands.badJoke) && await context.send(NameLibrary.GetRandomSample("bad_jokes"))
+            context.command?.match(Commands.warning) && await this.SendWarningForm(context)
+            context.command?.match(Commands.ban) && await this.SendBanForm(context)
+            context.command?.match(Commands.resources) && await context.reply(context.player.GetResources())
+            context.command?.match(Commands.location) && await this.LocationRequest(context)
+            context.command?.match(Commands.aboutMe) && await context.reply(context.player.GetInfo())
+            context.command?.match(Commands.checkLocation) && await this.CheckLocation(context)
+            context.command?.match(Commands.checkDocs) && await this.CheckDocs(context)
+            context.command?.match(Commands.send) && await this.SendResource(context)
+            context.command?.match(Commands.relax) && await this.Relax(context)
+            context.command?.match(Commands.wakeup) && await this.Wakeup(context)
+            context.command?.match(/^мир$/) && await context.send("🌍 Таков наш мир, но что смотреть ты хочешь?", {attachment: Data.variables.globalMap, keyboard: keyboard.build([[keyboard.greyButton({name: "🗺 Карта дорог", type: "show_road_map"})]]).inline()})
+            context.command?.match(Commands.map) && await this.RoadMap(context)
+            context.command?.match(Commands.work) && await this.Work(context)
+            context.command?.match(/^ресет$/) && await this.Reset(context)
+            context.command?.match(/^добавить чат/) && await this.AddCountryChat(context)
+            context.command?.match(Commands.countries) && await this.ShowCountriesInfo(context)
+            context.command?.match(Commands.countriesActive) && await this.ShowCountriesActive(context)
+            context.command?.match(Commands.marry) && await this.OfferMarry(context)
+            context.command?.match(Commands.divorce) && await this.Divorce(context)
+            context.command?.match(Commands.stats) && await this.ShowPlayerActive(context)
+            context.command?.match(/^кик/) && await this.KickUser(context)
+            context.command?.match(/^закреп/) && await this.GiveAttachment(context)
+            context.command?.match(/^установить переменную |^изменить переменную /) && await this.SetVar(context)
+            context.command?.match(/^переменные/) && await this.ShowVars(context)
         }
-        context.command?.match(/^бот$/) && await context.reply(NameLibrary.GetRandomSample("call_request"))
-        context.command?.match(Commands.botCall) && await context.reply(NameLibrary.GetRandomSample("dungeon_master_request"))
-        context.command?.match(Commands.clearKeyboard) && await context.send("Убираю", {keyboard: keyboard.none})
-        context.command?.match(Commands.badJoke) && await context.send(NameLibrary.GetRandomSample("bad_jokes"))
-        context.command?.match(Commands.warning) && await this.SendWarningForm(context)
-        context.command?.match(Commands.ban) && await this.SendBanForm(context)
-        context.command?.match(Commands.resources) && await context.reply(context.player.GetResources())
-        context.command?.match(Commands.location) && await this.LocationRequest(context)
-        context.command?.match(Commands.aboutMe) && await context.reply(context.player.GetInfo())
-        context.command?.match(Commands.checkLocation) && await this.CheckLocation(context)
-        context.command?.match(Commands.checkDocs) && await this.CheckDocs(context)
-        context.command?.match(Commands.send) && await this.SendResource(context)
-        context.command?.match(Commands.relax) && await this.Relax(context)
-        context.command?.match(Commands.wakeup) && await this.Wakeup(context)
-        context.command?.match(/^мир$/) && await context.send("🌍 Таков наш мир, но что смотреть ты хочешь?", {attachment: Data.variables.globalMap, keyboard: keyboard.build([[keyboard.greyButton({name: "🗺 Карта дорог", type: "show_road_map"})]]).inline()})
-        context.command?.match(Commands.map) && await this.RoadMap(context)
-        context.command?.match(Commands.work) && await this.Work(context)
-        context.command?.match(/^ресет$/) && await this.Reset(context)
-        context.command?.match(/^добавить чат/) && await this.AddCountryChat(context)
-        context.command?.match(Commands.countries) && await this.ShowCountriesInfo(context)
-        context.command?.match(Commands.countriesActive) && await this.ShowCountriesActive(context)
-        context.command?.match(Commands.marry) && await this.OfferMarry(context)
-        context.command?.match(Commands.divorce) && await this.Divorce(context)
-        context.command?.match(Commands.stats) && await this.ShowPlayerActive(context)
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/CommandHandler", e)
+        }
     }
 
     async ChatButtonHandler(context)
     {
-        context.messagePayload.type === "extract" && await this.ExtractResource(context, context.messagePayload.action)
-        context.messagePayload.type === "show_road_map" && await this.RoadMap(context)
-        context.messagePayload.type === "to_other_city" && await this.ToOtherCity(context, Data.ParseButtonID(context.messagePayload.action))
-        context.messagePayload.type === "to_other_country" && await this.ToOtherCountry(context, Data.ParseButtonID(context.messagePayload.action))
+        try
+        {
+            context.messagePayload.type === "extract" && await this.ExtractResource(context, context.messagePayload.action)
+            context.messagePayload.type === "show_road_map" && await this.RoadMap(context)
+            context.messagePayload.type === "to_other_city" && await this.ToOtherCity(context, Data.ParseButtonID(context.messagePayload.action))
+            context.messagePayload.type === "to_other_country" && await this.ToOtherCountry(context, Data.ParseButtonID(context.messagePayload.action))
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async ShowVars(context)
+    {
+        try
+        {
+            if (NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            const vars = Object.keys(Data.variables)
+            const varButtons = []
+            let request = "ℹ Список переменных:\n\n"
+            for(let i = 0; i < vars.length; i++)
+            {
+                varButtons.push([vars[i], vars[i]])
+                request += "🔸 " + vars[i] + "   =   " + Data.variables[vars[i]] + "\n"
+            }
+            await context.reply(request)
+        }
+        catch (e)
+        {
+            await context.reply("Ошибка: " + e.message)
+        }
+    }
+
+    async SetVar(context)
+    {
+        try
+        {
+            const vars = Object.keys(Data.variables)
+            const varButtons = []
+            let request = "ℹ Список переменных:\n\n"
+            for(let i = 0; i < vars.length; i++)
+            {
+                varButtons.push([vars[i], vars[i]])
+                request += "🔸 " + vars[i] + "   =   " + Data.variables[vars[i]] + "\n"
+            }
+            if (NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            let msg = context.text.replace(/^установить переменную |^изменить переменную /i, "")
+            let commands = msg.split(" ")
+            if(commands.length < 2)
+            {
+                await context.reply("Неверный формат")
+                return
+            }
+            let varName = commands[0]
+            console.log(varName)
+            commands = commands.slice(1)
+            commands = commands.join(" ")
+            if(!Data.variables[varName])
+            {
+                await context.reply("Переменная не найдена")
+                return
+            }
+            Data.variables[varName] = commands
+            await Data.SaveVariables()
+            await context.reply("✅ Значение переменной изменено")
+        }
+        catch (e)
+        {
+            await context.reply("Ошибка: " + e.message)
+        }
+    }
+
+    async GiveAttachment(context)
+    {
+        try
+        {
+            if (NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            if (!context.attachments[0])
+            {
+                await context.reply("Нет прикрепленных данных")
+                return
+            }
+            await context.reply(context.attachments[0].toString())
+        }
+        catch (e)
+        {
+            await context.reply("Ошибка: " + e.message)
+        }
+    }
+
+    async KickUser(context)
+    {
+        try
+        {
+            if (NameLibrary.RoleEstimator(context.player.role) < 4) {
+                return
+            }
+            context.command = context.command.replace(/^кик /, "")
+            let id = parseInt(context.command)
+            if (isNaN(id))
+            {
+                await context.reply("Неверный формат id")
+                return
+            }
+            let result = await api.KickUser(context.peerId, id)
+            if (result)
+            {
+                await context.reply("Ошибка: " + result)
+            }
+        }
+        catch (e)
+        {
+            await context.reply("Ошибка: " + e.message)
+        }
     }
 
     async ShowPlayerActive(context)
@@ -245,16 +376,23 @@ class ChatController
                 context.player.state = SceneController.WaitingWalkMenu
                 context.reply("ℹ Вы отправились в город " + city.name)
                 context.player.timeout = setTimeout(async () => {
-                    await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + city.name + "\n" + city.description, SceneController.GetStartMenuKeyboard(context))
-                    context.player.location = city.id
-                    context.player.state = SceneController.StartScreen
-                    await PlayerStatus.update(
-                        {location: city.id},
-                        {where: {id: context.player.id}}
-                    )
-                    if(city.notifications)
+                    try
                     {
-                        await api.SendMessage(city.leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${city.name}`)
+                        await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + city.name + "\n" + city.description, SceneController.GetStartMenuKeyboard(context))
+                        context.player.location = city.id
+                        context.player.state = SceneController.StartScreen
+                        await PlayerStatus.update(
+                            {location: city.id},
+                            {where: {id: context.player.id}}
+                        )
+                        if(city.notifications)
+                        {
+                            await api.SendMessage(city.leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${city.name}`)
+                        }
+                    }
+                    catch (e)
+                    {
+                        await ErrorHandler.SendLogs(context, "ChatController/ToOtherCountry", e)
                     }
                 }, road.dataValues.time * 60000)
             }
@@ -314,27 +452,34 @@ class ChatController
                 await context.reply("ℹ Вы отправились в фракцию " + country.GetName())
                 context.player.lastActionTime = time
                 context.player.timeout = setTimeout(async () => {
-                    await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + Data.GetCityName(country.capitalID), SceneController.GetStartMenuKeyboard(context))
-                    context.player.location = country.capitalID
-                    context.player.countryID = country.id
-                    if (country.entranceFee !== 0)
+                    try
                     {
-                        await Data.AddPlayerResources(context.player.id, {money: -country.entranceFee})
-                        await Data.AddCountryResources(country, {money: country.entranceFee})
+                        await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + Data.GetCityName(country.capitalID), SceneController.GetStartMenuKeyboard(context))
+                        context.player.location = country.capitalID
+                        context.player.countryID = country.id
+                        if (country.entranceFee !== 0)
+                        {
+                            await Data.AddPlayerResources(context.player.id, {money: -country.entranceFee})
+                            await Data.AddCountryResources(country, {money: country.entranceFee})
+                        }
+                        await PlayerStatus.update(
+                            {location: Data.countries[country].capitalID, countryID: Data.countries[country].id},
+                            {where: {id: context.player.id}}
+                        )
+                        if(Data.countries[country].notifications)
+                        {
+                            await api.SendMessage(Data.countries[country].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${country.GetName()}`)
+                        }
+                        if(Data.cities[Data.countries[country].capitalID].notifications)
+                        {
+                            await api.SendMessage(Data.cities[Data.countries[country].capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[country.capitalID].name}`)
+                        }
+                        context.player.state = SceneController.StartScreen
                     }
-                    await PlayerStatus.update(
-                        {location: Data.countries[country].capitalID, countryID: Data.countries[country].id},
-                        {where: {id: context.player.id}}
-                    )
-                    if(Data.countries[country].notifications)
+                    catch (e)
                     {
-                        await api.SendMessage(Data.countries[country].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${country.GetName()}`)
+                        await ErrorHandler.SendLogs(context, "ChatController/ToOtherCountry", e)
                     }
-                    if(Data.cities[Data.countries[country].capitalID].notifications)
-                    {
-                        await api.SendMessage(Data.cities[Data.countries[country].capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[country.capitalID].name}`)
-                    }
-                    context.player.state = SceneController.StartScreen
                 }, road.dataValues.time * 60000)
             }
         }
@@ -463,7 +608,6 @@ class ChatController
         {
             if(NameLibrary.RoleEstimator(context.player.role) < 4)
             {
-                await context.reply("⚠ У вас нет прав на эту команду")
                 return
             }
             context.command = context.command.replace(/добавить чат/, "")
@@ -693,17 +837,18 @@ class ChatController
                 await context.reply("⚠ Введите количество ресурса")
                 return
             }
-            let obj = {}
-            obj[resource] = -Math.abs(count)
-            if(!context.player.CanPay(obj))
+            let objIN = {}
+            let objOUT = {}
+            objIN[resource] = -Math.abs(count)
+            objOUT[resource] = Math.abs(count)
+            if(!context.player.CanPay(objIN))
             {
                 await context.reply(`⚠ Вы не можете передать ${NameLibrary.GetResourceName(resource)} больше ${context.player[resource]} шт.`)
                 return
             }
-            await Data.AddPlayerResources(context.player.id, obj)
-            obj = NameLibrary.ReversePrice(obj)
-            await Data.AddPlayerResources(user.dataValues.id, obj)
-            await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(obj)}`)
+            await Data.AddPlayerResources(context.player.id, objIN)
+            await Data.AddPlayerResources(user.dataValues.id, objOUT)
+            await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
             await context.reply(`✅ Ресурс передан`)
         }
         catch (e)
@@ -743,7 +888,7 @@ class ChatController
             flag = context.player.countryID === user.dataValues.countryID && flag
             if(!flag && context.player.status !== "worker")
             {
-                await context.reply(`⚠ У вас нет права проверять документы в фракции ${Data.countries[context.player.countryID].GetName()}`)
+                await context.reply(`⚠ У вас нет права проверять документы в фракции ${Data.countries[user.dataValues.countryID].GetName()}`)
                 return
             }
 
@@ -817,12 +962,12 @@ class ChatController
             if(Data.countries[context.player.countryID].resources.match(resource))
             {
                 const extract = {
-                    wood: {min: 2.5, max: 5, img: "photo565472458_457240621_da59ab56e0b4759369"},
-                    wheat: {min: 2.5, max: 7.5, img: "photo565472458_457240622_c245972e88cb05d4ec"},
-                    stone: {min: 2.5, max: 5, img: "photo565472458_457240628_68cde51b5783682f79"},
-                    iron: {min: 0.65, max: 1.85, img: "photo565472458_457240629_1c30668d6937ddbc82"},
-                    copper: {min: 0.65, max: 1.85, img: "photo565472458_457240627_0163551e74f37a1633"},
-                    silver: {min: 1.25, max: 2.5, img: "photo565472458_457240630_020e0b0f3eaee322a7"}
+                    wood: {min: 2.5, max: 5, img: Data.variables["woodPicture"]},
+                    wheat: {min: 2.5, max: 7.5, img: Data.variables["wheatPicture"]},
+                    stone: {min: 2.5, max: 5, img: Data.variables["stonePicture"]},
+                    iron: {min: 0.65, max: 1.85, img: Data.variables["ironPicture"]},
+                    copper: {min: 0.65, max: 1.85, img: Data.variables["copperPicture"]},
+                    silver: {min: 1.25, max: 2.5, img: Data.variables["silverPicture"]}
                 }
                 const extraction = NameLibrary.GetRandomNumb(extract[resource].min * context.player.fatigue, extract[resource].max * context.player.fatigue)
                 context.player.fatigue = context.player.HasEffect("industriousness") ? Math.max(0, context.player.fatigue - 50) : 0
@@ -830,7 +975,7 @@ class ChatController
                 if(NameLibrary.GetChance(0.1 * (context.player.HasEffect("luck") ? 2 : 1)))
                 {
                     diamonds = 1
-                    await context.reply(`💎 Вы нашли алмаз!`)
+                    await context.reply(`💎 Вы нашли алмаз!`, {attachment: Data.variables["diamondPicture"]})
                 }
                 let obj = {
                     diamonds: diamonds

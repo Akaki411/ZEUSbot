@@ -185,31 +185,31 @@ class SceneController
         try
         {
             const current_keyboard = this.GetGMMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|events|apply_effects|remove_effects|controls/))
+            if(context.messagePayload?.choice?.match(/back|events|apply_effects|remove_effects|controls/))
             {
-                if(context.messagePayload?.choice.match(/back/))
+                if(context.messagePayload?.choice?.match(/back/))
                 {
                     await context.send("↪ Назад",{
                         keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
                     })
                     context.player.state = this.StartScreen
                 }
-                if(context.messagePayload?.choice.match(/controls/))
+                if(context.messagePayload?.choice?.match(/controls/))
                 {
                     await context.send("↪ Управление",{
                         keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
                     })
                     context.player.state = this.GMControlsMenu
                 }
-                if(context.messagePayload?.choice.match(/remove_effects/))
+                if(context.messagePayload?.choice?.match(/remove_effects/))
                 {
                     await Builders.RemoveEffect(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/apply_effects/))
+                if(context.messagePayload?.choice?.match(/apply_effects/))
                 {
                     await Builders.AddEffect(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/events/))
+                if(context.messagePayload?.choice?.match(/events/))
                 {
                     await Builders.Events(context, current_keyboard)
                 }
@@ -232,41 +232,41 @@ class SceneController
         try
         {
             const current_keyboard = this.GetGMControlsMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|roads|users|cities|buildings|chat_list/))
+            if(context.messagePayload?.choice?.match(/back|roads|users|cities|buildings|chat_list/))
             {
-                if(context.messagePayload?.choice.match(/back/))
+                if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
                         keyboard: keyboard.build(this.GetGMMenuKeyboard(context))
                     })
                     context.player.state = this.GMMenu
                 }
-                if(context.messagePayload?.choice.match(/roads/))
+                if(context.messagePayload?.choice?.match(/roads/))
                 {
                     await Builders.RoadControls(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/users/))
+                if(context.messagePayload?.choice?.match(/users/))
                 {
                     context.send("▶ Игроки", {
                         keyboard: keyboard.build(this.GetGMUsersMenuKeyboard())
                     })
                     context.player.state = this.GMUsersMenu
                 }
-                if(context.messagePayload?.choice.match(/cities/))
+                if(context.messagePayload?.choice?.match(/cities/))
                 {
                     context.send("▶ Города", {
                         keyboard: keyboard.build(this.GetGMCitiesMenuKeyboard())
                     })
                     context.player.state = this.GMCitiesMenu
                 }
-                if(context.messagePayload?.choice.match(/buildings/))
+                if(context.messagePayload?.choice?.match(/buildings/))
                 {
                     context.send("▶ Постройки", {
                         keyboard: keyboard.build(this.GetGMBuildingsMenuKeyboard())
                     })
                     context.player.state = this.GMBuildingsMenu
                 }
-                if(context.messagePayload?.choice.match(/chat_list/))
+                if(context.messagePayload?.choice?.match(/chat_list/))
                 {
                     context.send("▶ Фракции", {
                         keyboard: keyboard.build(this.GetGMCountriesMenuKeyboard())
@@ -292,9 +292,9 @@ class SceneController
         try
         {
             const current_keyboard = this.GetGMCountriesMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|cheating_resource|country_info|resources/))
+            if(context.messagePayload?.choice?.match(/back|cheating_resource|country_info|resources/))
             {
-                if(context.messagePayload?.choice.match(/back/))
+                if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
                         keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
@@ -305,11 +305,11 @@ class SceneController
                 {
                     await Builders.CheatingCountryResources(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/country_info/))
+                if(context.messagePayload?.choice?.match(/country_info/))
                 {
                     await Builders.GetCountryInfo(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/resources/))
+                if(context.messagePayload?.choice?.match(/resources/))
                 {
                     await Builders.ChangeCountryResource(context, current_keyboard)
                 }
@@ -332,16 +332,16 @@ class SceneController
         try
         {
             const current_keyboard = this.GetGMBuildingsMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|building_info/))
+            if(context.messagePayload?.choice?.match(/back|building_info/))
             {
-                if(context.messagePayload?.choice.match(/back/))
+                if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
                         keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
                     })
                     context.player.state = this.GMControlsMenu
                 }
-                if(context.messagePayload?.choice.match(/building_info/))
+                if(context.messagePayload?.choice?.match(/building_info/))
                 {
                     await Builders.GetBuildingInfo(context, current_keyboard)
                 }
@@ -364,9 +364,9 @@ class SceneController
         try
         {
             const current_keyboard = this.GetGMCitiesMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|cheating_resource|city_info/))
+            if(context.messagePayload?.choice?.match(/back|cheating_resource|city_info/))
             {
-                if(context.messagePayload?.choice.match(/back/))
+                if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
                         keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
@@ -377,7 +377,7 @@ class SceneController
                 {
                     await Builders.CheatingCityResources(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/city_info/))
+                if(context.messagePayload?.choice?.match(/city_info/))
                 {
                     await Builders.GetCityInfo(context, current_keyboard)
                 }
@@ -400,9 +400,9 @@ class SceneController
         try
         {
             const current_keyboard = this.GetGMUsersMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|cheating_resource|user_info|teleport/))
+            if(context.messagePayload?.choice?.match(/back|cheating_resource|user_info|teleport/))
             {
-                if(context.messagePayload?.choice.match(/back/))
+                if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
                         keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
@@ -413,11 +413,11 @@ class SceneController
                 {
                     await Builders.CheatingUserResources(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/user_info/))
+                if(context.messagePayload?.choice?.match(/user_info/))
                 {
                     await Builders.GetUserInfo(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/teleport/))
+                if(context.messagePayload?.choice?.match(/teleport/))
                 {
                     await Builders.TeleportUser(context, current_keyboard)
                 }
@@ -456,7 +456,8 @@ class SceneController
         return [
             [keyboard.uploadMapButton],
             [keyboard.logListButton, keyboard.uploadLogButton, keyboard.clearLogsButton],
-            [keyboard.sqlButton, keyboard.clearUserCacheButton, keyboard.variablesButton],
+            [keyboard.clearUserCacheButton, keyboard.variablesButton],
+            [keyboard.sqlButton, keyboard.DBAdminButton],
             [keyboard.backButton]
         ]
     }
@@ -499,47 +500,43 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|chat_list|users|technical|cities/))
+            if(context.messagePayload?.choice?.match(/back|chat_list|users|technical|cities/))
             {
-                if(context.messagePayload?.choice.match(/back/))
+                if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
                         keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
                     })
                     context.player.state = this.StartScreen
                 }
-                if(context.messagePayload?.choice.match(/chat_list/))
+                if(context.messagePayload?.choice?.match(/chat_list/))
                 {
                     context.send("▶ Фракции",{
                         keyboard: keyboard.build(this.GetAdminCountriesMenuKeyboard())
                     })
                     context.player.state = this.AdminCountriesMenu
                 }
-                if(context.messagePayload?.choice.match(/users/))
+                if(context.messagePayload?.choice?.match(/users/))
                 {
                     context.send("▶ Пользователи",{
                         keyboard: keyboard.build(this.GetAdminUsersMenuKeyboard())
                     })
                     context.player.state = this.AdminUsersMenu
                 }
-                if(context.messagePayload?.choice.match(/technical/))
+                if(context.messagePayload?.choice?.match(/technical/))
                 {
                     context.send("▶ Техническое",{
                         keyboard: keyboard.build(this.GetAdminTechnicalMenuKeyboard())
                     })
                     context.player.state = this.AdminTechnicalMenu
                 }
-                if(context.messagePayload?.choice.match(/cities/))
+                if(context.messagePayload?.choice?.match(/cities/))
                 {
                     context.send("▶ Города",{
                         keyboard: keyboard.build(this.GetAdminsCitiesMenuKeyboard())
                     })
                     context.player.state = this.AdminCitiesMenu
                 }
-            }
-            else if(context.command.match(/карусель/))
-            {
-                await Builders.TestCorusel()
             }
             else
             {
@@ -565,7 +562,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|sql|upload_log|log_list|clear_logs|clear_user_cache|upload_map|variables/))
+            if(context.messagePayload?.choice?.match(/back|sql|upload_log|log_list|clear_logs|clear_user_cache|upload_map|variables/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -574,31 +571,31 @@ class SceneController
                     })
                     context.player.state = this.AdminPanel
                 }
-                if(context.messagePayload?.choice.match(/sql/))
+                if(context.messagePayload?.choice?.match(/sql/))
                 {
                     await Builders.SQLSession(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/upload_log/))
+                if(context.messagePayload?.choice?.match(/upload_log/))
                 {
                     await Builders.SendLog(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/log_list/))
+                if(context.messagePayload?.choice?.match(/log_list/))
                 {
                     await Builders.SendLogList(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/clear_logs/))
+                if(context.messagePayload?.choice?.match(/clear_logs/))
                 {
                     await Builders.ClearLogs(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/clear_user_cache/))
+                if(context.messagePayload?.choice?.match(/clear_user_cache/))
                 {
                     await Builders.ClearUserCache(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/upload_map/))
+                if(context.messagePayload?.choice?.match(/upload_map/))
                 {
                     await Builders.ChangeMap(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/variables/))
+                if(context.messagePayload?.choice?.match(/variables/))
                 {
                     await Builders.ChangeVariables(context, current_keyboard)
                 }
@@ -627,7 +624,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|create_country|remove_country|appoint_leader|add_the_chat/))
+            if(context.messagePayload?.choice?.match(/back|create_country|remove_country|appoint_leader|add_the_chat/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -677,7 +674,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|set_mayor|build_city|remove_city/))
+            if(context.messagePayload?.choice?.match(/back|set_mayor|build_city|remove_city/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -723,7 +720,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|warnings|bans|add_message|give_role|cheating_diamonds/))
+            if(context.messagePayload?.choice?.match(/back|warnings|bans|add_message|give_role|cheating_diamonds/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -740,7 +737,7 @@ class SceneController
                 {
                     await Builders.Bans(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice.match(/give_role/))
+                if(context.messagePayload?.choice?.match(/give_role/))
                 {
                     await Builders.ChangeRole(context, current_keyboard, {
                         GetStartMenuKeyboard: this.GetStartMenuKeyboard,
@@ -849,7 +846,7 @@ class SceneController
         try
         {
             const current_keyboard = this.GetGovernanceCountryMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|budget|controls|info|officials|params/))
+            if(context.messagePayload?.choice?.match(/back|budget|controls|info|officials|params/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -923,7 +920,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|official_list|set|change_rights|take_away/))
+            if(context.messagePayload?.choice?.match(/back|official_list|set|change_rights|take_away/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -978,7 +975,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|set_mayor|build_city|set_tax|buildings|take_away_citizenship/))
+            if(context.messagePayload?.choice?.match(/back|set_mayor|build_city|set_tax|buildings|take_away_citizenship/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1040,7 +1037,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|new_building|upgrade/))
+            if(context.messagePayload?.choice?.match(/back|new_building|upgrade/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1087,7 +1084,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|get_tax|transaction|get_resource/))
+            if(context.messagePayload?.choice?.match(/back|get_tax|transaction|get_resource/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1143,7 +1140,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|name|description|public|photo|welcome_picture|notifications_off|notifications_on/))
+            if(context.messagePayload?.choice?.match(/back|name|description|public|photo|welcome_picture|notifications_off|notifications_on/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1216,7 +1213,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|resources|cities|country_info|players_list/))
+            if(context.messagePayload?.choice?.match(/back|resources|cities|country_info|players_list/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1315,7 +1312,7 @@ class SceneController
         try
         {
             const current_keyboard = this.GetCityControlsKeyboard()
-            if(context.messagePayload?.choice.match(/back|buildings|controls|info|params/))
+            if(context.messagePayload?.choice?.match(/back|buildings|controls|info|params/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1382,7 +1379,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|get_resource|transaction|build_road/))
+            if(context.messagePayload?.choice?.match(/back|get_resource|transaction|build_road/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1438,7 +1435,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|name|description|photo|notifications_off|notifications_on/))
+            if(context.messagePayload?.choice?.match(/back|name|description|photo|notifications_off|notifications_on/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1503,7 +1500,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|new_building|delete_building|upgrade|expand/))
+            if(context.messagePayload?.choice?.match(/back|new_building|delete_building|upgrade|expand/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1558,7 +1555,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice.match(/back|buildings|resources|city_info|players_list/))
+            if(context.messagePayload?.choice?.match(/back|buildings|resources|city_info|players_list/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1737,7 +1734,7 @@ class SceneController
         try
         {
             const current_keyboard = this.GetMenuKeyboard()
-            if(context.messagePayload?.choice.match(/back|location|extract|profile|ratings|params/))
+            if(context.messagePayload?.choice?.match(/back|location|extract|profile|ratings|params/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1800,7 +1797,7 @@ class SceneController
         try
         {
             let current_keyboard = this.GetPropertyMenuKeyboard()
-            if (context.messagePayload?.choice.match(/back|list|build|give_key|copy_key|upgrade|resources|transaction/))
+            if (context.messagePayload?.choice?.match(/back|list|build|give_key|copy_key|upgrade|resources|transaction/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1876,7 +1873,7 @@ class SceneController
         try
         {
             let current_keyboard = this.GetParamsMenuKeyboard(context)
-            if (context.messagePayload?.choice.match(/back|notifications_on|notifications_off|info|admins|postbox|change_nick/))
+            if (context.messagePayload?.choice?.match(/back|notifications_on|notifications_off|info|admins|postbox|change_nick/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1969,7 +1966,7 @@ class SceneController
         {
             let current_keyboard = this.GetRatingsMenuKeyboard()
 
-            if (context.messagePayload?.choice.match(/back|most_active|uncultured|stickermans|music_lovers|rich/))
+            if (context.messagePayload?.choice?.match(/back|most_active|uncultured|stickermans|music_lovers|rich/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -2076,7 +2073,7 @@ class SceneController
     {
         try
         {
-            if (context.messagePayload?.choice.match(/wakeup/))
+            if (context.messagePayload?.choice?.match(/wakeup/))
             {
                 let need
                 const now = new Date()
@@ -2126,7 +2123,7 @@ class SceneController
         {
             let current_keyboard = await this.GetProfileMenuKeyboard(context)
 
-            if (context.messagePayload?.choice.match(/back|get_registration|refuse_registration|get_citizenship|refuse_citizenship|merry|divorce|create_last_will|delete_last_will|about_me|effects|property/))
+            if (context.messagePayload?.choice?.match(/back|get_registration|refuse_registration|get_citizenship|refuse_citizenship|merry|divorce|create_last_will|delete_last_will|about_me|effects|property/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -2215,7 +2212,7 @@ class SceneController
         try
         {
             let current_keyboard = this.GetLocationMenuKeyboard()
-            if (context.messagePayload?.choice.match(/back|map|where_me|buildings|other_city|other_country|chat_list/))
+            if (context.messagePayload?.choice?.match(/back|map|where_me|buildings|other_city|other_country|chat_list/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -2300,7 +2297,7 @@ class SceneController
         try
         {
             let current_keyboard = await this.GetInBuildingMenuKeyboard(context)
-            if (context.messagePayload?.choice.match(/back|get_resource|relax|change_money/) && context.player.inBuild)
+            if (context.messagePayload?.choice?.match(/back|get_resource|relax|change_money/) && context.player.inBuild)
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -2341,7 +2338,7 @@ class SceneController
         try
         {
             let current_keyboard = this.GetExtractingMenuKeyboard(context)
-            if (context.messagePayload?.choice.match(/back|extract_wheat|extract_stone|extract_wood|extract_iron|extract_copper|extract_silver|relax|wakeup/))
+            if (context.messagePayload?.choice?.match(/back|extract_wheat|extract_stone|extract_wood|extract_iron|extract_copper|extract_silver|relax|wakeup/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -2366,10 +2363,10 @@ class SceneController
                         if(NameLibrary.GetChance(0.1 * (context.player.HasEffect("luck") ? 2 : 1)))
                         {
                             diamonds = 1
-                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
+                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
                         await Data.AddPlayerResources(context.player.id, {wheat: extraction, diamonds: diamonds})
-                        context.send(`🌾 Вы добыли ${extraction} зерна`, {attachment: "photo565472458_457240622_c245972e88cb05d4ec"})
+                        context.send(`🌾 Вы добыли ${extraction} зерна`, {attachment: Data.variables["wheatPicture"]})
                     }
                     else
                     {
@@ -2392,10 +2389,10 @@ class SceneController
                         if(NameLibrary.GetChance(0.1 * (context.player.HasEffect("luck") ? 2 : 1)))
                         {
                             diamonds = 1
-                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
+                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
                         await Data.AddPlayerResources(context.player.id, {stone: extraction, diamonds: diamonds})
-                        context.send(`🪨 Вы добыли ${extraction} камня`, {attachment: "photo565472458_457240628_68cde51b5783682f79"})
+                        context.send(`🪨 Вы добыли ${extraction} камня`, {attachment: Data.variables["stonePicture"]})
                     }
                     else
                     {
@@ -2418,10 +2415,10 @@ class SceneController
                         if(NameLibrary.GetChance(0.1 * (context.player.HasEffect("luck") ? 2 : 1)))
                         {
                             diamonds = 1
-                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
+                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
                         await Data.AddPlayerResources(context.player.id, {wood: extraction, diamonds: diamonds})
-                        context.send(`🪵 Вы добыли ${extraction} дерева`, {attachment: "photo565472458_457240621_da59ab56e0b4759369"})
+                        context.send(`🪵 Вы добыли ${extraction} дерева`, {attachment: Data.variables["woodPicture"]})
                     }
                     else
                     {
@@ -2444,10 +2441,10 @@ class SceneController
                         if(NameLibrary.GetChance(0.1 * (context.player.HasEffect("luck") ? 2 : 1)))
                         {
                             diamonds = 1
-                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
+                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
                         await Data.AddPlayerResources(context.player.id, {iron: extraction, diamonds: diamonds})
-                        context.send(`🌑 Вы добыли ${extraction} железа`, {attachment: "photo565472458_457240629_1c30668d6937ddbc82"})
+                        context.send(`🌑 Вы добыли ${extraction} железа`, {attachment: Data.variables["ironPicture"]})
                     }
                     else
                     {
@@ -2470,10 +2467,10 @@ class SceneController
                         if(NameLibrary.GetChance(0.1 * (context.player.HasEffect("luck") ? 2 : 1)))
                         {
                             diamonds = 1
-                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
+                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
                         await Data.AddPlayerResources(context.player.id, {copper: extraction, diamonds: diamonds})
-                        context.send(`🪙 Вы добыли ${extraction} бронзы`, {attachment: "photo565472458_457240627_0163551e74f37a1633"})
+                        context.send(`🪙 Вы добыли ${extraction} бронзы`, {attachment: Data.variables["copperPicture"]})
                     }
                     else
                     {
@@ -2496,10 +2493,10 @@ class SceneController
                         if(NameLibrary.GetChance(0.1 * (context.player.HasEffect("luck") ? 2 : 1)))
                         {
                             diamonds = 1
-                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`)
+                            context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
                         await Data.AddPlayerResources(context.player.id, {silver: extraction, diamonds: diamonds})
-                        context.send(`🥈 Вы добыли ${extraction} серебра`, {attachment: "photo565472458_457240630_020e0b0f3eaee322a7"})
+                        context.send(`🥈 Вы добыли ${extraction} серебра`, {attachment: Data.variables["silverPicture"]})
                     }
                     else
                     {

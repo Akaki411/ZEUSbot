@@ -1145,6 +1145,13 @@ class KeyboardButtons
             }
         })
     }
+
+    //URL buttons
+    DBAdminButton = Keyboard.urlButton({
+        label: "🐘 pgAdmin",
+        color: Keyboard.PRIMARY_COLOR,
+        url: "http://45.12.237.82/pgadmin4"
+    })
 }
 
 module.exports = new KeyboardButtons()

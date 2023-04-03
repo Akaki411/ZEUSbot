@@ -395,6 +395,7 @@ class CacheData
 
     async AddPlayerResources(id, res)
     {
+        if(!this.users[id]) return false
         let resources = await PlayerResources.findOne({where: {id: id}})
         this.users[id].money += res.money ? res.money : 0
         this.users[id].stone += res.stone ? res.stone : 0

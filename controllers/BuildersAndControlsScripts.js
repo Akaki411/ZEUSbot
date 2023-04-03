@@ -317,8 +317,9 @@ class BuildersAndControlsScripts
                 {
                     if(Data.countries[i]?.leaderID === user.dataValues.id)
                     {
-                        oldCountry = await Country.findOne({where: {id: Data.countries[i].id}})
+                        oldCountry = await Country.findOne({where: {id: Data.countries[i].id}, attributes: ["id"]})
                         await context.send(`⚠ *id${user.dataValues.id}(${user.dataValues.nick}) уже является правителем!`)
+                        break
                     }
                 }
                 const access = await InputManager.InputBoolean(context, `ℹ Назначить игрока *id${user.dataValues.id}(${user.dataValues.nick}) правителем фракции ${country.GetName()}?`, current_keyboard)
@@ -572,7 +573,7 @@ class BuildersAndControlsScripts
                 let objIN = {}
                 objIN[resource] = count
                 await Data.AddCountryResources(country.id, objIN)
-                await api.SendMessage(country.leaderID, `ℹ Поступил перевод в бюджет фракции ${Data.GetCountryName(country)} в размере:\n${NameLibrary.GetResourceName(resource)}: ${count}`)
+                await api.SendMessage(country.leaderID, `ℹ Поступил перевод в бюджет фракции ${country.GetName()} в размере:\n${NameLibrary.GetResourceName(resource)}: ${count}`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
@@ -1089,19 +1090,13 @@ class BuildersAndControlsScripts
                         {
                             if(Data.cities[i].countryID === Data.cities[context.cityID].countryID)
                             {
-                                if(Data.buildings[Data.cities[i].id])
+                                for(let j = 0; j < Data.buildings[Data.cities[i].id]?.length; j++)
                                 {
-                                    for(let j = 0; j < Data.buildings[Data.cities[i].id].length; j++)
+                                    if(Data.buildings[Data.cities[i].id][j]?.type === "building_of_" + building)
                                     {
-                                        if(Data.buildings[Data.cities[i].id][j])
-                                        {
-                                            if(Data.buildings[Data.cities[i].id][j].type === "building_of_" + building)
-                                            {
-                                                const country = Data.GetCountryForCity(context.cityID)
-                                                await context.send(`⚠ В фракции *public${country.groupID}(${country.name}) уже имеется ${NameLibrary.GetBuildingType("building_of_" + building)}`, {keyboard: keyboard.build(current_keyboard)})
-                                                return resolve()
-                                            }
-                                        }
+                                        const country = Data.GetCountryForCity(context.cityID)
+                                        await context.send(`⚠ В фракции *public${country.groupID}(${country.name}) уже имеется ${NameLibrary.GetBuildingType("building_of_" + building)}`, {keyboard: keyboard.build(current_keyboard)})
+                                        return resolve()
                                     }
                                 }
                             }
@@ -1178,7 +1173,7 @@ class BuildersAndControlsScripts
                     await context.send(`⚠ ${NameLibrary.GetBuildingType(building.type)} \"${building.name}\" имеет максимальный уровень улучшения.`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                if(building.type.match(/church|mint|monument/))
+                if(building.type.match(/church|monument/))
                 {
                     await context.send(NameLibrary.GetBuildingType(building.type) + " не нуждается в улучшении", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
@@ -1807,20 +1802,23 @@ class BuildersAndControlsScripts
                 city = Data.cities[city]
                 const user = await InputManager.InputUser(context, `2️⃣ Выберите, кого назначить главой города ${city.name}`, current_keyboard)
                 if(!user) return resolve()
-                if(user.dataValues.status === "worker")
-                {
-                    await context.send("🚫 Назначать игроков со статусом ⚙ Работник на должность градоначальника запрещено", {keyboard: keyboard.build(current_keyboard)})
-                    return resolve()
-                }
                 const accept = await InputManager.InputBoolean(context, `Назначить *id${user.dataValues.id}(${user.dataValues.nick}) главой города ${city.name}?`, current_keyboard)
                 if(!accept)
                 {
                     await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "official"
-                if(city.leaderID) await api.SendMessage(city.leaderID, `⚠ Вы были сняты с должности главы города ${city.name}`)
-                await Player.update({status: "official"}, {where: {id: user.dataValues.id}})
+                if(user.dataValues.status.match(/citizen|stateless|official/))
+                {
+                    if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "official"
+                    user.set({status: "official"})
+                    await user.save()
+                    await PlayerStatus.update({citizenship: city.countryID}, {where: {id: user.dataValues.id}})
+                    await OfficialInfo.findOrCreate({
+                        where: {id: user.dataValues.id},
+                        defaults: {id: user.dataValues.id, nick: user.dataValues.nick, countryID: city.countryID}
+                    })
+                }
                 if(user.dataValues.id !== Data.countries[city.countryID].leaderID)
                 {
                     await OfficialInfo.findOrCreate({
@@ -1936,17 +1934,17 @@ class BuildersAndControlsScripts
                 await CityRoads.create({fromID: context.country.capitalID, toID: newCity.dataValues.id, time: Data.variables["cityToCityTime"], isBlocked: false})
                 await CityRoads.create({fromID: newCity.dataValues.id, toID: context.country.capitalID, time: Data.variables["cityToCityTime"], isBlocked: false})
                 await CityResources.create({id: newCity.dataValues.id})
-                if(Data.users[leader.dataValues.id]) Data.users[leader.dataValues.id].status = "official"
                 if(leader.dataValues.status.match(/citizen|/))
                 {
+                    if(Data.users[leader.dataValues.id]) Data.users[leader.dataValues.id].status = "official"
                     leader.set({status: "official"})
                     await leader.save()
+                    await OfficialInfo.findOrCreate({
+                        where: {id: leader.dataValues.id},
+                        defaults: {id: leader.dataValues.id, nick: leader.dataValues.nick, countryID: context.country.id}
+                    })
                 }
                 await Data.AddCountryResources(context.country.id, Prices["new_city"])
-                await OfficialInfo.findOrCreate({
-                    where: {id: leader.dataValues.id},
-                    defaults: {id: leader.dataValues.id, countryID: context.country.id}
-                })
                 await Data.LoadCities()
                 await api.SendMessage(leader.dataValues.id, `✅ Правитель фракции ${context.country.GetName()} построил новый город \"${newCity.dataValues.name}\" и вы были назначены его главой, ваш статус изменен на "Чиновник"`)
                 await context.send("✅ Город создан.", {keyboard: keyboard.build(current_keyboard)})
@@ -2067,7 +2065,7 @@ class BuildersAndControlsScripts
                     {
                         if(Data.cities[i]?.countryID === context.country.id)
                         {
-                            for(let j = 0; j < Data.buildings[Data.cities[i].id].length; j++)
+                            for(let j = 0; j < Data.buildings[Data.cities[i].id]?.length; j++)
                             {
                                 if(Data.buildings[Data.cities[i].id][j]?.type === "building_of_" + building)
                                 {
@@ -2165,7 +2163,7 @@ class BuildersAndControlsScripts
                     await context.send(`⚠ ${NameLibrary.GetBuildingType(building.type)} \"${building.name}\" имеет максимальный уровень улучшения.`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                if(building.type.match(/church|mint|monument/))
+                if(building.type.match(/church|monument/))
                 {
                     await context.send(NameLibrary.GetBuildingType(building.type) + " не нуждается в улучшении", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
@@ -3527,9 +3525,23 @@ class BuildersAndControlsScripts
                     await context.send("ℹ Монетный двор пока занят чеканкой монет, приходите через " + NameLibrary.ParseFutureTime(context.player.inBuild.lastActivityTime), {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                if(context.player.silver === 0)
+                let source = null
+                if(context.player.inBuild.ownerType === "city")
                 {
-                    await context.send("⚠ У вас нет серебра для размена", {keyboard: keyboard.build(current_keyboard)})
+                    source = Data.cities[context.player.inBuild.cityID]
+                }
+                else if (context.player.inBuild.ownerType === "country")
+                {
+                    source = Data.countries[Data.cities[context.player.inBuild.cityID].countryID]
+                }
+                else
+                {
+                    await context.send("⚠ Ошибка определения источника, свяжитесь с тех-поддержкой", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                if(source.silver === 0)
+                {
+                    await context.send("⚠ Не хватает серебра для чеканки", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 const lvls = {
@@ -3539,7 +3551,7 @@ class BuildersAndControlsScripts
                     4: {from: 0.55, to: 0.6, max: 1000}
                 }
                 let request = `Сейчас вы можете отчеканить из своего серебра монеты. \n\nМонетный двор имеет оборудование ${context.player.inBuild.level} уровня, это значит что КПД от чеканки будет от ${Math.round(lvls[context.player.inBuild.level].from * 100)} до ${Math.round(lvls[context.player.inBuild.level].to * 100)} процентов.\nМаксимально можно до ${lvls[context.player.inBuild.level].max} серебра единоразово.`
-                const silver = await InputManager.InputInteger(context, request + `\nℹ У вас на счету ${context.player.silver} серебра.\n\nВведите количество серебра, которое вы хотите запустить на чеканку. Имейте ввиду, если загрузить слишком мало (< 2), то из-за шанса брака вы можете не получить монет.\nДоступный для ввода диапазон: от 1 до ${Math.min(lvls[context.player.inBuild.level].max, context.player.silver)}`, 1, Math.min(lvls[context.player.inBuild.level].max, context.player.silver))
+                const silver = await InputManager.InputInteger(context, request + `\nℹ В бюджете ${source.silver} серебра.\n\nВведите количество серебра, которое вы хотите запустить на чеканку. Имейте ввиду, если загрузить слишком мало (< 2), то из-за шанса брака вы можете не получить монет.\nДоступный для ввода диапазон: от 1 до ${Math.min(lvls[context.player.inBuild.level].max, source.silver)}`, 1, Math.min(lvls[context.player.inBuild.level].max, source.silver))
                 if(!silver) return resolve()
                 const accept = await InputManager.InputBoolean(context, `❓ Обменять ${silver} серебра на монеты?`)
                 if(!accept) return resolve()
@@ -3547,9 +3559,15 @@ class BuildersAndControlsScripts
                 time.setSeconds(time.getSeconds() + seconds)
                 context.player.inBuild.lastActivityTime = time
                 const extraction = NameLibrary.GetRandomNumb(Math.round(silver * lvls[context.player.inBuild.level].from), Math.round(silver * lvls[context.player.inBuild.level].to))
-                await Data.AddPlayerResources(context.player.id, {money: extraction, silver: -silver})
-                await Data.AddCityResources(context.player.location, {silver: silver})
-                await context.send(`✅ Из ${silver} серебра отчеканено ${extraction} монет`, {keyboard: keyboard.build(current_keyboard)})
+                if(context.player.inBuild.ownerType === "city")
+                {
+                    await Data.AddCityResources(source.id, {silver: -silver, money: extraction})
+                }
+                else if (context.player.inBuild.ownerType === "country")
+                {
+                    await Data.AddCountryResources(source.id, {silver: -silver, money: extraction})
+                }
+                await context.send(`✅ Из ${silver} серебра отчеканено ${extraction} монет`, {keyboard: keyboard.build(current_keyboard), attachment: Data.variables["moneyPicture"]})
                 return resolve()
             }
             catch (e)
@@ -5533,18 +5551,6 @@ class BuildersAndControlsScripts
                 await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
-    }
-
-    async TestCorusel(context)
-    {
-        try
-        {
-            await OutputManager.SendCountryCarousel(context)
-        }
-        catch (e)
-        {
-            await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TestCorusel", e)
-        }
     }
 }
 

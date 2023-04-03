@@ -163,7 +163,7 @@ class CallbackEventController
         const countryID = context.eventPayload.addition
         try
         {
-            if(Data.users[secondUserID].waitingCitizenship)
+            if(Data.users[secondUserID]?.waitingCitizenship)
             {
                 clearTimeout(Data.users[secondUserID].waitingCitizenship)
                 await PlayerStatus.update({citizenship: countryID},{where: {id: secondUserID}})
@@ -210,7 +210,7 @@ class CallbackEventController
         const citizen = Data.users[secondUserID]
         try
         {
-            if(citizen.waitingCitizenship)
+            if(citizen?.waitingCitizenship)
             {
                 clearTimeout(Data.users[secondUserID].waitingCitizenship)
                 if(Data.users[secondUserID].status !== "worker")
@@ -247,7 +247,7 @@ class CallbackEventController
         const cityID = context.eventPayload.addition
         try
         {
-            if(Data.users[secondUserID].waitingRegistration)
+            if(Data.users[secondUserID]?.waitingRegistration)
             {
                 clearTimeout(Data.users[secondUserID].waitingRegistration)
                 await PlayerStatus.update({registration: cityID},{where: {id: secondUserID}})
@@ -282,7 +282,7 @@ class CallbackEventController
         const citizen = Data.users[secondUserID]
         try
         {
-            if(citizen.waitingRegistration)
+            if(citizen?.waitingRegistration)
             {
                 clearTimeout(Data.users[secondUserID].waitingRegistration)
                 await api.api.messages.edit({

@@ -33,6 +33,8 @@ class VK_API
                 }
                 let active = null
                 let max = 0
+                let activeNegative = null
+                let min = 0
                 for(let i = 0; i < Data.countries.length; i++)
                 {
                     if(Data.countries[i])
@@ -42,23 +44,21 @@ class VK_API
                             max = Data.countries[i].active
                             active = i
                         }
-                    }
-                }
-                await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, в бюджет передан сладкий подарок в размере 100 монет`)
-                await Data.AddCountryResources(Data.countries[active].id, {money: 100})
-                for(let i = 0; i < Data.countries.length; i++)
-                {
-                    if(Data.countries[i])
-                    {
-                        if(Data.countries[i].active <= 500)
+                        if(Data.countries[i].active <= min)
                         {
-                            Data.countries[i].warnings++
-                            await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
-                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание, ваша фракция ${Data.countries[i].GetName()} получила варн за малый актив в чате (< 500 сообщений за день)`)
+                            min = Data.countries[i].active
+                            activeNegative = i
                         }
-                        Data.countries[i].active = 0
                     }
                 }
+                Data.countries[active].rating++
+                Data.countries[activeNegative].rating++
+                await Country.update({rating: Data.countries[active].rating}, {where: {id: Data.countries[active].id}})
+                await Country.update({rating: Data.countries[activeNegative].rating}, {where: {id: Data.countries[activeNegative].id}})
+                await Data.AddCountryResources(Data.countries[active].id, {money: 100})
+                await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 бал, в бюджет передан сладкий подарок в размере 100 монет`)
+                await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[active].GetName()} набрала самый низкий актив за сегодня, рейтинг уменьшен на 1 бал`)
+
                 let temp = null
                 for(const key of Object.keys(Data.activity))
                 {
@@ -93,6 +93,21 @@ class VK_API
                 }
                 Data.uncultured = {}
             }, 86400000)
+            setInterval(async () => {
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        if(Data.countries[i].active <= 500)
+                        {
+                            Data.countries[i].warnings++
+                            await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание, ваша фракция ${Data.countries[i].GetName()} получила варн за малый актив в чате (< 500 сообщений за день)`)
+                        }
+                        Data.countries[i].active = 0
+                    }
+                }
+            }, 259200000)
         }
         catch (e)
         {
@@ -109,10 +124,11 @@ class VK_API
                 chat_id: chatID - 2000000000,
                 user_id: userID
             })
+            return null
         }
         catch (e)
         {
-            console.log(e.message)
+            return e.message
         }
     }
 
