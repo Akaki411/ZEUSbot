@@ -2566,16 +2566,20 @@ class BuildersAndControlsScripts
                     message: `🪪 Игрок ${context.player.GetName()} подал на гражданство в вашу фракцию: \n\n${context.player.GetInfo()}`,
                     keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country})]]).inline().oneTime()
                 })
-                for(let i = 0; i < Data.officials[country]?.length; i++)
+                let officials = Data.officials[country]
+                if(officials)
                 {
-                    if(Data.officials[country][i].canBeDelegate)
+                    for(const official of Object.keys(officials))
                     {
-                        await api.api.messages.send({
-                            user_id: Data.officials[country][i].id,
-                            random_id: Math.round(Math.random() * 100000),
-                            message: `🪪 Игрок ${context.player.GetName()} подал на гражданство в вашу фракцию: \n\n${context.player.GetInfo()}`,
-                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country})]]).inline().oneTime()
-                        })
+                        if(officials[official].canBeDelegate)
+                        {
+                            await api.api.messages.send({
+                                user_id: official,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `🪪 Игрок ${context.player.GetName()} подал на гражданство в вашу фракцию: \n\n${context.player.GetInfo()}`,
+                                keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country})]]).inline().oneTime()
+                            })
+                        }
                     }
                 }
 
