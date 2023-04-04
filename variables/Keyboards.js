@@ -1050,6 +1050,14 @@ class KeyboardButtons
         }
     })
 
+    tagsButton = Keyboard.textButton({
+        label: '🔤 Теги',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'tags'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

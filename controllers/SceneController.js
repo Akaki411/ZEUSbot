@@ -466,7 +466,7 @@ class SceneController
     {
         return [
             [keyboard.createCountryButton, keyboard.removeCountryButton],
-            [keyboard.appointLeaderCountryButton, keyboard.addTheChatButton],
+            [keyboard.appointLeaderCountryButton, keyboard.tagsButton, keyboard.addTheChatButton],
             [keyboard.backButton]
         ]
     }
@@ -624,7 +624,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|create_country|remove_country|appoint_leader|add_the_chat/))
+            if(context.messagePayload?.choice?.match(/back|create_country|remove_country|appoint_leader|add_the_chat|tags/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -648,6 +648,10 @@ class SceneController
                 if(context.messagePayload.choice.match(/remove_country/))
                 {
                     await Builders.RemoveCountry(context, current_keyboard)
+                }
+                if(context.messagePayload.choice.match(/tags/))
+                {
+                    await Builders.CountryTags(context, current_keyboard)
                 }
             }
             else
@@ -1572,9 +1576,9 @@ class SceneController
                         await context.send("⛺ В городе нет построек", {keyboard: keyboard.build(current_keyboard)})
                         return
                     }
-                    for(let i = 0; i < Data.buildings[context.cityID].length; i++)
+                    for(let i = 0; i < Data.buildings[context.cityID]?.length; i++)
                     {
-                        request += (i+1) + ": " + NameLibrary.GetBuildingType(Data.buildings[context.cityID][i].type) + " \"" + Data.buildings[context.cityID][i].name + "\" " + Data.buildings[context.cityID][i].level + ` ур ${Data.buildings[context.cityID][i].ownerType === "country" ? " (гос)" : ""}\n`
+                        request += (i+1) + ": " + NameLibrary.GetBuildingType(Data.buildings[context.cityID][i].type) + " \"" + Data.buildings[context.cityID][i].name + "\" " + Data.buildings[context.cityID][i].level + ` ур ${Data.buildings[context.cityID][i].ownerType === "country" ? " (гос)" : Data.buildings[context.cityID][i].ownerType === "city" ? " (гор)" : "(час)"}\n`
                     }
                     await context.send(`Список построек в городе ${Data.cities[context.cityID].name}:\n\n${request}`)
                 }
@@ -1988,7 +1992,7 @@ class SceneController
                     }
                     array = array.sort()
                     let request = "🎆 Самые активные за сегодня:\n"
-                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " сообщений\n"
                     }
@@ -2007,7 +2011,7 @@ class SceneController
                     }
                     array = array.sort()
                     let request = "🤬 Сегодня больше всех матерились:\n"
-                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }
@@ -2026,7 +2030,7 @@ class SceneController
                     }
                     array = array.sort()
                     let request = "💩 Отправили больше всех стикеров на сегодня:\n"
-                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }
@@ -2045,7 +2049,7 @@ class SceneController
                     }
                     array = array.sort()
                     let request = "🎵 Больше всех сегодня делились музыкой:\n"
-                    for(let i = 0; i < Math.min(10, array.length); i++)
+                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }

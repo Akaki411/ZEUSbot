@@ -17,6 +17,7 @@ const Effects = require("../variables/Effects")
 const User = require("../models/User")
 const fs = require('fs')
 const path = require("path")
+const {KeyboardBuilder} = require("vk-io");
 
 class BuildersAndControlsScripts
 {
@@ -1118,7 +1119,7 @@ class BuildersAndControlsScripts
                     freezing: false
                 })
                 await Data.LoadBuildings()
-                if(building !== "monument")
+                if(!building.match(/monument|barracks|port|church/))
                 {
                     Data.cities[context.cityID].buildingsScore++
                     await City.update({buildingsScore: Data.cities[context.cityID].buildingsScore}, {where: {id: context.cityID}})
@@ -2090,7 +2091,7 @@ class BuildersAndControlsScripts
                     level: 1,
                     freezing: false
                 })
-                if(building !== "monument")
+                if(!building.match(/monument|barracks|port|church/))
                 {
                     Data.cities[city].buildingsScore++
                     await City.update({buildingsScore: Data.cities[city].buildingsScore}, {where: {id: city}})
@@ -3368,7 +3369,7 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                const buildings = await Buildings.findAll({where: {ownerID: context.player.id}})
+                const buildings = await Buildings.findAll({where: {ownerID: context.player.id, freezing: false}})
                 if(buildings.length === 0)
                 {
                     await context.send("⚠ У вас нет построек.", {keyboard: keyboard.build(current_keyboard)})
@@ -3405,7 +3406,7 @@ class BuildersAndControlsScripts
                 }
                 await Data.AddPlayerResources(context.player.id ,Prices[building.type.replace("building_of_", "") + "_lvl" + (building.level + 1)])
                 await Buildings.update({level: building.level + 1}, {where: {id: building.id}})
-                for(let i = 0; i < Data.buildings[building.cityID].length; i++)
+                for(let i = 0; i < Data.buildings[building.cityID]?.length; i++)
                 {
                     if(Data.buildings[building.cityID][i].id === building.id)
                     {
@@ -3438,11 +3439,20 @@ class BuildersAndControlsScripts
                 for(let i = 0; i < Data.buildings[context.player.location].length; i++)
                 {
                     request += (i+1) + ": " + NameLibrary.GetBuildingType(Data.buildings[context.player.location][i].type) + " \"" + Data.buildings[context.player.location][i].name + "\" " + Data.buildings[context.player.location][i].level + " уровня\n"
-                    if(Data.officials[context.player.countryID] || context.player.id === Data.countries[context.player.countryID].leaderID)
+                    if(Data.buildings[context.player.location][i].type.match(/mint/))
                     {
-                        if(Data.officials[context.player.countryID][context.player.id]?.canUseResources || context.player.id === Data.countries[context.player.countryID].leaderID)
+                        if(context.player.id === Data.countries[context.player.countryID].leaderID)
                         {
-                            if(Data.buildings[context.player.location][i].type.match(/mint/))
+                            if(context.player.id === Data.countries[context.player.countryID].leaderID)
+                            {
+
+                                    buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.player.location][i].type) + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
+                                    continue
+                            }
+                        }
+                        if(Data.officials[context.player.countryID])
+                        {
+                            if(Data.officials[context.player.countryID][context.player.id]?.canUseResources)
                             {
                                 buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.player.location][i].type) + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
                                 continue
@@ -5257,6 +5267,124 @@ class BuildersAndControlsScripts
         })
     }
 
+    async CountryTags(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const kb = [
+                    ["➕ Добавить тег", "add_tag"],
+                    ["➖ Удалить тег", "remove_tag"]
+                ]
+                const action = await InputManager.KeyboardBuilder(context, "Выберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action === "add_tag" && await this.AddCountryTag(context, current_keyboard)
+                action === "remove_tag" && await this.RemoveCountryTag(context, current_keyboard)
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
+            }
+        })
+    }
+
+    async RemoveCountryTag(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                let tags = []
+                if(country.tags)
+                {
+                    tags = country.tags.split("|")
+                }
+                let request = `Теги фракции ${country.GetName()}:\n\n`
+                let tagsKB = []
+                if(tags.length === 0)
+                {
+                    await context.send(`⚠ У фракции ${country.GetName()} нет тегов`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                for(const tag of tags)
+                {
+                    request += "- " + tag + "\n"
+                    tagsKB.push([tag, tag])
+                }
+                let newTag = await InputManager.KeyboardBuilder(context, "Выберите тег, который вы хотите убрать", tagsKB, current_keyboard)
+                if(!newTag) return resolve()
+                tags = tags.filter(key => {return key !== newTag})
+                if(tags.length !== 0)
+                {
+                    country.tags = tags.join("|")
+                    await Country.update({tags: tags.join("|")}, {where: {id: country.id}})
+                }
+                else
+                {
+                    country.tags = null
+                    await Country.update({tags: null}, {where: {id: country.id}})
+                }
+                await context.send("✅ Теги обновлены", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
+            }
+        })
+    }
+
+    async AddCountryTag(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                let tags = []
+                if(country.tags)
+                {
+                    tags = country.tags.split("|")
+                }
+                const showTags = (array) => {
+                    if(array.length === 0) return "Тегов нет"
+                    let request = `Теги фракции ${country.GetName()}:\n\n`
+                    for(const tag of array)
+                    {
+                        request += "- " + tag + "\n"
+                    }
+                    return request
+                }
+                let newTag = ""
+                do
+                {
+                    await context.send(showTags(tags))
+                    newTag = await InputManager.InputString(context, "Введите новый тег", current_keyboard)
+                    if(newTag)
+                    {
+                        tags.push(newTag)
+                    }
+                }
+                while(newTag)
+                if(tags.length !== 0)
+                {
+                    country.tags = tags.join("|")
+                    await Country.update({tags: tags.join("|")}, {where: {id: country.id}})
+                }
+                await context.send("✅ Теги обновлены", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
+            }
+        })
+    }
+
     async RemoveCountry(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
@@ -5543,6 +5671,12 @@ class BuildersAndControlsScripts
                 }
                 context.player.nick = name
                 await Player.update({nick: name}, {where: {id: context.player.id}})
+                let official = await OfficialInfo.findOne({where: {id: context.player.id}})
+                if(official)
+                {
+                    official.set({nick: name})
+                    await official.save()
+                }
                 await context.send("✅ Ник изменен", {keyboard: keyboard.build(current_keyboard)})
                 if(context.player.status === "worker")
                 {
