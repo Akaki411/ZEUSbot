@@ -79,7 +79,7 @@ class ChatController
                 if(!resources)
                 {
                     await context.reply("⚠ Игрок не зарегистрирован")
-                    await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота`)
+                    await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                     return
                 }
                 await context.reply(`Инвентарь:\n\n💰 Монеты - ${resources.dataValues.money}\n🪨 Камень - ${resources.dataValues.stone}\n🌾 Зерно - ${resources.dataValues.wheat}\n🪵 Дерево - ${resources.dataValues.wood}\n🌑 Железо - ${resources.dataValues.iron}\n🥉 Бронза - ${resources.dataValues.copper}\n🥈 Серебро - ${resources.dataValues.silver}\n💎 Алмазы - ${resources.dataValues.diamond}\``)
@@ -322,7 +322,7 @@ class ChatController
                     if(!user)
                     {
                         await context.reply("⚠ Игрок не зарегистрирован")
-                        await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота`)
+                        await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                         return
                     }
                     activity.allMessages = user.dataValues.msgs
@@ -407,7 +407,7 @@ class ChatController
             if(!user)
             {
                 await context.reply("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота`)
+                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             const userInfo = await PlayerInfo.findOne({where: {id: user.dataValues.id}, attributes: ["marriedID"]})
@@ -563,19 +563,19 @@ class ChatController
                         if (country.entranceFee !== 0)
                         {
                             await Data.AddPlayerResources(context.player.id, {money: -country.entranceFee})
-                            await Data.AddCountryResources(country, {money: country.entranceFee})
+                            await Data.AddCountryResources(country.id, {money: country.entranceFee})
                         }
                         await PlayerStatus.update(
-                            {location: Data.countries[country].capitalID, countryID: Data.countries[country].id},
+                            {location: country.capitalID, countryID: country.id},
                             {where: {id: context.player.id}}
                         )
-                        if(Data.countries[country].notifications)
+                        if(country.notifications)
                         {
-                            await api.SendMessage(Data.countries[country].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${country.GetName()}`)
+                            await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${country.GetName()}`)
                         }
-                        if(Data.cities[Data.countries[country].capitalID].notifications)
+                        if(Data.cities[country.capitalID].notifications)
                         {
-                            await api.SendMessage(Data.cities[Data.countries[country].capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[country.capitalID].name}`)
+                            await api.SendMessage(Data.cities[country.capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[country.capitalID].name}`)
                         }
                         context.player.state = SceneController.StartScreen
                     }
@@ -891,7 +891,7 @@ class ChatController
             if(!user)
             {
                 await context.reply("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота`)
+                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             context.command = context.command.replace(Commands.send, "")
@@ -993,7 +993,7 @@ class ChatController
             if(!user)
             {
                 await context.reply("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота`)
+                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             if(!flag && context.player.status !== "worker")
@@ -1002,7 +1002,7 @@ class ChatController
                 return
             }
             const userInfo = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
-            const userStatus = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
+            const userStatus = await PlayerStatus.findOne({where: {id: context.replyPlayers[0]}})
             await context.reply(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘Жена)` : `*id${userInfo.dataValues.marriedID}(💘Муж)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}`)
         }
         catch (e)
@@ -1029,7 +1029,7 @@ class ChatController
             if(!user)
             {
                 await context.reply("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота`)
+                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             if(user.dataValues.location === context.player.location)

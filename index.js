@@ -16,10 +16,6 @@ const {Player, PlayerStatus, PlayerInfo, PlayerResources} = require("./database/
 const bot = new VK({token: process.env.VK_BOT_TOKEN})
 const questionManager = new QuestionManager()
 
-// USER_IMPORT - импорт старой базы игроков при старте бота
-// Файл должен иметь название users.csv и находиться в папке files
-const USER_IMPORT = false
-
 bot.updates.use(questionManager.middleware)
 bot.updates.on('message_new', CacheUserMiddleware)
 bot.updates.on('message_new', SelectPlayerMiddleware)
@@ -61,7 +57,7 @@ const start = async () => {
         })
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
-            USER_IMPORT && await Builders.ImportUsers()
+            Data.variables["import"] && await Builders.ImportUsers()
         })
         await Player.findOrCreate({
             where: {id: 565472458},

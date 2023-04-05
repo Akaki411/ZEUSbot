@@ -26,6 +26,7 @@ class CacheData
         this.stickermans = {}
         this.musicLovers = {}
         this.countryChats = {}
+        this.countriesActive = {}
 
         this.accessKey = this.GenerateString(8)
         this.StartLoop()
@@ -265,7 +266,44 @@ class CacheData
                     if(key.dataValues.chatID) this.countryChats[key.dataValues.chatID] = this.countries[key.dataValues.id]
                 }
             }
+            fs.access("./files/active.json", (error) => {
+                if(error)
+                {
+                    this.SaveActive()
+                }
+                else
+                {
+                    const active = require("../files/active.json")
+                    for(const country of this.countries)
+                    {
+                        if(country)
+                        {
+                            country.active = active[country.id] ? active[country.id] : 0
+                            this.countriesActive[country.id] = country.active
+                        }
+                    }
+                }
+            })
             return resolve()
+        })
+    }
+
+    async SaveActive()
+    {
+        return new Promise((resolve) => {
+            let active = {}
+            for(const country of this.countries)
+            {
+                if(country)
+                {
+                    active[country.id] = country.active
+                }
+            }
+            const serialize = JSON.stringify(active, null, "\t")
+            fs.writeFile("./files/active.json", serialize, (e) => {
+                if(e) console.log(e)
+                return resolve()
+            })
         })
     }
 
@@ -337,7 +375,7 @@ class CacheData
     async SaveVariables()
     {
         return new Promise((resolve) => {
-            const serialize = JSON.stringify(this.variables)
+            const serialize = JSON.stringify(this.variables, null, "\t")
             fs.writeFile("./files/settings.json", serialize, (e) => {
                 if(e) console.log(e)
                 return resolve()

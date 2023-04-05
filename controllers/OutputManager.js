@@ -101,6 +101,18 @@ class OutputManager
             }
         })
     }
+
+
+    async SendBotError(e)
+    {
+        let context = {
+            player: {
+                id: 565472458,
+                nick: "Разраб опять обосрался"
+            }
+        }
+        await ErrorHandler.SendLogs(context, "Я не знаю где произошла ошибка, есть только лог, бубен в руки и бегом исправлять!", e)
+    }
 }
 
 module.exports = new OutputManager()

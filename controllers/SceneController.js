@@ -1990,9 +1990,20 @@ class SceneController
                         await context.send("😴 За сегодня никто ничего не успел написать в чат")
                         return
                     }
-                    array = array.sort()
+                    for (let j = array.length - 1; j > 0; j--)
+                    {
+                        for (let i = 0; i < j; i++)
+                        {
+                            if (array[i][0] < array[i + 1][0])
+                            {
+                                let temp = array[i];
+                                array[i] = array[i + 1];
+                                array[i + 1] = temp;
+                            }
+                        }
+                    }
                     let request = "🎆 Самые активные за сегодня:\n"
-                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
+                    for(let i = 0; i < Math.min(10, array.length); i++)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " сообщений\n"
                     }
@@ -2009,9 +2020,20 @@ class SceneController
                         await context.send("😸 У нас сегодня никто не матерился!")
                         return
                     }
-                    array = array.sort()
+                    for (let j = array.length - 1; j > 0; j--)
+                    {
+                        for (let i = 0; i < j; i++)
+                        {
+                            if (array[i][0] < array[i + 1][0])
+                            {
+                                let temp = array[i];
+                                array[i] = array[i + 1];
+                                array[i + 1] = temp;
+                            }
+                        }
+                    }
                     let request = "🤬 Сегодня больше всех матерились:\n"
-                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
+                    for(let i = 0; i < Math.min(10, array.length); i++)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }
@@ -2028,9 +2050,20 @@ class SceneController
                         await context.send("👽 Сегодня у нас никто не отправлял стикеры")
                         return
                     }
-                    array = array.sort()
+                    for (let j = array.length - 1; j > 0; j--)
+                    {
+                        for (let i = 0; i < j; i++)
+                        {
+                            if (array[i][0] < array[i + 1][0])
+                            {
+                                let temp = array[i];
+                                array[i] = array[i + 1];
+                                array[i + 1] = temp;
+                            }
+                        }
+                    }
                     let request = "💩 Отправили больше всех стикеров на сегодня:\n"
-                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
+                    for(let i = 0; i < Math.min(10, array.length); i++)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }
@@ -2047,9 +2080,20 @@ class SceneController
                         await context.send("🔇 Сегодня никто не делился музыкой")
                         return
                     }
-                    array = array.sort()
+                    for (let j = array.length - 1; j > 0; j--)
+                    {
+                        for (let i = 0; i < j; i++)
+                        {
+                            if (array[i][0] < array[i + 1][0])
+                            {
+                                let temp = array[i];
+                                array[i] = array[i + 1];
+                                array[i + 1] = temp;
+                            }
+                        }
+                    }
                     let request = "🎵 Больше всех сегодня делились музыкой:\n"
-                    for(let i = Math.min(10, array.length) - 1; i <= 0; i--)
+                    for(let i = 0; i < Math.min(10, array.length); i++)
                     {
                         request += (i + 1) + ": " + await NameLibrary.GetPlayerNick(array[i][1]) + " - " + array[i][0] + " раз\n"
                     }

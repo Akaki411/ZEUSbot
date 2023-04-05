@@ -17,7 +17,6 @@ const Effects = require("../variables/Effects")
 const User = require("../models/User")
 const fs = require('fs')
 const path = require("path")
-const {KeyboardBuilder} = require("vk-io");
 
 class BuildersAndControlsScripts
 {
@@ -1073,7 +1072,7 @@ class BuildersAndControlsScripts
                 })
                 const building = await InputManager.KeyboardBuilder(context, request + "\nКакую постройку вы хотите возвести?\nℹ Сейчас в городе " + Data.cities[context.cityID].buildingsScore + "/" + Data.cities[context.cityID].maxBuildings + " построек", buildingButtons, current_keyboard)
                 if(!building) return resolve()
-                if(Data.cities[context.cityID].buildingsScore >= Data.cities[context.cityID].maxBuildings && building !== "monument")
+                if(Data.cities[context.cityID].buildingsScore >= Data.cities[context.cityID].maxBuildings && !building.match(/monument|barracks|port|church/))
                 {
                     await context.send("⚠ Лимит на постройки исчерпан " + Data.cities[context.cityID].buildingsScore + "/" + Data.cities[context.cityID].maxBuildings + "\n\nЧтобы построить государственное здание, требуется расширить город или снести какое-то из находящихся в городе.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
@@ -2050,7 +2049,7 @@ class BuildersAndControlsScripts
                 })
                 const building = await InputManager.KeyboardBuilder(context, request + "\n1️⃣ Какую постройку вы хотите возвести?\nСейчас в городе " + Data.cities[city].buildingsScore + "/" + Data.cities[city].maxBuildings + " построек", buildingButtons, current_keyboard)
                 if(!building) return resolve()
-                if(Data.cities[city].buildingsScore >= Data.cities[city].maxBuildings && building !== "monument")
+                if(Data.cities[city].buildingsScore >= Data.cities[city].maxBuildings && !building.match(/monument|barracks|port|church/))
                 {
                     await context.send("⚠ Лимит на постройки исчерпан " + Data.cities[city].buildingsScore + "/" + Data.cities[city].maxBuildings + "\n\nЧтобы построить государственное здание, требуется расширить город или снести какое-то из находящихся в городе.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
@@ -4939,17 +4938,17 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             const getCountryID = (country, isCitizen) =>
             {
-                if(country.toLowerCase().match(/рим/)) return [1, 1]
-                if(country.toLowerCase().match(/саксы/)) return [10, 10]
-                if(country.toLowerCase().match(/ицены/)) return [3, 3]
-                if(country.toLowerCase().match(/кимвры/)) return [2, 2]
-                if(country.toLowerCase().match(/македония/)) return [7, 7]
-                if(country.toLowerCase().match(/афины/)) return [6, 6]
-                if(country.toLowerCase().match(/тила/)) return [8, 8]
-                if(country.toLowerCase().match(/понт/)) return [5, 5]
-                if(country.toLowerCase().match(/cклавины/)) return [11, 11]
-                if(country.toLowerCase().match(/елевкид/)) return [4, 4]
-                if(country.toLowerCase().match(/египет/)) return [9, 9]
+                if(country?.toLowerCase()?.match(/рим/)) return [1, 1]
+                if(country?.toLowerCase()?.match(/саксы/)) return [10, 10]
+                if(country?.toLowerCase()?.match(/ицены/)) return [3, 3]
+                if(country?.toLowerCase()?.match(/кимвры/)) return [2, 2]
+                if(country?.toLowerCase()?.match(/македония/)) return [7, 7]
+                if(country?.toLowerCase()?.match(/афины/)) return [6, 6]
+                if(country?.toLowerCase()?.match(/тила/)) return [8, 8]
+                if(country?.toLowerCase()?.match(/понт/)) return [5, 5]
+                if(country?.toLowerCase()?.match(/cклавины/)) return [11, 11]
+                if(country?.toLowerCase()?.match(/елевкид/)) return [4, 4]
+                if(country?.toLowerCase()?.match(/египет/)) return [9, 9]
                 if(isCitizen) return [null, null]
                 return [1, 1]
             }
@@ -5006,13 +5005,13 @@ class BuildersAndControlsScripts
             for(let i = 1; i < rows.length; i++)
             {
                 user = rows[i].split(";")
-                if(user[12]?.match(/^пройдена/))
+                if(!user[28]?.match(/noname/))
                 {
                     userInfo.id = parseInt(user[0])
                     userInfo.nick = user[11]
                     userInfo.description = user[13]
-                    userInfo.nation = getNation(user[43])
-                    userInfo.location = getCountryID(user[28], false)[1]
+                    userInfo.nation = user[43] ? getNation(user[43]) : "🐴 Цыган"
+                    userInfo.location = user[28] ? getCountryID(user[28], false)[1] : 1
                     userInfo.countryID = getCountryID(user[28], false)[0]
                     userInfo.age = parseInt(user[5])
                     userInfo.gender = user[7] === "male"
