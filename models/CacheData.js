@@ -448,14 +448,14 @@ class CacheData
             this.users[id].diamond += res.diamond ? res.diamond : 0
         }
         resources.set({
-            money: resources.dataValues.money + res.money ? res.money : 0,
-            stone: resources.dataValues.stone + res.stone ? res.stone : 0,
-            wood: resources.dataValues.wood + res.wood ? res.wood : 0,
-            wheat: resources.dataValues.wheat + res.wheat ? res.wheat : 0,
-            iron: resources.dataValues.iron + res.iron ? res.iron : 0,
-            copper: resources.dataValues.copper + res.copper ? res.copper : 0,
-            silver: resources.dataValues.silver + res.silver ? res.silver : 0,
-            diamond: resources.dataValues.diamond + res.diamond ? res.diamond : 0
+            money: resources.dataValues.money + (res.money ? res.money : 0),
+            stone: resources.dataValues.stone + (res.stone ? res.stone : 0),
+            wood: resources.dataValues.wood + (res.wood ? res.wood : 0),
+            wheat: resources.dataValues.wheat + (res.wheat ? res.wheat : 0),
+            iron: resources.dataValues.iron + (res.iron ? res.iron : 0),
+            copper: resources.dataValues.copper + (res.copper ? res.copper : 0),
+            silver: resources.dataValues.silver + (res.silver ? res.silver : 0),
+            diamond: resources.dataValues.diamond + (res.diamond ? res.diamond : 0)
         })
         await resources.save()
     }
