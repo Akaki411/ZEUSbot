@@ -1202,6 +1202,65 @@ class BuildersAndControlsScripts
         })
     }
 
+    async GiveToCountryBuilding(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(!Data.buildings[context.cityID])
+                {
+                    await context.send("⛺ В городе нет построек", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let request = "🏢 Городские постройки:\n"
+                const buildingButtons = []
+                for(let i = 0; i < Data.buildings[context.cityID].length; i++)
+                {
+                    if(Data.buildings[context.cityID][i].ownerType === "city")
+                    {
+                        buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.cityID][i].type) + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
+                        request += `${NameLibrary.GetBuildingType(Data.buildings[context.cityID][i].type)} \"${Data.buildings[context.cityID][i].name}\" ${Data.buildings[context.cityID][i].level} ур\n`
+                    }
+                }
+                if(buildingButtons.length === 0)
+                {
+                    await context.send("⛺ В городе нет городских построек", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let building = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать городу", buildingButtons, current_keyboard)
+                if(!building) return resolve()
+                building = Data.ParseButtonID(building)
+                for(let i = 0; i < Data.cities.length; i++)
+                {
+                    if(Data.cities[i]?.countryID === Data.cities[context.cityID].id)
+                    {
+                        for(let j = 0; j < Data.buildings[Data.cities[i].id]?.length; j++)
+                        {
+                            if(Data.buildings[Data.cities[i].id][j].id === building)
+                            {
+                                building = Data.buildings[Data.cities[i].id][j]
+                                break
+                            }
+                        }
+                    }
+                }
+                const accept = await InputManager.InputBoolean(context, `Передать ${NameLibrary.GetBuildingType(building.type)} ${building.name} в государственное владение?`, current_keyboard)
+                if(!accept)
+                {
+                    await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                await Buildings.update({ownerType: "country"}, {where: {id: building.id}})
+                building.ownerType = "country"
+                await context.send("✅ Постройка передана фракции.", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GiveToCountryBuilding", e)
+            }
+        })
+    }
+
     async ExpandCity(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
@@ -2102,6 +2161,75 @@ class BuildersAndControlsScripts
             catch (e)
             {
                 await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateCountryBuilding", e)
+            }
+        })
+    }
+
+    async GiveToCityBuilding(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let request = "🏢 Постройки:\n\n"
+                const buildingButtons = []
+                for(let i = 0; i < Data.cities.length; i++)
+                {
+                    if(Data.cities[i]?.countryID === context.country.id)
+                    {
+                        request += `🌇 Город ${Data.cities[i].name}:\n`
+                        if(Data.buildings[Data.cities[i].id])
+                        {
+                            for(let j = 0; j < Data.buildings[Data.cities[i].id].length; j++)
+                            {
+                                if(Data.buildings[Data.cities[i].id][j].ownerType === "country")
+                                {
+                                    buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[Data.cities[i].id][j].type) + Data.buildings[Data.cities[i].id][j].name, "ID" + Data.buildings[Data.cities[i].id][j].id])
+                                    request += `${NameLibrary.GetBuildingType(Data.buildings[Data.cities[i].id][j].type)} \"${Data.buildings[Data.cities[i].id][j].name}\" ${Data.buildings[Data.cities[i].id][j].level} ур\n`
+                                }
+                            }
+                        }
+                        if(!Data.buildings[Data.cities[i].id])
+                        {
+                            request += "⛺ В городе нет построек"
+                        }
+                        request += "\n\n"
+                    }
+                }
+                if(buildingButtons.length === 0)
+                {
+                    await context.send("⛺ В фракции нет государственных построек", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let building = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать городу", buildingButtons, current_keyboard)
+                if(!building) return resolve()
+                building = Data.ParseButtonID(building)
+                for(let i = 0; i < Data.cities.length; i++)
+                {
+                    if(Data.cities[i]?.countryID === context.country.id)
+                    {
+                        for(let j = 0; j < Data.buildings[Data.cities[i].id]?.length; j++)
+                        {
+                            if(Data.buildings[Data.cities[i].id][j].id === building)
+                            {
+                                building = Data.buildings[Data.cities[i].id][j]
+                                break
+                            }
+                        }
+                    }
+                }
+                const accept = await InputManager.InputBoolean(context, `Передать ${NameLibrary.GetBuildingType(building.type)} ${building.name} во владение города ${Data.cities[building.cityID].name}?`, current_keyboard)
+                if(!accept)
+                {
+                    await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                await Buildings.update({ownerType: "city"}, {where: {id: building.id}})
+                building.ownerType = "city"
+                await context.send("✅ Постройка передана городу.", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeCountryBuilding", e)
             }
         })
     }

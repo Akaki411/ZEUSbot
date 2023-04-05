@@ -11,7 +11,7 @@ class ErrorHandler
         try
         {
             await api.SendMessage(context.player.id, "⛔Ошибка⛔\nПроизошла ошибка, вся информация отправлена поддержке, скоро это будет исправлено.")
-
+            console.log(error)
             const filename = `error_${NameLibrary.GetDate() + "_" + NameLibrary.GetTime()}.log`
             await new Promise(res => {
                 fs.appendFile("./logs/" + filename, error.stack,  (err) => {

@@ -80,6 +80,7 @@ module.exports = async (context, next) =>
                 const current_keyboard = [[keyboard.registrationButton]]
                 if(context.command?.match(commands.registration))
                 {
+                    Data.variables["isTest"] && await context.send("⚠⚠⚠ Внимание! ⚠⚠⚠\n\nЭтот бот используется для тестирования при разработке обновлений основного бота, если вы зашли сюда по ошибке, то вот ссылка на основного бота: https://vk.com/im?sel=-218388422")
                     await Builders.Registration(context, current_keyboard, {
                         StartMenu: SceneManager.StartScreen,
                         StartMenuKeyboard: SceneManager.GetStartMenuKeyboard,

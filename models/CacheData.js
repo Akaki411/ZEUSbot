@@ -27,6 +27,7 @@ class CacheData
         this.musicLovers = {}
         this.countryChats = {}
         this.countriesActive = {}
+        this.stall = []
 
         this.accessKey = this.GenerateString(8)
         this.StartLoop()

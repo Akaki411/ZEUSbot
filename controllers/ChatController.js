@@ -36,7 +36,7 @@ class ChatController
             context.command?.match(Commands.map) && await this.RoadMap(context)
             context.command?.match(Commands.work) && await this.Work(context)
             context.command?.match(/^ресет$/) && await this.Reset(context)
-            context.command?.match(/^добавить чат/) && await this.AddCountryChat(context)
+            context.command?.match(/^добавить чат /) && await this.AddCountryChat(context)
             context.command?.match(Commands.countries) && await this.ShowCountriesInfo(context)
             context.command?.match(Commands.countriesActive) && await this.ShowCountriesActive(context)
             context.command?.match(Commands.marry) && await this.OfferMarry(context)
@@ -47,6 +47,10 @@ class ChatController
             context.command?.match(/^установить переменную |^изменить переменную /) && await this.SetVar(context)
             context.command?.match(/^переменные/) && await this.ShowVars(context)
             context.command?.match(Commands.getCitizenship) && await this.GetCitizenship(context)
+            context.command?.match(Commands.toStall) && await this.ToStall(context)
+            context.command?.match(Commands.outOfStall) && await this.OutOfStall(context)
+            context.command?.match(Commands.stall) && await this.Stall(context)
+            context.command?.match(Commands.teleport) && await this.Teleport(context)
         }
         catch (e)
         {
@@ -69,6 +73,146 @@ class ChatController
         }
     }
 
+    async Teleport(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 2)
+            {
+                return
+            }
+            let user, temp, country
+            if(context.replyPlayers?.length !== 0)
+            {
+                user = context.replyPlayers[0]
+            }
+            else
+            {
+                user = context.player.id
+            }
+            let status = await PlayerStatus.findOne({where: {id: user}})
+            if(!status)
+            {
+                await context.reply("⚠ Игрок не зарегистрирован")
+                await context.send(`⚠ А *id${user}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
+                return
+            }
+            for(const key of Data.countries)
+            {
+                if(key?.tags)
+                {
+                    temp = new RegExp(key.tags)
+                    if(context.command.match(temp))
+                    {
+                        country = key
+                        break
+                    }
+                }
+            }
+            if(!country)
+            {
+                await context.reply("⚠ Фракция не найдена")
+                return
+            }
+            if(Data.users[user])
+            {
+                Data.users[user].countryID = country.id
+                Data.users[user].location = country.capitalID
+            }
+            status.set({
+                countryID: country.id,
+                location: country.capitalID
+            })
+            await status.save()
+            await context.send(`✅ Игрок телепортирован в фракцию ${country.GetName()}`)
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/Teleport", e)
+        }
+    }
+
+    async Stall(context)
+    {
+        try
+        {
+            let users = await api.api.users.get({
+                user_ids: Data.stall.join(",")
+            })
+            if(users.length === 0)
+            {
+                await context.send(`👻 В стойле никого нет.`)
+                return
+            }
+            let request = "👽 В стойле находятся:\n\n"
+            for(const key of users)
+            {
+                request += `🤡 *id${key.id}(${key.first_name + " " + key.last_name})\n`
+            }
+            await context.send(request)
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/Stall", e)
+        }
+    }
+
+    async OutOfStall(context)
+    {
+        try
+        {
+            let user
+            if(context.replyPlayers?.length !== 0)
+            {
+                user = context.replyPlayers[0]
+            }
+            else
+            {
+                user = context.player.id
+            }
+            if(!user) return
+            if(user < 0) user = context.player.id
+            if(Data.stall.includes(user))
+            {
+                Data.stall = Data.stall.filter((key) => {return key !== user})
+                let person = await api.GetUserData(user)
+                await context.send(`🫡 *id${user}(${person.first_name + " " + person.last_name}) вышел из стойла.`)
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/OutOfStall", e)
+        }
+    }
+
+    async ToStall(context)
+    {
+        try
+        {
+            let user
+            if(context.replyPlayers?.length !== 0)
+            {
+                user = context.replyPlayers[0]
+            }
+            else
+            {
+                user = context.player.id
+            }
+            if(!user) return
+            if(user < 0) user = context.player.id
+            if(!Data.stall.includes(user))
+            {
+                Data.stall.push(user)
+                let person = await api.GetUserData(user)
+                await context.send(`💊 *id${user}(${person.first_name + " " + person.last_name}) отправляется в стойло.`)
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/ToStall", e)
+        }
+    }
+
     async GetResources(context)
     {
         try
@@ -82,14 +226,14 @@ class ChatController
                     await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                     return
                 }
-                await context.reply(`Инвентарь:\n\n💰 Монеты - ${resources.dataValues.money}\n🪨 Камень - ${resources.dataValues.stone}\n🌾 Зерно - ${resources.dataValues.wheat}\n🪵 Дерево - ${resources.dataValues.wood}\n🌑 Железо - ${resources.dataValues.iron}\n🥉 Бронза - ${resources.dataValues.copper}\n🥈 Серебро - ${resources.dataValues.silver}\n💎 Алмазы - ${resources.dataValues.diamond}\``)
+                await context.reply(`*id${context.replyPlayers[0]}(Инвентарь):\n\n💰 Монеты - ${resources.dataValues.money}\n🪨 Камень - ${resources.dataValues.stone}\n🌾 Зерно - ${resources.dataValues.wheat}\n🪵 Дерево - ${resources.dataValues.wood}\n🌑 Железо - ${resources.dataValues.iron}\n🥉 Бронза - ${resources.dataValues.copper}\n🥈 Серебро - ${resources.dataValues.silver}\n💎 Алмазы - ${resources.dataValues.diamond}`)
                 return
             }
             await context.reply(context.player.GetResources())
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "ChatController/GetCitizenship", e)
+            await ErrorHandler.SendLogs(context, "ChatController/GetResources", e)
         }
     }
 
@@ -262,7 +406,8 @@ class ChatController
     {
         try
         {
-            if (NameLibrary.RoleEstimator(context.player.role) < 4) {
+            if (NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
                 return
             }
             context.command = context.command.replace(/^кик /, "")
@@ -290,7 +435,6 @@ class ChatController
         {
             if(context.replyPlayers?.length !== 0 && NameLibrary.RoleEstimator(context.player.role) === 0)
             {
-                await context.reply("⚠ Вы вы не можете просматривать активность других игроков")
                 return
             }
             let activity = {
@@ -674,38 +818,69 @@ class ChatController
     {
         try
         {
-            let request = "🔰 Актив фракций:\n\n"
-            let activeCountries = []
-            for(let i = 0; i < Data.countries.length; i++)
+            let command = context.command.split(" ")
+            if(command.length === 1)
             {
-                if(Data.countries[i])
+                let request = "🔰 Актив фракций:\n\n"
+                let activeCountries = []
+                for(let i = 0; i < Data.countries.length; i++)
                 {
-                    activeCountries.push([Data.countries[i].active, i])
-                }
-            }
-            for (let j = activeCountries.length - 1; j > 0; j--)
-            {
-                for (let i = 0; i < j; i++)
-                {
-                    if (activeCountries[i][0] < activeCountries[i + 1][0])
+                    if(Data.countries[i])
                     {
-                        let temp = activeCountries[i];
-                        activeCountries[i] = activeCountries[i + 1];
-                        activeCountries[i + 1] = temp;
+                        activeCountries.push([Data.countries[i].active, i])
                     }
                 }
-            }
-            for(let i = 0; i < activeCountries.length; i++)
-            {
-                if(Data.countries[activeCountries[i][1]])
+                for (let j = activeCountries.length - 1; j > 0; j--)
                 {
-                    request += `${Data.countries[activeCountries[i][1]].GetName()}\n`
-                    request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
-                    request += `💪 Получено баллов: ${Data.countries[activeCountries[i][1]].rating}\n`
-                    request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                    for (let i = 0; i < j; i++)
+                    {
+                        if (activeCountries[i][0] < activeCountries[i + 1][0])
+                        {
+                            let temp = activeCountries[i];
+                            activeCountries[i] = activeCountries[i + 1];
+                            activeCountries[i + 1] = temp;
+                        }
+                    }
                 }
+                for(let i = 0; i < activeCountries.length; i++)
+                {
+                    if(Data.countries[activeCountries[i][1]])
+                    {
+                        request += `${Data.countries[activeCountries[i][1]].GetName()}\n`
+                        request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
+                        request += `💪 Получено баллов: ${Data.countries[activeCountries[i][1]].rating}\n`
+                        request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                    }
+                }
+                await context.send(request)
             }
-            await context.send(request)
+            else
+            {
+                command = command.slice(1)
+                command = command.join(" ")
+                let temp, country, request = ""
+                for(const key of Data.countries)
+                {
+                    if(key?.tags)
+                    {
+                        temp = new RegExp(key.tags)
+                        if(command.match(temp))
+                        {
+                            country = key
+                            break
+                        }
+                    }
+                }
+                if(!country)
+                {
+                    return
+                }
+                request += `${country.GetName()}\n`
+                request +=  `${country.chatID ? `⚒ Актив за сегодня: ${country.active} сообщений` : "⚠ Чат не добавлен"}\n`
+                request += `💪 Получено баллов: ${country.rating}\n`
+                request += `🔴 Получено варнов: ${country.warnings}\n\n`
+                await context.send(request)
+            }
         }
         catch (e)
         {
@@ -721,9 +896,9 @@ class ChatController
             {
                 return
             }
-            context.command = context.command.replace(/добавить чат/, "")
-            context.command = context.command.replace(" ", "")
             let country = null
+            let temp = null
+            context.command = context.command.replace(/добавить чат /, "")
             for(let i = 0; i < Data.countries.length; i++)
             {
                 if(Data.countries[i])
@@ -735,14 +910,14 @@ class ChatController
                     }
                 }
             }
-            let command = new RegExp(context.command, "i")
-            for(let i = 0; i < Data.countries.length; i++)
+            for(const key of Data.countries)
             {
-                if(Data.countries[i])
+                if(key?.tags)
                 {
-                    if(Data.countries[i].name.toLowerCase().match(command))
+                    temp = new RegExp(key.tags)
+                    if(context.command.match(temp))
                     {
-                        country = Data.countries[i]
+                        country = key
                         break
                     }
                 }
@@ -938,7 +1113,6 @@ class ChatController
             }
             if(!resource)
             {
-                await context.reply("⚠ Укажите какой ресурс вы хотите передать")
                 return
             }
             context.command = context.command.replace(" ", "")
@@ -1003,7 +1177,7 @@ class ChatController
             }
             const userInfo = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
             const userStatus = await PlayerStatus.findOne({where: {id: context.replyPlayers[0]}})
-            await context.reply(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘Жена)` : `*id${userInfo.dataValues.marriedID}(💘Муж)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}`)
+            await context.reply(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘Муж)` : `*id${userInfo.dataValues.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}`)
         }
         catch (e)
         {

@@ -3,7 +3,6 @@ const keyboard = require('../variables/Keyboards')
 const Data = require("../models/CacheData")
 const {PlayerStatus, Warning, Player, Country, PlayerInfo} = require("../database/Models");
 const NameLibrary = require("../variables/NameLibrary")
-const OutputManager = require("../controllers/OutputManager")
 
 class VK_API
 {
@@ -134,7 +133,7 @@ class VK_API
         }
         catch (e)
         {
-            await OutputManager.SendBotError(e)
+            console.log(e)
         }
     }
 
@@ -297,7 +296,7 @@ class VK_API
         }
         catch (e)
         {
-            await OutputManager.SendBotError(e)
+            console.log(e)
         }
     }
 }

@@ -1058,6 +1058,22 @@ class KeyboardButtons
         }
     })
 
+    giveToCityButton = Keyboard.textButton({
+        label: '🔂 Передать городу',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'give_to_city'
+        }
+    })
+
+    giveToCountryButton = Keyboard.textButton({
+        label: '🔂 Передать фракции',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'give_to_country'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

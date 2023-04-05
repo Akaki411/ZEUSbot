@@ -841,7 +841,7 @@ class SceneController
     {
         return [
             [keyboard.newBuildingButton, keyboard.upgradeButton],
-            [keyboard.backButton]
+            [keyboard.backButton, keyboard.giveToCityButton]
         ]
     }
 
@@ -1041,7 +1041,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|new_building|upgrade/))
+            if(context.messagePayload?.choice?.match(/back|new_building|upgrade|give_to_city/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1057,6 +1057,10 @@ class SceneController
                 if (context.messagePayload.choice.match(/upgrade/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity))
                 {
                     await Builders.UpgradeCountryBuilding(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/give_to_city/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity))
+                {
+                    await Builders.GiveToCityBuilding(context, current_keyboard)
                 }
             }
             else
@@ -1275,7 +1279,7 @@ class SceneController
     GetCityControlsBuildingsMenuKeyboard = () =>
     {
         return [
-            [keyboard.newBuildingButton, keyboard.deleteBuildingButton],
+            [keyboard.newBuildingButton, keyboard.giveToCountryButton, keyboard.deleteBuildingButton],
             [keyboard.upgradeButton, keyboard.expandButton],
             [keyboard.backButton]
         ]
@@ -1504,7 +1508,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|new_building|delete_building|upgrade|expand/))
+            if(context.messagePayload?.choice?.match(/back|new_building|delete_building|upgrade|expand|give_to_country/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1524,6 +1528,10 @@ class SceneController
                 if(context.messagePayload.choice.match(/upgrade/))
                 {
                     await Builders.UpgradeCityBuilding(context, current_keyboard)
+                }
+                if(context.messagePayload.choice.match(/give_to_country/))
+                {
+                    await Builders.GiveToCountryBuilding(context, current_keyboard)
                 }
                 if(context.messagePayload.choice.match(/expand/))
                 {
@@ -1805,10 +1813,10 @@ class SceneController
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
-                    await context.send("▶ Меню", {
-                        keyboard: keyboard.build(this.GetMenuKeyboard())
+                    await context.send("▶ Профиль", {
+                        keyboard: keyboard.build(await this.GetProfileMenuKeyboard(context))
                     })
-                    context.player.state = this.Menu
+                    context.player.state = this.Profile
                 }
                 if(context.messagePayload.choice.match(/transaction/))
                 {
