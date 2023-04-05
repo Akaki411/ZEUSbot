@@ -538,6 +538,11 @@ class SceneController
                     context.player.state = this.AdminCitiesMenu
                 }
             }
+            else if(context.command?.match(/время/))
+            {
+                let time = new Date()
+                await context.send(time.toString())
+            }
             else
             {
                 context.send("👉🏻 Админка",{
