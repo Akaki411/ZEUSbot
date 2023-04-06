@@ -51,6 +51,7 @@ class BuildersAndControlsScripts
                     nationKeyboard.push([Nations[key].name, key])
                 })
                 let nation = await InputManager.KeyboardBuilder(context, "5️⃣ Какова национальность вашего персонажа?", nationKeyboard, current_keyboard)
+                if(!nation) return resolve()
                 await context.send(Nations[nation].description)
                 nation = Nations[nation].name
 
@@ -2559,7 +2560,7 @@ class BuildersAndControlsScripts
                 await status.save()
                 if(user.dataValues.status !== "worker")
                 {
-                    await Player.update({status: "stateless"}, )
+                    await Player.update({status: "stateless"}, {where: {id: user.dataValues.id}})
                     if(Data.users[user.dataValues.id])
                     {
                         Data.users[user.dataValues.id].status = "stateless"
@@ -3506,14 +3507,22 @@ class BuildersAndControlsScripts
                 const buildingButtons = []
                 for(let i = 0; i < buildings.length; i++)
                 {
-                    buildingButtons.push([NameLibrary.GetBuildingEmoji(buildings[i].dataValues.type) + buildings[i].dataValues.name, "ID" + buildings[i].dataValues.id])
-                    request += `${NameLibrary.GetBuildingType(buildings[i].dataValues.type)} \"${buildings[i].dataValues.name}\" ${buildings[i].dataValues.level} уровня\n`
+                    if(!buildings[i].dataValues.type.match(/house/))
+                    {
+                        buildingButtons.push([NameLibrary.GetBuildingEmoji(buildings[i].dataValues.type) + buildings[i].dataValues.name, "ID" + buildings[i].dataValues.id])
+                        request += `${NameLibrary.GetBuildingType(buildings[i].dataValues.type)} \"${buildings[i].dataValues.name}\" ${buildings[i].dataValues.level} уровня\n`
+                    }
                 }
                 let building = await InputManager.KeyboardBuilder(context, request, buildingButtons, current_keyboard)
                 if(!building) return resolve()
 
                 building = Data.ParseButtonID(building)
                 buildings.forEach(key => {if(parseInt(key.dataValues.id) === parseInt(building)) building = key.dataValues})
+                if(building.type.match(/house/))
+                {
+                    await context.send(`⚠ Жилые дома не имеют уровней улучшения.`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
                 if(building.level >= 4)
                 {
                     await context.send(`⚠ ${NameLibrary.GetBuildingType(building.type)} \"${building.name}\" имеет максимальный уровень улучшения.`, {keyboard: keyboard.build(current_keyboard)})
@@ -3723,22 +3732,7 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                let need
-                switch (context.player.inBuild.level)
-                {
-                    case 1:
-                        need = (100 - context.player.fatigue) * 3.3
-                        break
-                    case 2:
-                        need = (100 - context.player.fatigue) * 3.0
-                        break
-                    case 3:
-                        need = (100 - context.player.fatigue) * 2.7
-                        break
-                    case 4:
-                        need = (100 - context.player.fatigue) * 2.4
-                        break
-                }
+                let need = (100 - context.player.fatigue) * 3.0
                 if(need === 0)
                 {
                     await context.send("💪 Вы полны сил.", {keyboard: keyboard.build(current_keyboard)})
@@ -4850,7 +4844,12 @@ class BuildersAndControlsScripts
                     })
                     warnCount = await Warning.count({where: {userID: i}})
                     await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: i}})
-                    await api.SendMessage(i, `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`)
+                    await api.api.messages.send({
+                        user_id: i,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
+                        attachment: proof
+                    })
                     if(warnCount >= 3)
                     {
                         await api.SendMessageWithKeyboard(i, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
@@ -4983,7 +4982,12 @@ class BuildersAndControlsScripts
                 })
                 let warnCount = await Warning.count({where: {userID: user.dataValues.id}})
                 await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: user.dataValues.id}})
-                await api.SendMessage(user.dataValues.id, `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`)
+                await api.api.messages.send({
+                    user_id: user.dataValues.id,
+                    random_id: Math.round(Math.random() * 100000),
+                    message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
+                    attachment: proof
+                })
                 if(warnCount >= 3)
                 {
                     await api.SendMessageWithKeyboard(user.dataValues.id, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
@@ -5879,6 +5883,29 @@ class BuildersAndControlsScripts
                     await official.save()
                 }
                 await context.send("✅ Ник изменен", {keyboard: keyboard.build(current_keyboard)})
+                if(context.player.status === "worker")
+                {
+                    await Data.LoadWorkers()
+                }
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+            }
+        })
+    }
+
+    async ChangeDescription(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let description = await InputManager.InputString(context, `1️⃣ Введите новое описание`, current_keyboard,2, 20)
+                if(!description) return resolve()
+                context.player.description = description
+                await PlayerInfo.update({description: description}, {where: {id: context.player.id}})
+                await context.send("✅ Описание изменено", {keyboard: keyboard.build(current_keyboard)})
                 if(context.player.status === "worker")
                 {
                     await Data.LoadWorkers()

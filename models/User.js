@@ -17,6 +17,7 @@ class User
         this.citizenship = status.dataValues.citizenship
         this.notifications = status.dataValues.notifications
         this.registration = status.dataValues.registration
+        this.description = info.dataValues.description
         this.marriedID = info.dataValues.marriedID
         this.nationality = info.dataValues.nationality
         this.age = info.dataValues.age
@@ -120,7 +121,7 @@ class User
     {
         try
         {
-            return `👤 *id${this.id}(${this.nick}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Муж)` : `*id${this.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}`
+            return `👤 *id${this.id}(${this.nick}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Муж)` : `*id${this.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n💭 Описание: ${this.description}`
         }
         catch (e)
         {

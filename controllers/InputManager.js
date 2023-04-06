@@ -513,9 +513,6 @@ class InputManager
             }
             catch (e)
             {
-                await context.send('🚫 Ввод отменен.', {
-                    keyboard: keyboard.build(current_keyboard)
-                })
                 return resolve(null)
             }
         })

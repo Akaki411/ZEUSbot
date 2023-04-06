@@ -159,24 +159,18 @@ class VK_API
         if(!userID) return
         try
         {
-            for(const country of Data.countries)
+            for(const chat of Object.keys(Data.countryChats))
             {
-                if(country)
+                try
                 {
-                    if(country.chatID)
-                    {
-                        try
-                        {
-                            await this.api.messages.removeChatUser({
-                                chat_id: country.chatID - 2000000000,
-                                user_id: userID
-                            })
-                        }
-                        catch (e)
-                        {
-                            console.log(e.message)
-                        }
-                    }
+                    await this.api.messages.removeChatUser({
+                        chat_id: parseInt(chat) - 2000000000,
+                        user_id: userID
+                    })
+                }
+                catch (e)
+                {
+                    console.log(e.message)
                 }
             }
         }

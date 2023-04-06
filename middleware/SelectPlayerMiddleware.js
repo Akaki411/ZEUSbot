@@ -5,7 +5,7 @@ module.exports = (context, next) =>
         if(context.peerType === "chat")
         {
             context.replyPlayers = []
-            const ids = context.command?.match(/id\d+/)
+            const ids = context.command?.match(/id\d+/g)
             let temp = null
             for(let i = 0; i < ids?.length; i++)
             {

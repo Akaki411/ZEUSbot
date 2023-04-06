@@ -81,7 +81,7 @@ const Country = sequelize.define("country", {
     isSiege: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
     isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
     notifications: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true},
-    chatID: {type: DataTypes.INTEGER, allowNull: true, defaultValue: null},
+    chatID: {type: DataTypes.STRING, allowNull: true, defaultValue: ""},
     warnings: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     rating: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     tags: {type: DataTypes.STRING, allowNull: true}

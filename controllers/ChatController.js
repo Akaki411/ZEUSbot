@@ -37,6 +37,8 @@ class ChatController
             context.command?.match(Commands.work) && await this.Work(context)
             context.command?.match(/^ресет$/) && await this.Reset(context)
             context.command?.match(/^добавить чат /) && await this.AddCountryChat(context)
+            context.command?.match(/^удалить чат/) && await this.RemoveCountryChat(context)
+            context.command?.match(/^чаты /) && await this.ShowCountryChats(context)
             context.command?.match(Commands.countries) && await this.ShowCountriesInfo(context)
             context.command?.match(Commands.countriesActive) && await this.ShowCountriesActive(context)
             context.command?.match(Commands.marry) && await this.OfferMarry(context)
@@ -52,6 +54,8 @@ class ChatController
             context.command?.match(Commands.stall) && await this.Stall(context)
             context.command?.match(Commands.teleport) && await this.Teleport(context)
             context.command?.match(/^id|^ид/) && await this.GetID(context)
+            context.command?.match(Commands.changeNick) && await this.ChangeNick(context)
+            context.command?.match(Commands.changeDescription) && await this.ChangeDescription(context)
         }
         catch (e)
         {
@@ -71,6 +75,42 @@ class ChatController
         catch (e)
         {
             await ErrorHandler.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async ChangeNick(context)
+    {
+        try
+        {
+            let nick = context.text.replace(Commands.changeNick, "")
+            let user = await Player.count({where: {nick: nick}})
+            if(user !== 0)
+            {
+                await context.reply("⚠ Ник занят")
+                return
+            }
+            context.player.nick = nick
+            await Player.update({nick: nick}, {where: {id: context.player.id}})
+            await context.reply("✅ Ник изменен")
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/Teleport", e)
+        }
+    }
+
+    async ChangeDescription(context)
+    {
+        try
+        {
+            let description = context.text.replace(Commands.changeDescription, "")
+            context.player.description = description
+            await PlayerInfo.update({description: description}, {where: {id: context.player.id}})
+            await context.reply("✅ Описание изменено")
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/Teleport", e)
         }
     }
 
@@ -313,7 +353,7 @@ class ChatController
                             user_id: official,
                             random_id: Math.round(Math.random() * 100000),
                             message: `🪪 Игрок ${context.player.GetName()} подал на гражданство в вашу фракцию: \n\n${context.player.GetInfo()}`,
-                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country})]]).inline().oneTime()
+                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country})]]).inline().oneTime()
                         })
                     }
                 }
@@ -909,6 +949,100 @@ class ChatController
         }
     }
 
+    async ShowCountryChats(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            let country = null
+            let temp = null
+            for(const key of Data.countries)
+            {
+                if(key?.tags)
+                {
+                    temp = new RegExp(key.tags)
+                    if(context.command.match(temp))
+                    {
+                        country = key
+                        break
+                    }
+                }
+            }
+            if(!country)
+            {
+                await context.reply("⚠ Фракция не найдена")
+                return
+            }
+            temp = country.chatID ? country.chatID.split("|") : []
+            if(temp.length !== 0)
+            {
+                let request = `✅ Чаты фракции ${country.GetName()}:\n\n`
+                for(const chat of temp)
+                {
+                    request += chat + (parseInt(chat) === context.peerId ? " (мы сейчас здесь)" : "") + "\n"
+                }
+                await context.send(request)
+            }
+            else
+            {
+                await context.send(`⚠ У фракции ${country.GetName()} не найдено чатов`)
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/AddCountryChat", e)
+        }
+    }
+
+    async RemoveCountryChat(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            let country = null
+            let temp = null
+            context.command = context.command.replace(/добавить чат /, "")
+            for(let i = 0; i < Data.countries.length; i++)
+            {
+                if(Data.countries[i])
+                {
+                    if(Data.countries[i].chatID)
+                    {
+                        temp = Data.countries[i].chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            if(parseInt(chat) === context.peerId)
+                            {
+                                country = Data.countries[i]
+                            }
+                        }
+                    }
+                }
+            }
+            if(!country)
+            {
+                await context.reply("⚠ Этот чат не является чатом фракции")
+                return
+            }
+            temp = country.chatID ? country.chatID.split("|") : []
+            temp = temp.filter(chat => {return parseInt(chat) !== context.peerId})
+            country.chatID = (temp.length === 0 ? null : temp.join("|"))
+            await Country.update({chatID: country.chatID}, {where: {id: country.id}})
+            await Data.LoadCountries()
+            await context.send(`✅ Чат ${context.peerId} больше не принадлежит фракции ${country.GetName()}`)
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/AddCountryChat", e)
+        }
+    }
+
     async AddCountryChat(context)
     {
         try
@@ -924,10 +1058,17 @@ class ChatController
             {
                 if(Data.countries[i])
                 {
-                    if(Data.countries[i].chatID === context.peerId)
+                    if(Data.countries[i].chatID)
                     {
-                        await context.reply(`⚠ Этот чат используется фракцией ${Data.countries[i].GetName()}`)
-                        return
+                        temp = Data.countries[i].chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            if(parseInt(chat) === context.peerId)
+                            {
+                                await context.reply(`⚠ Этот чат используется фракцией ${Data.countries[i].GetName()}`)
+                                return
+                            }
+                        }
                     }
                 }
             }
@@ -948,10 +1089,12 @@ class ChatController
                 await context.reply("⚠ Фракция не найдена")
                 return
             }
-            country.chatID = context.peerId
-            await Country.update({chatID: context.peerId}, {where: {id: country.id}})
+            temp = country.chatID ? country.chatID.split("|") : []
+            temp.push(context.peerId)
+            country.chatID = temp.join("|")
+            await Country.update({chatID: country.chatID}, {where: {id: country.id}})
             await Data.LoadCountries()
-            await context.send(`✅ Чат ${context.peerId} добавлен как основной чат фракции ${country.GetName()}`)
+            await context.send(`✅ Чат ${context.peerId} теперь принадлежит фракции ${country.GetName()}`)
         }
         catch (e)
         {
@@ -984,11 +1127,11 @@ class ChatController
                     if(Data.users[user].relaxingEndTimeout) clearTimeout(Data.users[user].relaxingEndTimeout)
                     if(Data.users[user].timeout) clearTimeout(Data.users[user].timeout)
                     delete Data.users[user]
-                    request += `- *id${user}(${user}) - удален из кэша ✅\n`
+                    request += `*id${user}(${user}) - удален из кэша ✅\n`
                 }
                 else
                 {
-                    request += `- *id${user}(${user}) - отсутствует в кэше ⚠\n`
+                    request += `*id${user}(${user}) - отсутствует в кэше ⚠\n`
                 }
             }
             await context.send(request)

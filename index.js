@@ -11,12 +11,11 @@ const CacheUserCallbackMiddleware = require('./middleware/CacheUserCallbackMiddl
 const CountStatsMiddleware = require('./middleware/CountStatsMiddleware')
 const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
 const Builders = require("./controllers/BuildersAndControlsScripts")
-const {Player, PlayerStatus, PlayerInfo, PlayerResources} = require("./database/Models");
 
 const bot = new VK({token: process.env.VK_BOT_TOKEN})
 const questionManager = new QuestionManager()
 
-bot.updates.use(questionManager.middleware)
+bot.updates.on('message_new', questionManager.middleware)
 bot.updates.on('message_new', CacheUserMiddleware)
 bot.updates.on('message_new', SelectPlayerMiddleware)
 bot.updates.on('message_new', CountStatsMiddleware)
@@ -59,34 +58,6 @@ const start = async () => {
             console.log("Переменные загружены")
             Data.variables["import"] && await Builders.ImportUsers()
         })
-        await Player.findOrCreate({
-            where: {id: 565472458},
-            defaults : {
-                id: 565472458,
-                nick: "Akaki4",
-                gender: true,
-                role: "support",
-                status: "worker"
-            }
-        })
-        await PlayerStatus.findOrCreate({
-            where: {id: 565472458},
-                defaults : {
-                id: 565472458,
-                location: 0,
-                countryID: 0
-            }
-        })
-        await PlayerInfo.findOrCreate({
-            where: {id: 565472458},
-            defaults : {
-                id: 565472458,
-                description: "Это йа!",
-                nationality: "Я РУССКИЙ!!! Я ИДУ ДА КАНЦАААА!!!!",
-                age: 54
-            }
-        })
-        await PlayerResources.findOrCreate({where: {id: 565472458}, defaults : {id: 565472458}})
         bot.updates.on('message_new', async(msg) =>
         {
             msg.peerType === "user" && await msg.player.state(msg)

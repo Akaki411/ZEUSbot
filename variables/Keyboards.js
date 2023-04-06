@@ -1090,6 +1090,14 @@ class KeyboardButtons
         }
     })
 
+    changeDescriptionButton = Keyboard.textButton({
+        label: '⏏ Изменить описание',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_description'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

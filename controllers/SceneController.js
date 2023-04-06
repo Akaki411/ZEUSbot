@@ -1719,7 +1719,8 @@ class SceneController
     {
         const kb = [
             [keyboard.postboxButton],
-            [keyboard.changeNickButton, keyboard.adminsButton, keyboard.infoButton],
+            [keyboard.changeNickButton, keyboard.changeDescriptionButton],
+            [keyboard.adminsButton, keyboard.infoButton],
             [keyboard.backButton]
         ]
         context.player.notifications ? kb[0].push(keyboard.notificationsOffButton) : kb[0].push(keyboard.notificationsOnButton)
@@ -1825,7 +1826,7 @@ class SceneController
         try
         {
             let current_keyboard = this.GetParamsMenuKeyboard(context)
-            if (context.messagePayload?.choice?.match(/back|notifications_on|notifications_off|info|admins|postbox|change_nick/))
+            if (context.messagePayload?.choice?.match(/back|change_description|notifications_on|notifications_off|info|admins|postbox|change_nick/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1898,12 +1899,14 @@ class SceneController
                 {
                     await Builders.ChangeNick(context, current_keyboard)
                 }
+                if (context.messagePayload.choice.match(/change_description/))
+                {
+                    await Builders.ChangeDescription(context, current_keyboard)
+                }
             }
             else
             {
-                await context.send("👉🏻 Параметры",{
-                    keyboard: keyboard.build(current_keyboard)
-                })
+                await context.send("👉🏻 Параметры",{keyboard: keyboard.build(current_keyboard)})
             }
         }
         catch (e)

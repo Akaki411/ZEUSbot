@@ -258,13 +258,21 @@ class CacheData
         this.countries = []
         return new Promise(async (resolve) => {
             const countries = await Country.findAll()
+            let temp
             for (const key of countries)
             {
                 if(key)
                 {
                     let res = await CountryResources.findOne({where: {id: key.dataValues.id}})
                     this.countries[key.dataValues.id] = new CountryObject(key, res)
-                    if(key.dataValues.chatID) this.countryChats[key.dataValues.chatID] = this.countries[key.dataValues.id]
+                    if(key.dataValues.chatID)
+                    {
+                        temp = key.dataValues.chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            this.countryChats[chat] = this.countries[key.dataValues.id]
+                        }
+                    }
                 }
             }
             fs.access("./files/active.json", (error) => {
