@@ -1074,6 +1074,22 @@ class KeyboardButtons
         }
     })
 
+    citizenListButton = Keyboard.textButton({
+        label: '💳 Список граждан',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'citizen_list'
+        }
+    })
+
+    registrationListButton = Keyboard.textButton({
+        label: '💳 Список горожан',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'reg_list'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

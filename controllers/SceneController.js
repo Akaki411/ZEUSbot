@@ -795,7 +795,7 @@ class SceneController
     {
         return [
             [keyboard.resourcesButton, keyboard.playersListButton],
-            [keyboard.citiesButton, keyboard.countryInfoButton],
+            [keyboard.citiesButton, keyboard.citizenListButton, keyboard.countryInfoButton],
             [keyboard.backButton]
         ]
     }
@@ -1226,7 +1226,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|resources|cities|country_info|players_list/))
+            if(context.messagePayload?.choice?.match(/back|resources|cities|country_info|players_list|citizen_list/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1250,6 +1250,10 @@ class SceneController
                 if (context.messagePayload.choice.match(/players_list/))
                 {
                     await Builders.GetCountryPlayersList(context)
+                }
+                if (context.messagePayload.choice.match(/citizen_list/))
+                {
+                    await Builders.GetCitizenList(context)
                 }
             }
             else
@@ -1294,7 +1298,7 @@ class SceneController
     {
         return [
             [keyboard.resourcesButton, keyboard.playersListButton],
-            [keyboard.buildingsButton, keyboard.cityInfoButton],
+            [keyboard.buildingsButton, keyboard.registrationListButton, keyboard.cityInfoButton],
             [keyboard.backButton]
         ]
     }
@@ -1572,7 +1576,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|buildings|resources|city_info|players_list/))
+            if(context.messagePayload?.choice?.match(/back|buildings|resources|city_info|players_list|reg_list/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1607,6 +1611,10 @@ class SceneController
                 {
                     await Builders.GetCityPlayersList(context)
                 }
+                if(context.messagePayload.choice.match(/reg_list/))
+                {
+                    await Builders.GetRegistrationList(context)
+                }
             }
             else
             {
@@ -1639,7 +1647,8 @@ class SceneController
         let kb = [
             [],
             [keyboard.aboutMeButton, keyboard.propertyButton, keyboard.effectsButton],
-            [keyboard.backButton]
+            [keyboard.resourcesButton],
+            [keyboard.backButton, keyboard.transactionButton]
         ]
         context.player.citizenship !== null ? kb[0].push(keyboard.refuseCitizenshipButton) : kb[0].push(keyboard.getCitizenshipButton)
         context.player.marriedID !== null ? kb[0].push(keyboard.refuseMerryButton) : kb[0].push(keyboard.merryButton)
@@ -1657,6 +1666,17 @@ class SceneController
         }
         return kb
     }
+
+    GetPropertyMenuKeyboard = () =>
+    {
+        return [
+            [keyboard.listButton],
+            [keyboard.buildButton, keyboard.upgradeButton],
+            [keyboard.giveKeyButton, keyboard.copyKeyButton],
+            [keyboard.backButton]
+        ]
+    }
+
     GetLocationMenuKeyboard = () =>
     {
         return [
@@ -1706,15 +1726,6 @@ class SceneController
         return kb
     }
 
-    GetPropertyMenuKeyboard = () =>
-    {
-        return [
-            [keyboard.listButton],
-            [keyboard.buildButton, keyboard.upgradeButton, keyboard.resourcesButton],
-            [keyboard.giveKeyButton, keyboard.transactionButton, keyboard.copyKeyButton],
-            [keyboard.backButton]
-        ]
-    }
 
     GetInBuildingMenuKeyboard = (context) =>
     {
@@ -1806,82 +1817,6 @@ class SceneController
         catch (e)
         {
             await ErrorHandler.SendLogs(context, "SceneController/Menu", e)
-        }
-    }
-
-    Property = async(context) =>
-    {
-        try
-        {
-            let current_keyboard = this.GetPropertyMenuKeyboard()
-            if (context.messagePayload?.choice?.match(/back|list|build|give_key|copy_key|upgrade|resources|transaction/))
-            {
-                if (context.messagePayload.choice.match(/back/))
-                {
-                    await context.send("▶ Профиль", {
-                        keyboard: keyboard.build(await this.GetProfileMenuKeyboard(context))
-                    })
-                    context.player.state = this.Profile
-                }
-                if(context.messagePayload.choice.match(/transaction/))
-                {
-                    if(context.player.CantTransact())
-                    {
-                        await context.send(`Вы не можете делать переводы, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
-                        return
-                    }
-                    await Builders.Transaction(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/list/))
-                {
-                    await Builders.GetAllProperty(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/give_key/))
-                {
-                    if(context.player.CantTransact())
-                    {
-                        await context.send(`Вы не можете обмениваться ключами, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
-                        return
-                    }
-                    await Builders.GiveKey(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/copy_key/))
-                {
-                    await Builders.CopyKey(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/build/))
-                {
-                    if(context.player.CantTransact())
-                    {
-                        await context.send(`Вы не можете строить, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
-                        return
-                    }
-                    await Builders.NewUserBuilding(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/upgrade/))
-                {
-                    if(context.player.CantTransact())
-                    {
-                        await context.send(`Вы не можете улучшать постройки, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
-                        return
-                    }
-                    await Builders.UpgradeUserBuilding(context, current_keyboard)
-                }
-                if(context.messagePayload.choice.match(/resources/))
-                {
-                    await context.send(context.player.GetResources())
-                }
-            }
-            else
-            {
-                await context.send("👉🏻 Имущество", {
-                    keyboard: keyboard.build(current_keyboard)
-                })
-            }
-        }
-        catch (e)
-        {
-            await ErrorHandler.SendLogs(context, "SceneController/Property", e)
         }
     }
 
@@ -2161,10 +2096,7 @@ class SceneController
                 context.player.isFreezed = false
                 context.player.inBuild = null
                 context.player.fatigue = Math.round(100 - (time * (100 / need)))
-                await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`,
-                    {
-                        keyboard: keyboard.build(this.GetMenuKeyboard())
-                    })
+                await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(this.GetMenuKeyboard())})
                 context.player.state = this.Menu
             }
             else
@@ -2184,7 +2116,7 @@ class SceneController
         {
             let current_keyboard = await this.GetProfileMenuKeyboard(context)
 
-            if (context.messagePayload?.choice?.match(/back|get_registration|refuse_registration|get_citizenship|refuse_citizenship|merry|divorce|create_last_will|delete_last_will|about_me|effects|property/))
+            if (context.messagePayload?.choice?.match(/back|get_registration|resources|refuse_registration|get_citizenship|refuse_citizenship|merry|transaction|divorce|create_last_will|delete_last_will|about_me|effects|property/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -2247,24 +2179,96 @@ class SceneController
                 {
                     await Builders.RefuseRegistration(context, current_keyboard, {keyboard: this.GetProfileMenuKeyboard})
                 }
+                if(context.messagePayload.choice.match(/transaction/))
+                {
+                    if(context.player.CantTransact())
+                    {
+                        await context.send(`Вы не можете делать переводы, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
+                        return
+                    }
+                    await Builders.Transaction(context, current_keyboard)
+                }
                 if(context.messagePayload.choice.match(/property/))
                 {
-                    context.send("▶ Имущество",{
-                        keyboard: keyboard.build(this.GetPropertyMenuKeyboard())
-                    })
+                    await context.send("▶ Имущество",{keyboard: keyboard.build(this.GetPropertyMenuKeyboard())})
                     context.player.state = this.Property
+                }
+                if(context.messagePayload.choice.match(/resources/))
+                {
+                    await context.send(context.player.GetResources())
                 }
             }
             else
             {
-                await context.send("👉🏻 Профиль",{
+                await context.send("👉🏻 Профиль",{keyboard: keyboard.build(current_keyboard)})
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "SceneController/Profile", e)
+        }
+    }
+
+    Property = async(context) =>
+    {
+        try
+        {
+            let current_keyboard = this.GetPropertyMenuKeyboard()
+            if (context.messagePayload?.choice?.match(/back|list|build|give_key|copy_key|upgrade/))
+            {
+                if (context.messagePayload.choice.match(/back/))
+                {
+                    await context.send("▶ Профиль", {
+                        keyboard: keyboard.build(await this.GetProfileMenuKeyboard(context))
+                    })
+                    context.player.state = this.Profile
+                }
+                if (context.messagePayload.choice.match(/list/))
+                {
+                    await Builders.GetAllProperty(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/give_key/))
+                {
+                    if(context.player.CantTransact())
+                    {
+                        await context.send(`Вы не можете обмениваться ключами, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
+                        return
+                    }
+                    await Builders.GiveKey(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/copy_key/))
+                {
+                    await Builders.CopyKey(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/build/))
+                {
+                    if(context.player.CantTransact())
+                    {
+                        await context.send(`Вы не можете строить, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
+                        return
+                    }
+                    await Builders.NewUserBuilding(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/upgrade/))
+                {
+                    if(context.player.CantTransact())
+                    {
+                        await context.send(`Вы не можете улучшать постройки, причина:\n\n${context.player.WhyCantTransact()}`, {keyboard: keyboard.build(current_keyboard)})
+                        return
+                    }
+                    await Builders.UpgradeUserBuilding(context, current_keyboard)
+                }
+            }
+            else
+            {
+                await context.send("👉🏻 Имущество", {
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Profile", e)
+            await ErrorHandler.SendLogs(context, "SceneController/Property", e)
         }
     }
 

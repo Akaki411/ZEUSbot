@@ -434,30 +434,18 @@ class CacheData
 
     async AddPlayerResources(id, res)
     {
-        if(!id || !res) return false
+        if(!id || !res) throw new Error("ID or Resources is not exist");
         let resources = await PlayerResources.findOne({where: {id: id}})
-        if(this.users[id])
+        let obj = {}
+        for(const key of Object.keys(res))
         {
-            this.users[id].money += res.money ? res.money : 0
-            this.users[id].stone += res.stone ? res.stone : 0
-            this.users[id].wood += res.wood ? res.wood : 0
-            this.users[id].wheat += res.wheat ? res.wheat : 0
-            this.users[id].iron += res.iron ? res.iron : 0
-            this.users[id].copper += res.copper ? res.copper : 0
-            this.users[id].silver += res.silver ? res.silver : 0
-            this.users[id].diamond += res.diamond ? res.diamond : 0
+            if(this.users[id])
+            {
+                this.users[id][key] = resources.dataValues[key] + res[key]
+            }
+            obj[key] = resources.dataValues[key] + res[key]
         }
-        resources.set({
-            money: resources.dataValues.money + (res.money ? res.money : 0),
-            stone: resources.dataValues.stone + (res.stone ? res.stone : 0),
-            wood: resources.dataValues.wood + (res.wood ? res.wood : 0),
-            wheat: resources.dataValues.wheat + (res.wheat ? res.wheat : 0),
-            iron: resources.dataValues.iron + (res.iron ? res.iron : 0),
-            copper: resources.dataValues.copper + (res.copper ? res.copper : 0),
-            silver: resources.dataValues.silver + (res.silver ? res.silver : 0),
-            diamond: resources.dataValues.diamond + (res.diamond ? res.diamond : 0)
-        })
-        await resources.save()
+        await PlayerResources.update(obj, {where: {id: id}})
     }
 }
 

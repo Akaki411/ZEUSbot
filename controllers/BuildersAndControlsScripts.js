@@ -5782,6 +5782,80 @@ class BuildersAndControlsScripts
         })
     }
 
+    async GetCitizenList(context)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let request = `💳 Граждане фракции ${context.country.GetName()}\n\n`
+                const playersStatus = await PlayerStatus.findAll({where: {citizenship: context.country.id}, attributes: ["id"]})
+                const players = await Player.findAll({where: {id: playersStatus.map(key => {return key.dataValues.id})}, attributes: ["id", "nick"]})
+                const users = []
+                for(const status of playersStatus)
+                {
+                    for(const player of players)
+                    {
+                        if(status.dataValues.id === player.dataValues.id)
+                        {
+                            users.push({
+                                id: player.dataValues.id,
+                                nick: player.dataValues.nick
+                            })
+                            break
+                        }
+                    }
+                }
+                for(const player of users)
+                {
+                    request += `🔸 *id${player.id}(${player.nick})\n`
+                }
+                await context.send(request)
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
+            }
+        })
+    }
+
+    async GetRegistrationList(context)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let request = `💳 В городе ${Data.cities[context.cityID].name} прописаны:\n\n`
+                const playersStatus = await PlayerStatus.findAll({where: {registration: context.cityID}, attributes: ["id"]})
+                const players = await Player.findAll({where: {id: playersStatus.map(key => {return key.dataValues.id})}, attributes: ["id", "nick"]})
+                const users = []
+                for(const status of playersStatus)
+                {
+                    for(const player of players)
+                    {
+                        if(status.dataValues.id === player.dataValues.id)
+                        {
+                            users.push({
+                                id: player.dataValues.id,
+                                nick: player.dataValues.nick
+                            })
+                            break
+                        }
+                    }
+                }
+                for(const player of users)
+                {
+                    request += `🔸 *id${player.id}(${player.nick})\n`
+                }
+                await context.send(request)
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
+            }
+        })
+    }
+
     async ChangeNick(context, current_keyboard)
     {
         return new Promise(async (resolve) => {

@@ -51,6 +51,7 @@ class ChatController
             context.command?.match(Commands.outOfStall) && await this.OutOfStall(context)
             context.command?.match(Commands.stall) && await this.Stall(context)
             context.command?.match(Commands.teleport) && await this.Teleport(context)
+            context.command?.match(/^id|^ид/) && await this.GetID(context)
         }
         catch (e)
         {
@@ -70,6 +71,26 @@ class ChatController
         catch (e)
         {
             await ErrorHandler.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async GetID(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                return
+            }
+            if(context.replyPlayers?.length === 0)
+            {
+                return
+            }
+            await context.reply(context.replyPlayers.join("\n"))
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/Teleport", e)
         }
     }
 
@@ -124,7 +145,7 @@ class ChatController
                 location: country.capitalID
             })
             await status.save()
-            await context.send(`✅ Игрок телепортирован в фракцию ${country.GetName()}`)
+            await context.send(`✅ *id${user}(Игрок) телепортирован в фракцию ${country.GetName()}`)
         }
         catch (e)
         {
@@ -944,27 +965,33 @@ class ChatController
         {
             if(NameLibrary.RoleEstimator(context.player.role) < 3)
             {
-                await context.reply("⚠ У вас нет прав на эту команду")
                 return
             }
-            let user
-            if(context.replyPlayers[0])
+            let users
+            if(context.replyPlayers.length !== 0)
             {
-                user = context.replyPlayers[0]
+                users = context.replyPlayers
             }
             else
             {
-                user = context.player.id
+                users = [context.player.id]
             }
-            if(Data.users[user])
+            let request = "♻ Очистка данных об игроках:\n"
+            for(const user of users)
             {
-                delete Data.users[user]
-                await context.reply("✅ Данные об игроке удалены из кэша")
+                if(Data.users[user])
+                {
+                    if(Data.users[user].relaxingEndTimeout) clearTimeout(Data.users[user].relaxingEndTimeout)
+                    if(Data.users[user].timeout) clearTimeout(Data.users[user].timeout)
+                    delete Data.users[user]
+                    request += `- *id${user}(${user}) - удален из кэша ✅\n`
+                }
+                else
+                {
+                    request += `- *id${user}(${user}) - отсутствует в кэше ⚠\n`
+                }
             }
-            else
-            {
-                await context.reply("⚠ Данные об игроке отсутствуют в кэше")
-            }
+            await context.send(request)
         }
         catch (e)
         {
