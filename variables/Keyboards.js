@@ -1098,6 +1098,14 @@ class KeyboardButtons
         }
     })
 
+    activeButton = Keyboard.textButton({
+        label: '📈 Актив',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'active'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

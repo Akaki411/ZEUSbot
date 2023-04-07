@@ -5398,6 +5398,121 @@ class BuildersAndControlsScripts
         })
     }
 
+    async CountryActive(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let report = "📈 Актив фракций за день:\n\n"
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        report += Data.countries[i].GetName() + "   -   " + Data.countries[i].active + " сообщений\n"
+                    }
+                }
+                report += "\n\n📈 Актив фракций за неделю:\n\n"
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        report += Data.countries[i].GetName() + "   -   " + Data.countriesWeekActive[Data.countries[i].id] + " сообщений\n"
+                    }
+                }
+                await context.send(report, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryActive", e)
+            }
+        })
+    }
+
+    async CountryWarnings(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(NameLibrary.RoleEstimator(context.player.role) < 4)
+                {
+                    await context.send(`⚠ Вы не можете выдавать предупреждения фракциям`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const kb = [
+                    ["➕ Добавить варн", "add"],
+                    ["➖ Удалить варн", "remove"]
+                ]
+                let request = "Количество варнов фракций:\n\n"
+                for(const country of Data.countries)
+                {
+                    if(country)
+                    {
+                        request += country.GetName() + "  -  " + country.warnings + " варнов\n"
+                    }
+                }
+                const action = await InputManager.KeyboardBuilder(context, request + "\nВыберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action === "add" && await this.AddCountryWarn(context, current_keyboard)
+                action === "remove" && await this.RemoveCountryWarn(context, current_keyboard)
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryWarnings", e)
+            }
+        })
+    }
+
+    async RemoveCountryWarn(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                if(country.warnings <= 0)
+                {
+                    await context.send(`⚠ У фракции ${country.GetName()} нет предупреждений`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                country.warnings --
+                await Country.update({warnings: country.warnings}, {where: {id: country.id}})
+                await api.SendMessage(country.leaderID, `✅ С вашей фракции ${country.GetName()} снят один варн`)
+                await context.send(`✅ Предупреждение снято`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountryWarn", e)
+            }
+        })
+    }
+
+    async AddCountryWarn(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                country.warnings ++
+                await Country.update({warnings: country.warnings}, {where: {id: country.id}})
+                await api.SendMessage(country.leaderID, `⚠ Внимание! Ваша фракция ${country.GetName()} получила варн`)
+                await context.send(`✅ Фракции ${country.GetName()} выдано предупреждение`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddCountryWarn", e)
+            }
+        })
+    }
+
     async CountryTags(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
@@ -5415,7 +5530,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryTags", e)
             }
         })
     }
@@ -5463,7 +5578,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountryTag", e)
             }
         })
     }
@@ -5511,7 +5626,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddCountryTag", e)
             }
         })
     }

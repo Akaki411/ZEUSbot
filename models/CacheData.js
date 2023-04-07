@@ -3,6 +3,7 @@ const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
+const active = require("../files/active.json");
 
 class CacheData
 {
@@ -26,7 +27,7 @@ class CacheData
         this.stickermans = {}
         this.musicLovers = {}
         this.countryChats = {}
-        this.countriesActive = {}
+        this.countriesWeekActive = {}
         this.stall = []
 
         this.accessKey = this.GenerateString(8)
@@ -288,7 +289,7 @@ class CacheData
                         if(country)
                         {
                             country.active = active[country.id] ? active[country.id] : 0
-                            this.countriesActive[country.id] = country.active
+                            this.countriesWeekActive[country.id] = active["week_" + country.id] ? active["week_" + country.id] : 0
                         }
                     }
                 }
@@ -306,6 +307,13 @@ class CacheData
                 if(country)
                 {
                     active[country.id] = country.active
+                }
+            }
+            for(const country of this.countries)
+            {
+                if(country)
+                {
+                    active["week_" + country.id] = this.countriesWeekActive[country.id] ? this.countriesWeekActive[country.id] : 0
                 }
             }
             const serialize = JSON.stringify(active, null, "\t")

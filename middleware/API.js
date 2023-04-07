@@ -11,6 +11,9 @@ class VK_API
         this.api = new API({token: token})
         this.day = 0
         this.StartLoop()
+        let time = new Date()
+        this.day = time.getDay()
+        this.day = this.day === 0 ? 7 : this.day
     }
 
     StartLoop()
@@ -26,7 +29,6 @@ class VK_API
 
     async StartMainLoop()
     {
-        await this.EveryDayLoop()
         setInterval(async () => {await this.EveryDayLoop()}, 86400000)
     }
 
@@ -48,15 +50,16 @@ class VK_API
                     await Player.update({warningScore: await Warning.count({where: {userID: warn.dataValues.userID}})}, {where: {id: warn.dataValues.userID}})
                 }
             }
+
             let active = null
             let max = 0
             let activeNegative = null
-            let min = 0
+            let min = Number.MAX_SAFE_INTEGER
             for(let i = 0; i < Data.countries.length; i++)
             {
                 if(Data.countries[i])
                 {
-                    Data.countriesActive[Data.countries[i].id] = Data.countries[i].active
+                    Data.countriesWeekActive[Data.countries[i].id] += Data.countries[i].active
                     if(Data.countries[i].active >= max)
                     {
                         max = Data.countries[i].active
@@ -71,65 +74,120 @@ class VK_API
                 }
             }
             Data.countries[active].rating++
-            Data.countries[activeNegative].rating++
+            Data.countries[activeNegative].rating--
             await Country.update({rating: Data.countries[active].rating}, {where: {id: Data.countries[active].id}})
             await Country.update({rating: Data.countries[activeNegative].rating}, {where: {id: Data.countries[activeNegative].id}})
             await Data.AddCountryResources(Data.countries[active].id, {money: 100})
-            await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 бал, в бюджет передан сладкий подарок в размере 100 монет`)
-            await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[active].GetName()} набрала самый низкий актив за сегодня, рейтинг уменьшен на 1 бал`)
-
+            await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 балл, в бюджет передан сладкий подарок в размере 100 монет`)
+            await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня, рейтинг уменьшен на 1 балл`)
+            let report = "Результаты подсчета актива за сегодня:\n\n" +
+                "🔝 Наибольший актив: " + Data.countries[active].GetName() + "\n" +
+                "💬 Сообщений: " + max + "\n" +
+                "➕ Выдан балл актива" + "\n\n" +
+                "🔝 Наименьший актив: " + Data.countries[activeNegative].GetName() + "\n" +
+                "💬 Сообщений: " + min + "\n" +
+                "➖ Вычтен балл актива" + "\n\n"
+            await this.SendMessage(Data.projectHead.id, report)
 
             let temp = null
+            max = 0
+            active = null
             for(const key of Object.keys(Data.activity))
             {
                 temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["msgs"]})
                 if(!temp) continue
                 temp.set({msgs: temp.dataValues.msgs + Data.activity[key]})
                 await temp.save()
+                if(Data.activity[key] > max)
+                {
+                    max = Data.activity[key]
+                    active = key
+                }
+            }
+            if(active)
+            {
+                await this.SendMessage(active, "🎉 Вы набрали больше всех сообщений за сегодня, печенька 🍪 в виде 70 монет прилагается")
+                await Data.AddPlayerResources(active, {money: 70})
             }
             Data.activity = {}
+            max = 0
+            active = null
             for(const key of Object.keys(Data.musicLovers))
             {
                 temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["audios"]})
                 if(!temp) continue
                 temp.set({audios: temp.dataValues.audios + Data.musicLovers[key]})
                 await temp.save()
+                if(Data.musicLovers[key] > max)
+                {
+                    max = Data.musicLovers[key]
+                    active = key
+                }
+            }
+            if(active)
+            {
+                await this.SendMessage(active, "🎶 За сегодня вы главный меломан, держи 🍬 конфетку (30 монет)")
+                await Data.AddPlayerResources(active, {money: 30})
             }
             Data.musicLovers = {}
+            max = 0
+            active = null
             for(const key of Object.keys(Data.stickermans))
             {
                 temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["stickers"]})
                 if(!temp) continue
                 temp.set({stickers: temp.dataValues.stickers + Data.stickermans[key]})
                 await temp.save()
+                if(Data.stickermans[key] > max)
+                {
+                    max = Data.stickermans[key]
+                    active = key
+                }
+            }
+            if(active)
+            {
+                await this.SendMessage(active, "💩 Любишь стикеры? Держи 🍰 тортик (30 монет)")
+                await Data.AddPlayerResources(active, {money: 30})
             }
             Data.stickermans = {}
+            max = 0
+            active = null
             for(const key of Object.keys(Data.uncultured))
             {
                 temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["swords"]})
                 if(!temp) continue
                 temp.set({swords: temp.dataValues.swords + Data.uncultured[key]})
                 await temp.save()
+                if(Data.uncultured[key] > max)
+                {
+                    max = Data.uncultured[key]
+                    active = key
+                }
+            }
+            if(active)
+            {
+                await this.SendMessage(active, "💩 Вы сегодня больше всех матерились, вот 🥛 молоко за вредность (50 монет)")
+                await Data.AddPlayerResources(active, {money: 50})
             }
             Data.uncultured = {}
-            if(this.day >= 3)
+
+            this.day ++
+            if(this.day > 7)
             {
+                report = "📈 Актив фракций за неделю:\n\n"
                 for(let i = 0; i < Data.countries.length; i++)
                 {
                     if(Data.countries[i])
                     {
-                        if(Data.countries[i].active <= 500)
-                        {
-                            Data.countries[i].warnings++
-                            await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
-                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание, ваша фракция ${Data.countries[i].GetName()} получила варн за малый актив в чате (< 500 сообщений за день)`)
-                        }
-                        Data.countriesActive[Data.countries[i].id] = 0
+                        report += Data.countries[i].GetName() + "   -   " + Data.countriesWeekActive[Data.countries[i].id] + " сообщений\n"
+                        Data.countriesWeekActive[Data.countries[i].id] = 0
                     }
                 }
+                report += "\nℹ Недельный актив сброшен"
+                await this.SendMessage(Data.projectHead.id, report)
                 this.day = 0
             }
-            this.day += 1
+            await Data.SaveActive()
         }
         catch (e)
         {

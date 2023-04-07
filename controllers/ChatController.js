@@ -353,7 +353,7 @@ class ChatController
                             user_id: official,
                             random_id: Math.round(Math.random() * 100000),
                             message: `🪪 Игрок ${context.player.GetName()} подал на гражданство в вашу фракцию: \n\n${context.player.GetInfo()}`,
-                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country})]]).inline().oneTime()
+                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country.id})]]).inline().oneTime()
                         })
                     }
                 }
@@ -909,7 +909,7 @@ class ChatController
                     {
                         request += `${Data.countries[activeCountries[i][1]].GetName()}\n`
                         request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
-                        request += `💪 Получено баллов: ${Data.countries[activeCountries[i][1]].rating}\n`
+                        request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
                         request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
                     }
                 }
@@ -938,7 +938,7 @@ class ChatController
                 }
                 request += `${country.GetName()}\n`
                 request +=  `${country.chatID ? `⚒ Актив за сегодня: ${country.active} сообщений` : "⚠ Чат не добавлен"}\n`
-                request += `💪 Получено баллов: ${country.rating}\n`
+                request += `💪 Рейтинг активности: ${country.rating}\n`
                 request += `🔴 Получено варнов: ${country.warnings}\n\n`
                 await context.send(request)
             }
