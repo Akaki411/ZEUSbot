@@ -5416,7 +5416,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.countries[i])
                     {
-                        report += Data.countries[i].GetName() + "   -   " + Data.countriesWeekActive[Data.countries[i].id] + " сообщений\n"
+                        report += Data.countries[i].GetName() + "   -   " + (Data.countriesWeekActive[Data.countries[i].id] + Data.countries[i].active) + " сообщений\n"
                     }
                 }
                 await context.send(report, {keyboard: keyboard.build(current_keyboard)})

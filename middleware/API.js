@@ -29,6 +29,7 @@ class VK_API
 
     async StartMainLoop()
     {
+        await this.EveryDayLoop()
         setInterval(async () => {await this.EveryDayLoop()}, 86400000)
     }
 
@@ -74,12 +75,15 @@ class VK_API
                 }
             }
             Data.countries[active].rating++
-            Data.countries[activeNegative].rating--
+            if(min < 300)
+            {
+                Data.countries[activeNegative].rating--
+                await Country.update({rating: Data.countries[activeNegative].rating}, {where: {id: Data.countries[activeNegative].id}})
+            }
             await Country.update({rating: Data.countries[active].rating}, {where: {id: Data.countries[active].id}})
-            await Country.update({rating: Data.countries[activeNegative].rating}, {where: {id: Data.countries[activeNegative].id}})
             await Data.AddCountryResources(Data.countries[active].id, {money: 100})
             await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 балл, в бюджет передан сладкий подарок в размере 100 монет`)
-            await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня, рейтинг уменьшен на 1 балл`)
+            await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 300 ? " и количество сообщений за день не достигло 300, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 300 сообщений, поэтому баллы активности с вас не снимаются."}`)
             let report = "Результаты подсчета актива за сегодня:\n\n" +
                 "🔝 Наибольший актив: " + Data.countries[active].GetName() + "\n" +
                 "💬 Сообщений: " + max + "\n" +
