@@ -377,7 +377,7 @@ class CallbackEventController
                 })
                 building.set({freezing: false})
                 await building.save()
-                await Data.LoadBuildings()
+                await Data.ResetBuildings()
                 Data.cities[building.dataValues.cityID].buildingsScore++
                 await City.update({buildingsScore: Data.cities[building.dataValues.cityID].buildingsScore}, {where: {id: building.dataValues.cityID}})
                 await api.api.messages.edit({

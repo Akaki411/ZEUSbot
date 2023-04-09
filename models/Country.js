@@ -36,6 +36,7 @@ class CountryObject
         this.silver = resources.dataValues.silver
         this.diamond = resources.dataValues.diamond
         this.lastTaxTime = new Date()
+        this.getResourcesTimeout = null
         this.active = 0
     }
 

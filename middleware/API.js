@@ -98,7 +98,7 @@ class VK_API
             active = null
             for(const key of Object.keys(Data.activity))
             {
-                temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["msgs"]})
+                temp = await PlayerInfo.findOne({where: {id: key}})
                 if(!temp) continue
                 temp.set({msgs: temp.dataValues.msgs + Data.activity[key]})
                 await temp.save()
@@ -118,7 +118,7 @@ class VK_API
             active = null
             for(const key of Object.keys(Data.musicLovers))
             {
-                temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["audios"]})
+                temp = await PlayerInfo.findOne({where: {id: key}})
                 if(!temp) continue
                 temp.set({audios: temp.dataValues.audios + Data.musicLovers[key]})
                 await temp.save()
@@ -138,7 +138,7 @@ class VK_API
             active = null
             for(const key of Object.keys(Data.stickermans))
             {
-                temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["stickers"]})
+                temp = await PlayerInfo.findOne({where: {id: key}})
                 if(!temp) continue
                 temp.set({stickers: temp.dataValues.stickers + Data.stickermans[key]})
                 await temp.save()
@@ -158,7 +158,7 @@ class VK_API
             active = null
             for(const key of Object.keys(Data.uncultured))
             {
-                temp = await PlayerInfo.findOne({where: {id: key}, attributes: ["swords"]})
+                temp = await PlayerInfo.findOne({where: {id: key}})
                 if(!temp) continue
                 temp.set({swords: temp.dataValues.swords + Data.uncultured[key]})
                 await temp.save()
@@ -170,7 +170,7 @@ class VK_API
             }
             if(active)
             {
-                await this.SendMessage(active, "💩 Вы сегодня больше всех матерились, вот 🥛 молоко за вредность (50 монет)")
+                await this.SendMessage(active, "😈 Вы сегодня больше всех матерились, вот 🥛 молоко за вредность (50 монет)")
                 await Data.AddPlayerResources(active, {money: 50})
             }
             Data.uncultured = {}
@@ -183,12 +183,12 @@ class VK_API
                 {
                     if(Data.countries[i])
                     {
-                        report += Data.countries[i].GetName() + "   -   " + Data.countriesWeekActive[Data.countries[i].id] + " сообщений\n"
+                        report += (Data.projectHead?.platform === "IOS" ? Data.countries[i].name : Data.countries[i].GetName()) + "   -   " + Data.countriesWeekActive[Data.countries[i].id] + " сообщений\n"
                         Data.countriesWeekActive[Data.countries[i].id] = 0
                     }
                 }
                 report += "\nℹ Недельный актив сброшен"
-                await this.SendMessage(Data.projectHead.id, report)
+                await this.SendMessage(Data.projectHead?.id, report)
                 this.day = 0
             }
             await Data.SaveActive()
@@ -245,7 +245,8 @@ class VK_API
     async GetUserData(id)
     {
         const info = await this.api.users.get({
-            user_ids: id
+            user_ids: id,
+            fields: "sex"
             })
         return info[0]
     }

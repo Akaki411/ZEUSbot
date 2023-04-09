@@ -298,6 +298,42 @@ class CacheData
         })
     }
 
+    async ResetCountries()
+    {
+        return new Promise(async (resolve) => {
+            const countries = await CountryResources.findAll()
+            let temp
+            for (const key of countries)
+            {
+                if(this.countries[key.id])
+                {
+                    this.countries[key.id].money = key.dataValues.money
+                    this.countries[key.id].stone = key.dataValues.stone
+                    this.countries[key.id].wood = key.dataValues.wood
+                    this.countries[key.id].wheat = key.dataValues.wheat
+                    this.countries[key.id].iron = key.dataValues.iron
+                    this.countries[key.id].copper = key.dataValues.copper
+                    this.countries[key.id].silver = key.dataValues.silver
+                    this.countries[key.id].diamond = key.dataValues.diamond
+                }
+                else
+                {
+                    let country = await Country.findOne({where: {id: key.dataValues.id}})
+                    this.countries[key.dataValues.id] = new CountryObject(key, country)
+                    if(key.dataValues.chatID)
+                    {
+                        temp = key.dataValues.chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            this.countryChats[chat] = this.countries[key.dataValues.id]
+                        }
+                    }
+                }
+            }
+            return resolve()
+        })
+    }
+
     async SaveActive()
     {
         return new Promise((resolve) => {
@@ -355,6 +391,33 @@ class CacheData
         })
     }
 
+    async ResetCities()
+    {
+        return new Promise(async (resolve) => {
+            const cities = await CityResources.findAll()
+            for (const key of cities)
+            {
+                if(this.cities[key.id])
+                {
+                    this.cities[key.id].money = key.dataValues.money
+                    this.cities[key.id].stone = key.dataValues.stone
+                    this.cities[key.id].wood = key.dataValues.wood
+                    this.cities[key.id].wheat = key.dataValues.wheat
+                    this.cities[key.id].iron = key.dataValues.iron
+                    this.cities[key.id].copper = key.dataValues.copper
+                    this.cities[key.id].silver = key.dataValues.silver
+                    this.cities[key.id].diamond = key.dataValues.diamond
+                }
+                else
+                {
+                    let city = await City.findOne({where: {id: key.dataValues.id}})
+                    this.cities[key.dataValues.id] = new CityObject(city, key)
+                }
+            }
+            return resolve()
+        })
+    }
+
     async LoadBuildings()
     {
         this.buildings = {}
@@ -376,6 +439,43 @@ class CacheData
                     }
                 }
 
+            }
+            return resolve()
+        })
+    }
+
+    async ResetBuildings()
+    {
+        return new Promise(async (resolve) =>
+        {
+            const buildings = await Buildings.findAll()
+            for(let i = 0; i < buildings.length; i++)
+            {
+                if(this.buildings[buildings[i].dataValues.cityID])
+                {
+                    let flag = false
+                    for(const building of this.buildings[buildings[i].dataValues.cityID])
+                    {
+                        if(building.id === buildings[i].dataValues.id)
+                        {
+                            flag = true
+                            break
+                        }
+                    }
+                    if(flag) continue
+                }
+                if(!buildings[i].dataValues.freezing)
+                {
+                    if(this.buildings[buildings[i].dataValues.cityID])
+                    {
+                        this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
+                    }
+                    else
+                    {
+                        this.buildings[buildings[i].dataValues.cityID] = []
+                        this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
+                    }
+                }
             }
             return resolve()
         })

@@ -24,6 +24,7 @@ class CityObject
         this.copper = resources.dataValues.copper
         this.silver = resources.dataValues.silver
         this.diamond = resources.dataValues.diamond
+        this.getResourcesTimeout = null
     }
 
     CanPay(pay)

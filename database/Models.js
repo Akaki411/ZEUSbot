@@ -9,7 +9,8 @@ const Player = sequelize.define("player", {
     isBanned: {type: DataTypes.BOOLEAN, defaultValue: false},
     warningScore: {type: DataTypes.INTEGER, defaultValue: 0},
     role: {type: DataTypes.STRING, allowNull: false, defaultValue: "player"},
-    status: {type: DataTypes.STRING, allowNull: false, defaultValue: "stateless"}
+    status: {type: DataTypes.STRING, allowNull: false, defaultValue: "stateless"},
+    platform: {type: DataTypes.STRING, allowNull: false, defaultValue: "ANDROID"}
 })
 const PlayerStatus = sequelize.define("player-status", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},

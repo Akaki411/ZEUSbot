@@ -12,6 +12,7 @@ class User
         this.warningScore = user.dataValues.warningScore
         this.role = user.dataValues.role
         this.status = user.dataValues.status
+        this.platform = user.dataValues.platform
         this.location = status.dataValues.location
         this.countryID = status.dataValues.countryID
         this.citizenship = status.dataValues.citizenship
@@ -44,6 +45,7 @@ class User
         this.relaxingEndTimeout = null
         this.lastActionTime = new Date()
         this.timeout = null
+        this.stayInCityTime = new Date()
         this.state = () => {delete this}
     }
 

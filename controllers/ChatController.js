@@ -6,6 +6,7 @@ const SceneController = require("../controllers/SceneController")
 const Data = require("../models/CacheData")
 const {Player, PlayerStatus, PlayerInfo, Country, CountryRoads, CityRoads, PlayerResources} = require("../database/Models");
 const ErrorHandler = require("../error/ErrorHandler")
+const Samples = require("../variables/Samples")
 
 class ChatController
 {
@@ -35,7 +36,8 @@ class ChatController
             context.command?.match(/^мир$/) && await context.send("🌍 Таков наш мир, но что смотреть ты хочешь?", {attachment: Data.variables.globalMap, keyboard: keyboard.build([[keyboard.greyButton({name: "🗺 Карта дорог", type: "show_road_map"})]]).inline()})
             context.command?.match(Commands.map) && await this.RoadMap(context)
             context.command?.match(Commands.work) && await this.Work(context)
-            context.command?.match(/^ресет$/) && await this.Reset(context)
+            context.command?.match(/^ресет|^reset/) && await this.Reset(context)
+            context.command?.match(/^перезагрузить|^релоад|^релод|^reload/) && await this.Reload(context)
             context.command?.match(/^добавить чат /) && await this.AddCountryChat(context)
             context.command?.match(/^удалить чат/) && await this.RemoveCountryChat(context)
             context.command?.match(/^чаты /) && await this.ShowCountryChats(context)
@@ -51,11 +53,11 @@ class ChatController
             context.command?.match(Commands.getCitizenship) && await this.GetCitizenship(context)
             context.command?.match(Commands.toStall) && await this.ToStall(context)
             context.command?.match(Commands.outOfStall) && await this.OutOfStall(context)
-            context.command?.match(Commands.stall) && await this.Stall(context)
             context.command?.match(Commands.teleport) && await this.Teleport(context)
             context.command?.match(/^id|^ид/) && await this.GetID(context)
             context.command?.match(Commands.changeNick) && await this.ChangeNick(context)
             context.command?.match(Commands.changeDescription) && await this.ChangeDescription(context)
+            context.command?.match(Commands.cheating) && await this.CheatResource(context)
         }
         catch (e)
         {
@@ -193,31 +195,6 @@ class ChatController
         }
     }
 
-    async Stall(context)
-    {
-        try
-        {
-            let users = await api.api.users.get({
-                user_ids: Data.stall.join(",")
-            })
-            if(users.length === 0)
-            {
-                await context.send(`👻 В стойле никого нет.`)
-                return
-            }
-            let request = "👽 В стойле находятся:\n\n"
-            for(const key of users)
-            {
-                request += `🤡 *id${key.id}(${key.first_name + " " + key.last_name})\n`
-            }
-            await context.send(request)
-        }
-        catch (e)
-        {
-            await ErrorHandler.SendLogs(context, "ChatController/Stall", e)
-        }
-    }
-
     async OutOfStall(context)
     {
         try
@@ -265,7 +242,12 @@ class ChatController
             {
                 Data.stall.push(user)
                 let person = await api.GetUserData(user)
-                await context.send(`💊 *id${user}(${person.first_name + " " + person.last_name}) отправляется в стойло.`)
+                await context.send(`💊 *id${user}(${person.first_name + " " + person.last_name}) ${Samples.stall_add_request(parseInt(person.sex) === 2)}`)
+            }
+            else
+            {
+                let person = await api.GetUserData(user)
+                await context.send(`💊 *id${user}(${person.first_name + " " + person.last_name}) ${Samples.stall_stay_request(parseInt(person.sex) === 2)}`)
             }
         }
         catch (e)
@@ -621,7 +603,7 @@ class ChatController
                 await context.send(`⚠ Этот игрок уже состоит в браке`)
                 return
             }
-            if(NameLibrary.GetGender(user.dataValues.gender) === context.player.gender && context.player.nation !== "Грек 🏛️")
+            if(NameLibrary.GetGender(user.dataValues.gender) === context.player.gender && !context.player.nation.match(/грек/i))
             {
                 await context.send("✝ Мы такое не одобряем.")
                 return
@@ -879,8 +861,39 @@ class ChatController
     {
         try
         {
-            let command = context.command.split(" ")
-            if(command.length === 1)
+            if(context.command.match(/неделя/))
+            {
+                await this.ShowCountriesWeekActive(context, context.command.replace(/неделя/, ""))
+            }
+            else
+            {
+                await this.ShowCountriesDayActive(context, context.command)
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/RoadMap", e)
+        }
+    }
+
+    async ShowCountriesDayActive(context, response)
+    {
+        try
+        {
+            let temp, country, request = ""
+            for(const key of Data.countries)
+            {
+                if(key?.tags)
+                {
+                    temp = new RegExp(key.tags)
+                    if(response.match(temp))
+                    {
+                        country = key
+                        break
+                    }
+                }
+            }
+            if(!country)
             {
                 let request = "🔰 Актив фракций:\n\n"
                 let activeCountries = []
@@ -907,7 +920,7 @@ class ChatController
                 {
                     if(Data.countries[activeCountries[i][1]])
                     {
-                        request += `${Data.countries[activeCountries[i][1]].GetName()}\n`
+                        request += `${context.player.platform === "IOS" ? Data.countries[activeCountries[i][1]].name : Data.countries[activeCountries[i][1]].GetName()}\n`
                         request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
                         request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
                         request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
@@ -917,29 +930,77 @@ class ChatController
             }
             else
             {
-                command = command.slice(1)
-                command = command.join(" ")
-                let temp, country, request = ""
-                for(const key of Data.countries)
+                request += `${context.player.platform === "IOS" ? country.name : country.GetName()}\n`
+                request +=  `${country.chatID ? `⚒ Актив за сегодня: ${country.active} сообщений` : "⚠ Чат не добавлен"}\n`
+                request += `💪 Рейтинг активности: ${country.rating}\n`
+                request += `🔴 Получено варнов: ${country.warnings}`
+                await context.send(request)
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/RoadMap", e)
+        }
+    }
+
+    async ShowCountriesWeekActive(context, response)
+    {
+        try
+        {
+            let temp, country, request = ""
+            for(const key of Data.countries)
+            {
+                if(key?.tags)
                 {
-                    if(key?.tags)
+                    temp = new RegExp(key.tags)
+                    if(response.match(temp))
                     {
-                        temp = new RegExp(key.tags)
-                        if(command.match(temp))
+                        country = key
+                        break
+                    }
+                }
+            }
+            if(!country)
+            {
+                let request = "🔰 Актив фракций за неделю:\n\n"
+                let activeCountries = []
+                for(let i = 0; i < Data.countries.length; i++)
+                {
+                    if(Data.countries[i])
+                    {
+                        activeCountries.push([Data.countriesWeekActive[Data.countries[i].id], i])
+                    }
+                }
+                for (let j = activeCountries.length - 1; j > 0; j--)
+                {
+                    for (let i = 0; i < j; i++)
+                    {
+                        if (activeCountries[i][0] < activeCountries[i + 1][0])
                         {
-                            country = key
-                            break
+                            let temp = activeCountries[i];
+                            activeCountries[i] = activeCountries[i + 1];
+                            activeCountries[i + 1] = temp;
                         }
                     }
                 }
-                if(!country)
+                for(let i = 0; i < activeCountries.length; i++)
                 {
-                    return
+                    if(Data.countries[activeCountries[i][1]])
+                    {
+                        request += `${context.player.platform === "IOS" ? Data.countries[activeCountries[i][1]].name : Data.countries[activeCountries[i][1]].GetName()}\n`
+                        request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за неделю: ${Data.countriesWeekActive[Data.countries[[activeCountries[i][1]]].id] + Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
+                        request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
+                        request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                    }
                 }
-                request += `${country.GetName()}\n`
-                request +=  `${country.chatID ? `⚒ Актив за сегодня: ${country.active} сообщений` : "⚠ Чат не добавлен"}\n`
+                await context.send(request)
+            }
+            else
+            {
+                request += `${context.player.platform === "IOS" ? country.name : country.GetName()}\n`
+                request += `${country.chatID ? `⚒ Актив за неделю: ${Data.countriesWeekActive[country.id] + country.active} сообщений` : "⚠ Чат не добавлен"}\n`
                 request += `💪 Рейтинг активности: ${country.rating}\n`
-                request += `🔴 Получено варнов: ${country.warnings}\n\n`
+                request += `🔴 Получено варнов: ${country.warnings}`
                 await context.send(request)
             }
         }
@@ -1034,7 +1095,6 @@ class ChatController
             temp = temp.filter(chat => {return parseInt(chat) !== context.peerId})
             country.chatID = (temp.length === 0 ? null : temp.join("|"))
             await Country.update({chatID: country.chatID}, {where: {id: country.id}})
-            await Data.LoadCountries()
             await context.send(`✅ Чат ${context.peerId} больше не принадлежит фракции ${country.GetName()}`)
         }
         catch (e)
@@ -1093,7 +1153,6 @@ class ChatController
             temp.push(context.peerId)
             country.chatID = temp.join("|")
             await Country.update({chatID: country.chatID}, {where: {id: country.id}})
-            await Data.LoadCountries()
             await context.send(`✅ Чат ${context.peerId} теперь принадлежит фракции ${country.GetName()}`)
         }
         catch (e)
@@ -1110,31 +1169,91 @@ class ChatController
             {
                 return
             }
-            let users
+            let users = []
+            let request = ""
+            if(context.command.match(/фракции|государства/))
+            {
+                await Data.ResetCountries()
+                request += "♻ Кеш фракций очищен\n\n"
+            }
+            if(context.command.match(/город/))
+            {
+                await Data.ResetCities()
+                request += "♻ Кеш городов очищен\n\n"
+            }
+            if(context.command.match(/здания|постройки|строения/))
+            {
+                await Data.ResetBuildings()
+                request += "♻ Кеш построек очищен\n\n"
+            }
             if(context.replyPlayers.length !== 0)
             {
                 users = context.replyPlayers
             }
-            else
+            else if (request.length === 0)
             {
                 users = [context.player.id]
             }
-            let request = "♻ Очистка данных об игроках:\n"
-            for(const user of users)
+            if(users.length > 0)
             {
-                if(Data.users[user])
+                request += "\n♻ Очистка данных об игроках:\n"
+                for(const user of users)
                 {
-                    if(Data.users[user].relaxingEndTimeout) clearTimeout(Data.users[user].relaxingEndTimeout)
-                    if(Data.users[user].timeout) clearTimeout(Data.users[user].timeout)
-                    delete Data.users[user]
-                    request += `*id${user}(${user}) - удален из кэша ✅\n`
-                }
-                else
-                {
-                    request += `*id${user}(${user}) - отсутствует в кэше ⚠\n`
+                    if(Data.users[user])
+                    {
+                        if(Data.users[user].relaxingEndTimeout) clearTimeout(Data.users[user].relaxingEndTimeout)
+                        if(Data.users[user].timeout) clearTimeout(Data.users[user].timeout)
+                        delete Data.users[user]
+                        request += `*id${user}(${user}) - удален из кэша ✅\n`
+                    }
+                    else
+                    {
+                        request += `*id${user}(${user}) - отсутствует в кэше ⚠\n`
+                    }
                 }
             }
+
             await context.send(request)
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "ChatController/Reset", e)
+        }
+    }
+
+    async Reload(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                return
+            }
+            let request = ""
+            if(context.command.match(/фракции|государства/))
+            {
+                await Data.LoadCountries()
+                request += "♻ Фракции перезагружены\n\n"
+            }
+            if(context.command.match(/город/))
+            {
+                await Data.LoadCities()
+                request += "♻ Города перезагружены\n\n"
+            }
+            if(context.command.match(/здания|постройки|строения/))
+            {
+                await Data.LoadBuildings()
+                request += "♻ Постройки перезагружены\n\n"
+            }
+            if(context.command.match(/чиновник/))
+            {
+                await Data.LoadOfficials()
+                request += "♻ Чиновники перезагружены\n\n"
+            }
+            if(request.length !== 0)
+            {
+                await context.send(request)
+            }
         }
         catch (e)
         {
@@ -1227,11 +1346,11 @@ class ChatController
                 await context.reply("⚠ Выберите игрока")
                 return
             }
-            if(context.replyPlayers[0] === context.player.id)
-            {
-                await context.reply("❓ Какой смысл передавать ресурсы самому себе? Вот просто зачем? Чтобы что?")
-                return
-            }
+            // if(context.replyPlayers[0] === context.player.id)
+            // {
+            //     await context.reply("❓ Какой смысл передавать ресурсы самому себе? Вот просто зачем? Чтобы что?")
+            //     return
+            // }
             const user = await Player.findOne({where: {id: context.replyPlayers[0]}})
             if(!user)
             {
@@ -1241,70 +1360,185 @@ class ChatController
             }
             context.command = context.command.replace(Commands.send, "")
             let resource = null
-            if(context.command.match(Commands.money))
-            {
-                resource = "money"
-                context.command = context.command.replace(Commands.money, "")
-            }
-            if(context.command.match(Commands.wheat))
-            {
-                resource = "wheat"
-                context.command = context.command.replace(Commands.wheat, "")
-            }
-            if(context.command.match(Commands.stone))
-            {
-                resource = "stone"
-                context.command = context.command.replace(Commands.stone, "")
-            }
-            if(context.command.match(Commands.wood))
-            {
-                resource = "wood"
-                context.command = context.command.replace(Commands.wood, "")
-            }
-            if(context.command.match(Commands.iron))
-            {
-                resource = "iron"
-                context.command = context.command.replace(Commands.iron, "")
-            }
-            if(context.command.match(Commands.copper))
-            {
-                resource = "copper"
-                context.command = context.command.replace(Commands.copper, "")
-            }
-            if(context.command.match(Commands.silver))
-            {
-                resource = "silver"
-                context.command = context.command.replace(Commands.silver, "")
-            }
-            if(context.command.match(Commands.diamond))
-            {
-                resource = "diamond"
-                context.command = context.command.replace(Commands.diamond, "")
-            }
-            if(!resource)
-            {
-                return
-            }
-            context.command = context.command.replace(" ", "")
-            let count = parseInt(context.command)
-            if(isNaN(count))
-            {
-                await context.reply("⚠ Введите количество ресурса")
-                return
-            }
+            let sends = context.command.split(";")
             let objIN = {}
             let objOUT = {}
-            objIN[resource] = -Math.abs(count)
-            objOUT[resource] = Math.abs(count)
-            if(!context.player.CanPay(objIN))
+            let count
+            let request = ""
+            let carrot = 0
+            for(let send of sends)
             {
-                await context.reply(`⚠ Вы не можете передать ${NameLibrary.GetResourceName(resource)} больше ${context.player[resource]} шт.`)
+                if(send.match(Commands.money))
+                {
+                    resource = "money"
+                }
+                if(send.match(Commands.wheat))
+                {
+                    resource = "wheat"
+                }
+                if(send.match(Commands.stone))
+                {
+                    resource = "stone"
+                }
+                if(send.match(Commands.wood))
+                {
+                    resource = "wood"
+                }
+                if(send.match(Commands.iron))
+                {
+                    resource = "iron"
+                }
+                if(send.match(Commands.copper))
+                {
+                    resource = "copper"
+                }
+                if(send.match(Commands.silver))
+                {
+                    resource = "silver"
+                }
+                if(context.command.match(Commands.diamond))
+                {
+                    resource = "diamond"
+                }
+                if(send.match(Commands.carrot))
+                {
+                    resource = "carrot"
+                }
+                if(!resource)
+                {
+                    return
+                }
+                count = send.match(/\d+/)
+                count = parseInt( count ? count[0] : send)
+                if(isNaN(count))
+                {
+                    count = 1
+                }
+                if(resource !== "carrot")
+                {
+                    if(context.player[resource] < count)
+                    {
+                        request += `⚠ Вы не можете передать ${NameLibrary.GetResourceName(resource)} больше ${context.player[resource]} шт\n`
+                        continue
+                    }
+                    objIN[resource] = -Math.abs(count)
+                    objOUT[resource] = Math.abs(count)
+                    request += `${NameLibrary.GetResourceName(resource)} - ✅ Передано\n`
+                }
+                else
+                {
+                    carrot += count
+                }
+            }
+            if(carrot !== 0)
+            {
+                if(!NameLibrary.GetChance((1 / carrot) * 100))
+                {
+                    request += "\nУ вас слишком мало морковки!🥕🥕🥕🥕"
+                }
+                else
+                {
+                    request += "\n🥕 Морковка - ✅ Передано"
+                    await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} поделился с вами марковкой, но из за того что я был голодный - я ее не донес\n👉👈`)
+                }
+            }
+            if(Object.keys(objOUT).length !== 0)
+            {
+                await Data.AddPlayerResources(user.dataValues.id, objOUT)
+                await Data.AddPlayerResources(context.player.id, objIN)
+                await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
+            }
+            await context.reply(request)
+        }
+        catch (e)
+        {
+            console.log(e)
+        }
+    }
+
+    async CheatResource(context)
+    {
+        try
+        {
+            let user
+            if(context.replyPlayers?.length !== 0)
+            {
+                user = context.replyPlayers[0]
+            }
+            else
+            {
+                user = context.player.id
+            }
+            let player = await Player.count({where: {id: user}})
+            if(player === 0)
+            {
+                await context.reply("⚠ Игрок не зарегистрирован")
+                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
-            await Data.AddPlayerResources(user.dataValues.id, objOUT)
-            await Data.AddPlayerResources(context.player.id, objIN)
-            await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
-            await context.reply(`✅ Ресурс передан`)
+            context.command = context.command.replace(Commands.cheating, "")
+            let resource = null
+            let sends = context.command.split(";")
+            let objOUT = {}
+            let count
+            let request = ""
+            for(let send of sends)
+            {
+                if(send.match(Commands.money))
+                {
+                    resource = "money"
+                }
+                if(send.match(Commands.wheat))
+                {
+                    resource = "wheat"
+                }
+                if(send.match(Commands.stone))
+                {
+                    resource = "stone"
+                }
+                if(send.match(Commands.wood))
+                {
+                    resource = "wood"
+                }
+                if(send.match(Commands.iron))
+                {
+                    resource = "iron"
+                }
+                if(send.match(Commands.copper))
+                {
+                    resource = "copper"
+                }
+                if(send.match(Commands.silver))
+                {
+                    resource = "silver"
+                }
+                if(context.command.match(Commands.diamond))
+                {
+                    resource = "diamond"
+                }
+                if(send.match(Commands.carrot))
+                {
+                    resource = "carrot"
+                }
+                if(!resource)
+                {
+                    return
+                }
+                count = send.match(/\d+/)
+                count = parseInt( count ? count[0] : send)
+                if(isNaN(count))
+                {
+                    count = 1
+                }
+                objOUT[resource] = Math.abs(count)
+                request += `${NameLibrary.GetResourceName(resource)} - ✅ Накручено\n`
+            }
+            if(Object.keys(objOUT).length !== 0)
+            {
+                await Data.AddPlayerResources(user, objOUT)
+                await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
+            }
+            await context.reply(request)
         }
         catch (e)
         {

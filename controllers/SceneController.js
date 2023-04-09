@@ -608,7 +608,7 @@ class SceneController
             }
             else
             {
-                context.send("👉🏻 Управление",{
+                await context.send("👉🏻 Управление",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
@@ -670,7 +670,7 @@ class SceneController
             }
             else
             {
-                context.send("👉🏻 Управление",{
+                await context.send("👉🏻 Управление",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
@@ -716,7 +716,7 @@ class SceneController
             }
             else
             {
-                context.send("👉🏻 Управление",{
+                await context.send("👉🏻 Управление",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
@@ -773,7 +773,7 @@ class SceneController
             }
             else
             {
-                context.send("👉🏻 Статистика",{
+                await context.send("👉🏻 Статистика",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
@@ -868,44 +868,37 @@ class SceneController
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
-                    context.send("↪ Назад", {
-                        keyboard: keyboard.build(this.GetStartMenuKeyboard(context))
-                    })
+                    await context.send("↪ Назад", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                     context.player.state = this.StartScreen
                 }
                 if(context.messagePayload.choice.match(/info/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official))
                 {
-                    context.send("▶ Информация о фракции",{
-                        keyboard: keyboard.build(this.GetCountryInfoMenuKeyboard())
-                    })
+                    await context.send("▶ Информация о фракции",{keyboard: keyboard.build(this.GetCountryInfoMenuKeyboard())})
                     context.player.state = this.CountryInfoMenu
                 }
                 if(context.messagePayload.choice.match(/params/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id))
                 {
-                    context.send("▶ Параметры",{
-                        keyboard: keyboard.build(this.GetChangeCountryMenuKeyboard(context))
-                    })
+                    await context.send("▶ Параметры",{keyboard: keyboard.build(this.GetChangeCountryMenuKeyboard(context))})
                     context.player.state = this.ChangeCountryMenu
                 }
                 if(context.messagePayload.choice.match(/controls/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity || context.official?.canAppointMayors || context.official?.canBeDelegate))
                 {
-                    context.send("▶ Управление ",{
-                        keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard())
-                    })
+                    await context.send("▶ Управление ",{keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard())})
                     context.player.state = this.CountryControlsMenu
                 }
                 if(context.messagePayload.choice.match(/budget/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canUseResources))
                 {
-                    context.send("▶ Бюджет",{
-                        keyboard: keyboard.build(this.GetCountryBudgetMenuKeyboard())
-                    })
+                    if(Data.countries[context.player.countryID].capitalID !== context.player.location && context.player.status !== "worker")
+                    {
+                        await context.send("⚠ Бюджетом можно управлять только находясь в столице фракции")
+                        return
+                    }
+                    await context.send("▶ Бюджет",{keyboard: keyboard.build(this.GetCountryBudgetMenuKeyboard())})
                     context.player.state = this.CountryBudgetMenu
                 }
                 if(context.messagePayload.choice.match(/officials/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canAppointOfficial))
                 {
-                    context.send("▶ Чиновники",{
-                        keyboard: keyboard.build(this.GetCountryOfficialsMenuKeyboard())
-                    })
+                    await context.send("▶ Чиновники",{keyboard: keyboard.build(this.GetCountryOfficialsMenuKeyboard())})
                     context.player.state = this.CountryOfficialsMenu
                 }
             }
@@ -1727,15 +1720,22 @@ class SceneController
     GetParamsMenuKeyboard = (context) =>
     {
         const kb = [
-            [keyboard.postboxButton],
-            [keyboard.changeNickButton, keyboard.changeDescriptionButton],
-            [keyboard.adminsButton, keyboard.infoButton],
+            [keyboard.accountButton],
+            [keyboard.adminsButton, keyboard.postboxButton, keyboard.infoButton],
             [keyboard.backButton]
         ]
         context.player.notifications ? kb[0].push(keyboard.notificationsOffButton) : kb[0].push(keyboard.notificationsOnButton)
         return kb
     }
 
+    GetChangeAccountMenuKeyboard = () =>
+    {
+        return [
+            [keyboard.changeNickButton, keyboard.changeDescriptionButton, keyboard.gadgetButton],
+            [keyboard.changeGenderButton, keyboard.changeNationButton, keyboard.changeAgeButton],
+            [keyboard.backButton]
+        ]
+    }
 
     GetInBuildingMenuKeyboard = (context) =>
     {
@@ -1835,7 +1835,7 @@ class SceneController
         try
         {
             let current_keyboard = this.GetParamsMenuKeyboard(context)
-            if (context.messagePayload?.choice?.match(/back|change_description|notifications_on|notifications_off|info|admins|postbox|change_nick/))
+            if (context.messagePayload?.choice?.match(/back|notifications_on|notifications_off|info|admins|postbox|account/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1904,13 +1904,12 @@ class SceneController
                     let request = "Проект *public218388422 («ZEUS - Вселенная игроков»).\n Войны, интриги, симулятор античного жителя.\n\nБот создан на NodeJS версии: "+ process.version + "\nБот версии: "+ Data.variables.version +"\nВладелец проекта - *id212554134(Игорь Будзинский)\nГлавный разработчик - *id565472458(Александр Ковалысько)\nЕсли возникли проблемы с использованием, кого пинать - знаете."
                     await context.send(request)
                 }
-                if (context.messagePayload.choice.match(/change_nick/))
+                if (context.messagePayload.choice.match(/account/))
                 {
-                    await Builders.ChangeNick(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/change_description/))
-                {
-                    await Builders.ChangeDescription(context, current_keyboard)
+                    await context.send("▶ Управление аккаунтом", {
+                        keyboard: keyboard.build(this.GetChangeAccountMenuKeyboard())
+                    })
+                    context.player.state = this.ChangeAccount
                 }
             }
             else
@@ -1921,6 +1920,54 @@ class SceneController
         catch (e)
         {
             await ErrorHandler.SendLogs(context, "SceneController/Params", e)
+        }
+    }
+
+    ChangeAccount = async(context) =>
+    {
+        try
+        {
+            let current_keyboard = this.GetChangeAccountMenuKeyboard()
+            if (context.messagePayload?.choice?.match(/back|change_description|change_nick|gadget|change_nation|change_gender|change_age/))
+            {
+                if (context.messagePayload.choice.match(/back/))
+                {
+                    await context.send("▶ Параметры", {keyboard: keyboard.build(this.GetMenuKeyboard())})
+                    context.player.state = this.Params
+                }
+                if (context.messagePayload.choice.match(/change_nick/))
+                {
+                    await Builders.ChangeNick(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_description/))
+                {
+                    await Builders.ChangeDescription(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/gadget/))
+                {
+                    await Builders.ChangeGadget(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_nation/))
+                {
+                    await Builders.ChangeNation(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_gender/))
+                {
+                    await Builders.ChangeGender(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_age/))
+                {
+                    await Builders.ChangeAge(context, current_keyboard)
+                }
+            }
+            else
+            {
+                await context.send("👉🏻 Управление аккаунтом",{keyboard: keyboard.build(current_keyboard)})
+            }
+        }
+        catch (e)
+        {
+            await ErrorHandler.SendLogs(context, "SceneController/ChangeAccount", e)
         }
     }
 
