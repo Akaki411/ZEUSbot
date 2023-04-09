@@ -58,6 +58,7 @@ class ChatController
             context.command?.match(Commands.changeNick) && await this.ChangeNick(context)
             context.command?.match(Commands.changeDescription) && await this.ChangeDescription(context)
             context.command?.match(Commands.cheating) && await this.CheatResource(context)
+            context.command?.match(Commands.pickUp) && await this.PickUpResource(context)
         }
         catch (e)
         {
@@ -1346,11 +1347,11 @@ class ChatController
                 await context.reply("⚠ Выберите игрока")
                 return
             }
-            // if(context.replyPlayers[0] === context.player.id)
-            // {
-            //     await context.reply("❓ Какой смысл передавать ресурсы самому себе? Вот просто зачем? Чтобы что?")
-            //     return
-            // }
+            if(context.replyPlayers[0] === context.player.id)
+            {
+                await context.reply("❓ Какой смысл передавать ресурсы самому себе? Вот просто зачем? Чтобы что?")
+                return
+            }
             const user = await Player.findOne({where: {id: context.replyPlayers[0]}})
             if(!user)
             {
@@ -1360,9 +1361,10 @@ class ChatController
             }
             context.command = context.command.replace(Commands.send, "")
             let resource = null
-            let sends = context.command.split(";")
-            let objIN = {}
+            let sends = context.command.split(",")
+            console.log(sends)
             let objOUT = {}
+            let objIN = {}
             let count
             let request = ""
             let carrot = 0
@@ -1396,7 +1398,7 @@ class ChatController
                 {
                     resource = "silver"
                 }
-                if(context.command.match(Commands.diamond))
+                if(send.match(Commands.diamond))
                 {
                     resource = "diamond"
                 }
@@ -1423,7 +1425,7 @@ class ChatController
                     }
                     objIN[resource] = -Math.abs(count)
                     objOUT[resource] = Math.abs(count)
-                    request += `${NameLibrary.GetResourceName(resource)} - ✅ Передано\n`
+                    request += `${NameLibrary.GetResourceName(resource)} - ✅ Передано ${Math.abs(count)}\n`
                 }
                 else
                 {
@@ -1460,6 +1462,10 @@ class ChatController
     {
         try
         {
+            if(NameLibrary.RoleEstimator(context.player.role) < 2)
+            {
+                return
+            }
             let user
             if(context.replyPlayers?.length !== 0)
             {
@@ -1478,7 +1484,7 @@ class ChatController
             }
             context.command = context.command.replace(Commands.cheating, "")
             let resource = null
-            let sends = context.command.split(";")
+            let sends = context.command.split(",")
             let objOUT = {}
             let count
             let request = ""
@@ -1512,7 +1518,7 @@ class ChatController
                 {
                     resource = "silver"
                 }
-                if(context.command.match(Commands.diamond))
+                if(send.match(Commands.diamond))
                 {
                     resource = "diamond"
                 }
@@ -1531,13 +1537,108 @@ class ChatController
                     count = 1
                 }
                 objOUT[resource] = Math.abs(count)
-                request += `${NameLibrary.GetResourceName(resource)} - ✅ Накручено\n`
+                request += `${NameLibrary.GetResourceName(resource)} - ✅ Накручено ${Math.abs(count)}\n`
             }
-            if(Object.keys(objOUT).length !== 0)
+            await Data.AddPlayerResources(user, objOUT)
+            await api.SendNotification(user, `✅ Вам поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
+            await context.reply(request)
+        }
+        catch (e)
+        {
+            console.log(e)
+        }
+    }
+
+    async PickUpResource(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 2)
             {
-                await Data.AddPlayerResources(user, objOUT)
-                await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
+                return
             }
+            let user
+            if(context.replyPlayers?.length !== 0)
+            {
+                user = context.replyPlayers[0]
+            }
+            else
+            {
+                user = context.player.id
+            }
+            let player = await PlayerResources.findOne({where: {id: user}})
+            if(player === 0)
+            {
+                await context.reply("⚠ Игрок не зарегистрирован")
+                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
+                return
+            }
+            context.command = context.command.replace(Commands.pickUp, "")
+            let resource = null
+            let sends = context.command.split(",")
+            let objOUT = {}
+            let count
+            let request = ""
+            for(let send of sends)
+            {
+                if(send.match(Commands.money))
+                {
+                    resource = "money"
+                }
+                if(send.match(Commands.wheat))
+                {
+                    resource = "wheat"
+                }
+                if(send.match(Commands.stone))
+                {
+                    resource = "stone"
+                }
+                if(send.match(Commands.wood))
+                {
+                    resource = "wood"
+                }
+                if(send.match(Commands.iron))
+                {
+                    resource = "iron"
+                }
+                if(send.match(Commands.copper))
+                {
+                    resource = "copper"
+                }
+                if(send.match(Commands.silver))
+                {
+                    resource = "silver"
+                }
+                if(send.match(Commands.diamond))
+                {
+                    resource = "diamond"
+                }
+                if(send.match(Commands.carrot))
+                {
+                    resource = "carrot"
+                }
+                if(!resource)
+                {
+                    return
+                }
+                count = send.match(/\d+/)
+                count = parseInt( count ? count[0] : send)
+                if(isNaN(count))
+                {
+                    count = 1
+                }
+                if(player.dataValues[resource] >= count)
+                {
+                    objOUT[resource] = -Math.abs(count)
+                    request += `${NameLibrary.GetResourceName(resource)} - ✅ Отобрано ${Math.abs(count)}\n`
+                }
+                else
+                {
+                    request += `${NameLibrary.GetResourceName(resource)} - ⚠ Мало\n`
+                }
+            }
+            await Data.AddPlayerResources(user, objOUT)
+            await api.SendNotification(user, `✅ У вас было отобрано:\n${NameLibrary.GetPrice(objOUT)}`)
             await context.reply(request)
         }
         catch (e)

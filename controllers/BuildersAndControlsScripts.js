@@ -2529,6 +2529,65 @@ class BuildersAndControlsScripts
         })
     }
 
+    async TransferPower(context, current_keyboard, scenes)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+
+                let user = await InputManager.InputUser(context, "Выберите приемника (у него должно быть гражданство фракции)", current_keyboard)
+                if(!user) return resolve()
+                if(user.dataValues.status === "worker")
+                {
+                    await context.send("🚫 Назначать игроков со статусом ⚙ Работник на должность чиновника запрещено", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const userStatus = await PlayerStatus.findOne({where: {id: user.dataValues.id}})
+                if(userStatus?.dataValues.citizenship !== context.country.id)
+                {
+                    await context.send("⚠ Вы не можете передать власть игроку, не имеющему гражданство вашей фракции", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const kb = [
+                    ["💼 Чиновник", "official"],
+                    ["💳 Гражданин", "citizen"],
+                ]
+                const giveState = (status) => {
+                    if(status === "official") return "💼 Чиновником"
+                    if(status === "citizen") return "💳 Гражданином"
+                }
+                let state = await InputManager.KeyboardBuilder(context, "Выберите, кем вы станете после оставления трона", kb, current_keyboard)
+                if(!state) return resolve()
+                let access = await InputManager.InputBoolean(context, `Назначить *id${user.dataValues.id}(${user.dataValues.nick}) новым правителем фракции ${context.country.GetName()}?`, current_keyboard)
+                if(!access) return resolve()
+                access = await InputManager.InputBoolean(context, `Вы будете назначены ${giveState(state)}`, current_keyboard)
+                if(!access) return resolve()
+                access = await InputManager.InputBoolean(context, `Спрашиваю последний раз - Вы уверены?`, current_keyboard)
+                if(!access) return resolve()
+                if(state === "official")
+                {
+                    await OfficialInfo.findOrCreate({
+                        where: {id: context.player.id},
+                        defaults: {id: context.player.id, nick: context.player.nick, countryID: context.country.id}
+                    })
+                }
+                await Player.update({status: state}, {where: {id: context.player.id}})
+                await Player.update({status: "leader"}, {where: {id: user.dataValues.id}})
+                context.country.leaderID = user.dataValues.id
+                if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "leader"
+                await Country.update({leaderID: user.dataValues.id}, {where: {id: context.country.id}})
+                await api.SendMessage(user.dataValues.id, `👑 Правитель фракции ${context.country.GetName()} передал вам власть, ваш статус изменен на "👑 Правитель"`)
+                await context.send(`Власть передана, вы стали ${giveState(state)}`, {keyboard: keyboard.build(scenes.GetMenuKeyboard(context))})
+                context.player.state = scenes.MenuScene
+                return resolve()
+            }
+            catch (e)
+            {
+                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TakeAwayCitizenship", e)
+            }
+        })
+    }
+
     async OfferMarry(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
@@ -3471,6 +3530,11 @@ class BuildersAndControlsScripts
                         buildingButtons.push([NameLibrary.GetBuildingEmoji(buildings[i].dataValues.type) + buildings[i].dataValues.name, "ID" + buildings[i].dataValues.id])
                         request += `${NameLibrary.GetBuildingType(buildings[i].dataValues.type)} \"${buildings[i].dataValues.name}\" ${buildings[i].dataValues.level} уровня\n`
                     }
+                }
+                if(buildingButtons.length === 0)
+                {
+                    await context.send("⚠ У вас нет построек, которые можно улучшить.", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
                 }
                 let building = await InputManager.KeyboardBuilder(context, request, buildingButtons, current_keyboard)
                 if(!building) return resolve()

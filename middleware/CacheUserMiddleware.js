@@ -15,7 +15,7 @@ module.exports = async (context, next) =>
         const peerId = context.peerType === "chat" ? context.senderId : context.peerId
         if(context.peerType === "chat")
         {
-            if(Data.countryChats[context.peerId])
+            if(Data.countryChats[context.peerId] && peerId > 0)
             {
                 Data.countryChats[context.peerId].active++
             }

@@ -831,14 +831,19 @@ class SceneController
         ]
     }
 
-    GetCountryControlsMenuKeyboard = () =>
+    GetCountryControlsMenuKeyboard = (context) =>
     {
-        return [
+        let kb = [
             [keyboard.setTaxButton, keyboard.buildRoadButton],
             [keyboard.buildCityButton, keyboard.buildingsButton],
             [keyboard.takeAwayCitizenshipButton, keyboard.setMayorButton],
             [keyboard.backButton]
         ]
+        if(context.player.id === Data.countries[context.player.countryID].leaderID)
+        {
+            kb[2].push(keyboard.transferPowerButton)
+        }
+        return kb
     }
 
     GetCountryOfficialsMenuKeyboard = () =>
@@ -883,7 +888,7 @@ class SceneController
                 }
                 if(context.messagePayload.choice.match(/controls/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity || context.official?.canAppointMayors || context.official?.canBeDelegate))
                 {
-                    await context.send("▶ Управление ",{keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard())})
+                    await context.send("▶ Управление ",{keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard(context))})
                     context.player.state = this.CountryControlsMenu
                 }
                 if(context.messagePayload.choice.match(/budget/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canUseResources))
@@ -974,7 +979,7 @@ class SceneController
     {
         try
         {
-            const current_keyboard = this.GetCountryControlsMenuKeyboard()
+            const current_keyboard = this.GetCountryControlsMenuKeyboard(context)
             context.country = null
             if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
             {
@@ -986,11 +991,11 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|set_mayor|build_city|set_tax|buildings|take_away_citizenship/))
+            if(context.messagePayload?.choice?.match(/back|set_mayor|build_city|set_tax|buildings|take_away_citizenship|transfer_power/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
-                    context.send("↪ Назад", {
+                    await context.send("↪ Назад", {
                         keyboard: keyboard.build(this.GetGovernanceCountryMenuKeyboard(context))
                     })
                     context.player.state = this.GovernanceCountryMenu
@@ -1017,6 +1022,10 @@ class SceneController
                 if (context.messagePayload.choice.match(/take_away_citizenship/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBeDelegate))
                 {
                     await Builders.TakeAwayCitizenship(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/transfer_power/))
+                {
+                    await Builders.TransferPower(context, current_keyboard, {GetMenuKeyboard: this.GetStartMenuKeyboard, MenuScene: this.StartScreen})
                 }
             }
             else
@@ -1052,7 +1061,7 @@ class SceneController
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
-                    context.send("↪ Назад", {
+                    await context.send("↪ Назад", {
                         keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard(context))
                     })
                     context.player.state = this.CountryControlsMenu

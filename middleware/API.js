@@ -19,9 +19,11 @@ class VK_API
     StartLoop()
     {
         let midnightTime = new Date()
+        let now = new Date()
         midnightTime.setDate(midnightTime.getDate() + 1)
         midnightTime.setHours(0)
-        let now = new Date()
+        midnightTime.setMinutes(0)
+        midnightTime.setSeconds(0)
         let toMidnight = midnightTime - now
         setTimeout(async () => {await this.StartMainLoop()}, toMidnight)
         setInterval(async () => {await Data.SaveActive()}, 300000)

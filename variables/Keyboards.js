@@ -1146,6 +1146,14 @@ class KeyboardButtons
         }
     })
 
+    transferPowerButton = Keyboard.textButton({
+        label: '👑 Передать власть',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'transfer_power'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null
