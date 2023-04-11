@@ -1355,7 +1355,7 @@ class BuildersAndControlsScripts
                     if(Data.cities[context.cityID].getResourcesTimeout) clearTimeout(Data.cities[context.cityID].getResourcesTimeout)
                     Data.cities[context.cityID].getResourcesTimeout = setTimeout(async () =>
                     {
-                        await context.send(`✅ Постройки города ${Data.buildings[context.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                        await context.send(`✅ Постройки города ${Data.cities[context.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
                     }, 21600000)
                 }
                 request += isVoid ? "" : ("\n\nДобыто всего:\n" + NameLibrary.GetPrice(extraction))

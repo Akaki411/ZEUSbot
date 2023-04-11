@@ -887,7 +887,7 @@ class SceneController
                     await context.send("▶ Параметры",{keyboard: keyboard.build(this.GetChangeCountryMenuKeyboard(context))})
                     context.player.state = this.ChangeCountryMenu
                 }
-                if(context.messagePayload.choice.match(/controls/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity || context.official?.canAppointMayors || context.official?.canBeDelegate))
+                if(context.messagePayload.choice.match(/controls/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity || context.official?.canAppointMayors || context.official?.canBeDelegate || context.official?.canUseResources))
                 {
                     await context.send("▶ Управление ",{keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard(context))})
                     context.player.state = this.CountryControlsMenu
@@ -1005,7 +1005,7 @@ class SceneController
                 {
                     await Builders.SetMayor(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/set_tax/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id))
+                if (context.messagePayload.choice.match(/set_tax/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id  || context.official?.canUseResources))
                 {
                     await Builders.SetTax(context, current_keyboard)
                 }
