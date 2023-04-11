@@ -1154,6 +1154,22 @@ class KeyboardButtons
         }
     })
 
+    warningButton = Keyboard.textButton({
+        label: '‼ Предупреждение',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'warning'
+        }
+    })
+
+    reportButton = Keyboard.textButton({
+        label: '🔔 Устное предупреждение',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'report'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

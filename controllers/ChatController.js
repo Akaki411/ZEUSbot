@@ -844,7 +844,7 @@ class ChatController
                 {
                     user = await Player.findOne({where: {id: country.leaderID}, attributes: ["nick"]})
                     population = await PlayerStatus.count({where: {citizenship: country.id}})
-                    request += `${country.GetName()}\n`
+                    request += `${context.player.platform === "IOS" ? country.name : country.GetName()}\n`
                     request += `👥 Население - ${population} чел.\n`
                     request += `👑 Правитель - ${user ? `*id${country.leaderID}(${user.dataValues.nick})` : "Не назначен"}\n`
                     request += `🌆 Столица - ${Data.cities[country.capitalID].name}\n\n`
@@ -969,7 +969,7 @@ class ChatController
                 {
                     if(Data.countries[i])
                     {
-                        activeCountries.push([Data.countriesWeekActive[Data.countries[i].id], i])
+                        activeCountries.push([Data.countriesWeekActive[Data.countries[i].id] + Data.countries[i].active, i])
                     }
                 }
                 for (let j = activeCountries.length - 1; j > 0; j--)
@@ -1347,11 +1347,11 @@ class ChatController
                 await context.reply("⚠ Выберите игрока")
                 return
             }
-            if(context.replyPlayers[0] === context.player.id)
-            {
-                await context.reply("❓ Какой смысл передавать ресурсы самому себе? Вот просто зачем? Чтобы что?")
-                return
-            }
+            // if(context.replyPlayers[0] === context.player.id)
+            // {
+            //     await context.reply("❓ Какой смысл передавать ресурсы самому себе? Вот просто зачем? Чтобы что?")
+            //     return
+            // }
             const user = await Player.findOne({where: {id: context.replyPlayers[0]}})
             if(!user)
             {
@@ -1362,12 +1362,11 @@ class ChatController
             context.command = context.command.replace(Commands.send, "")
             let resource = null
             let sends = context.command.split(",")
-            console.log(sends)
             let objOUT = {}
             let objIN = {}
             let count
             let request = ""
-            let carrot = 0
+            let esterEgg = {}
             for(let send of sends)
             {
                 if(send.match(Commands.money))
@@ -1406,6 +1405,22 @@ class ChatController
                 {
                     resource = "carrot"
                 }
+                if(send.match(Commands.tea))
+                {
+                    resource = "tea"
+                }
+                if(send.match(Commands.beer))
+                {
+                    resource = "beer"
+                }
+                if(send.match(Commands.ale))
+                {
+                    resource = "ale"
+                }
+                if(send.match(Commands.mushroom))
+                {
+                    resource = "mushroom"
+                }
                 if(!resource)
                 {
                     return
@@ -1416,7 +1431,7 @@ class ChatController
                 {
                     count = 1
                 }
-                if(resource !== "carrot")
+                if(!resource.match(/carrot|tea|beer|ale|mushroom/))
                 {
                     if(context.player[resource] < count)
                     {
@@ -1429,19 +1444,45 @@ class ChatController
                 }
                 else
                 {
-                    carrot += count
+                    esterEgg[resource] = count
                 }
             }
-            if(carrot !== 0)
+            if(Object.keys(esterEgg) !== 0)
             {
-                if(!NameLibrary.GetChance((1 / carrot) * 100))
+                for(const res of Object.keys(esterEgg))
                 {
-                    request += "\nУ вас слишком мало морковки!🥕🥕🥕🥕"
-                }
-                else
-                {
-                    request += "\n🥕 Морковка - ✅ Передано"
-                    await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} поделился с вами марковкой, но из за того что я был голодный - я ее не донес\n👉👈`)
+                    if(res === "carrot")
+                    {
+                        if(!NameLibrary.GetChance((1 / esterEgg[res]) * 100))
+                        {
+                            request += "\nУ вас слишком мало морковки!🥕🥕🥕🥕"
+                        }
+                        else
+                        {
+                            request += "\n🥕 Морковка - ✅ Передано " + esterEgg[res]
+                            await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} поделился с вами марковкой, но из за того что я был голодный - я ее не донес\n👉👈`)
+                        }
+                    }
+                    if(res === "tea")
+                    {
+                        request += "\n🍵 Чай - ✅ Передано " + esterEgg[res]
+                        await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} угостил вас 🍵 чаем!`)
+                    }
+                    if(res === "beer")
+                    {
+                        request += "\n🍺 Пиво - ✅ Передано " + esterEgg[res]
+                        await api.SendNotification(user.dataValues.id, `✅ Там это, как там его, игрок ${context.player.GetName()} с вами 🍺 пивом поделился.\n\n🥴🥴🥴 Вкусное пиво было, а чё я пришел?\n\n🥴🥴🥴Не помню уже`)
+                    }
+                    if(res === "ale")
+                    {
+                        request += "\n🥃 Эль - ✅ Передано " + esterEgg[res]
+                        await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} угостил вас 🥃 элем, но пограничники отобрали его у меня!`)
+                    }
+                    if(res === "mushroom")
+                    {
+                        request += "\n🍄 Мухоморы - ✅ Передано " + esterEgg[res]
+                        await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} 🤢 поделился с вами 🍄 мухоморами 🤢, а я их 🤢🤢 съел. 🤮🤮🤮\nО, мультики показывают!`)
+                    }
                 }
             }
             if(Object.keys(objOUT).length !== 0)
@@ -1517,14 +1558,6 @@ class ChatController
                 if(send.match(Commands.silver))
                 {
                     resource = "silver"
-                }
-                if(send.match(Commands.diamond))
-                {
-                    resource = "diamond"
-                }
-                if(send.match(Commands.carrot))
-                {
-                    resource = "carrot"
                 }
                 if(!resource)
                 {
@@ -1818,14 +1851,6 @@ class ChatController
                 return
             }
             let time = new Date()
-            if(context.player.lastReportTime)
-            {
-                if(time - context.player.lastReportTime < 3600000 && NameLibrary.RoleEstimator(context.player.role) < 3)
-                {
-                    await context.reply("⚠ Вы слишком часто отправляете репорты")
-                    return
-                }
-            }
             if(NameLibrary.RoleEstimator(context.player.role) === 0)
             {
                 await this.SendReport(context)
@@ -1873,9 +1898,9 @@ class ChatController
             context.player.lastReportTime = time
             await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы ввести данные репорта на игроков:\n${context.replyPlayers?.map(user => {
                 return `*id${user}(${user})\n`
-            })}`, [[keyboard.startButton({type: "new_warning", users: users})]])
+            })}`, [[keyboard.startButton({type: "new_warning", users: users})], [keyboard.backButton]])
             context.player.state = SceneController.FillingOutTheForm
-            await context.reply("Заполните форму в ЛС")
+            await context.reply("ℹ Заполните форму в ЛС")
         }
         catch (e)
         {
@@ -1905,7 +1930,7 @@ class ChatController
             context.player.lastReportTime = time
             await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы ввести данные репорта на игрок${context.replyPlayers.length > 1 ? "ов" : "а"}:\n${context.replyPlayers?.map(user => {
                 return `*id${user}(${user})\n`
-            })}`, [[keyboard.startButton({type: "new_report", users: users})]])
+            })}`, [[keyboard.startButton({type: "new_report", users: users})], [keyboard.backButton]])
             context.player.state = SceneController.FillingOutTheForm
             await context.reply("ℹ Заполните форму в ЛС")
         }
@@ -1930,14 +1955,6 @@ class ChatController
                 return
             }
             let time = new Date()
-            if(context.player.lastReportTime)
-            {
-                if(time - context.player.lastReportTime < 3600000 && NameLibrary.RoleEstimator(context.player.role) < 4)
-                {
-                    await context.reply("⚠ Вы слишком часто отправляете репорты")
-                    return
-                }
-            }
             let adminsFlag = false
             let unregFlag = false
             let temp = null

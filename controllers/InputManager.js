@@ -462,7 +462,7 @@ class InputManager
             try
             {
                 let user
-                let answer = await context.question(message + "\n\nℹ Введите ник, ID игрока или перешлите сюда его сообщение. (Именно перешлите, ответ на сообщение не сработает)", {
+                let answer = await context.question(message + "\n\nℹ Введите ник, ID игрока, упомяните его (через @ или *) или перешлите сюда его сообщение. (Именно перешлите, ответ на сообщение не сработает)", {
                     keyboard: keyboard.build([[keyboard.cancelButton]]),
                     answerTimeLimit: 900_000
                 })
@@ -480,20 +480,58 @@ class InputManager
                     })
                     return resolve(null)
                 }
-                if(answer.forwards.length > 0 && !answer.payload && !answer.isTimeout) user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
-                else if (answer.text && !answer.payload && !answer.isTimeout) {if(isNaN(answer.text)) user = await Player.findOne({where: {nick: answer.text}})}
-                else if (answer.text?.match(/\d/) && !answer.payload && !answer.isTimeout) user = await Player.findOne({where: {id: answer.text}})
-                else if (!answer.text || answer.payload || answer.isTimeout) return resolve(null)
+                if(answer.forwards?.length > 0 && !answer.payload && !answer.isTimeout)
+                {
+                    user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
+                }
+                else if(answer.text?.match(/id\d+/) && !answer.payload && !answer.isTimeout)
+                {
+                    let id = answer.text.match(/id\d+/)[0]
+                    id = parseInt(id.replace("id", ""))
+                    user = await Player.findOne({where: {id: id}})
+                }
+                else if(answer.text?.match(/\d{5,}/) && !answer.payload && !answer.isTimeout)
+                {
+                    let id = answer.text.match(/\d{5,}/)[0]
+                    user = await Player.findOne({where: {id: id}})
+                }
+                else if(answer.text && !answer.payload && !answer.isTimeout)
+                {
+                    user = await Player.findOne({where: {nick: answer.text}})
+                }
+                else
+                {
+                    return resolve(null)
+                }
                 while (!answer.isTimeout && !answer.payload && !user)
                 {
                     answer = await context.question("⚠ Игрок не найден", {
                         keyboard: keyboard.build([[keyboard.cancelButton]]),
                         answerTimeLimit: 900_000
                     })
-                    if(answer.forwards.length > 0) user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
-                    else if (answer.text?.match(/\d/)) user = await Player.findOne({where: {id: answer.text}})
-                    else if (answer.text) {if(isNaN(answer.text)) user = await Player.findOne({where: {nick: answer.text}})}
-                    else if (!answer.text || answer.payload) return resolve(null)
+                    if(answer.forwards?.length > 0 && !answer.payload && !answer.isTimeout)
+                    {
+                        user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
+                    }
+                    else if(answer.text?.match(/id\d+/) && !answer.payload && !answer.isTimeout)
+                    {
+                        let id = answer.text.match(/id\d+/)[0]
+                        id = parseInt(id.replace("id", ""))
+                        user = await Player.findOne({where: {id: id}})
+                    }
+                    else if(answer.text?.match(/\d{5,}/) && !answer.payload && !answer.isTimeout)
+                    {
+                        let id = answer.text.match(/\d{5,}/)[0]
+                        user = await Player.findOne({where: {id: id}})
+                    }
+                    else if(answer.text && !answer.payload && !answer.isTimeout)
+                    {
+                        user = await Player.findOne({where: {nick: answer.text}})
+                    }
+                    else
+                    {
+                        return resolve(null)
+                    }
                 }
                 if(answer.isTimeout)
                 {

@@ -241,7 +241,6 @@ class BuildersAndControlsScripts
                     })
                     return resolve()
                 }
-
                 let giveRoleKB = [
                     ["👶 Игрок", "player"],
                     ["🧒 Модератор", "moder"],
@@ -252,7 +251,7 @@ class BuildersAndControlsScripts
                 context.player.role.match(/owner/) && giveRoleKB.push(["🤴 Глава проекта", "project_head"])
                 let role = await InputManager.KeyboardBuilder(context, `✅ Выбран игрок *id${user.dataValues.id}(${user.dataValues.nick})\n2️⃣ Выберите новую роль.`, giveRoleKB, current_keyboard)
                 if(!role) return resolve()
-                const status = role === "player" ? await Data.GetUserStatus(user.dataValues.id) : "worker"
+                const status = role.match(/player|moder/) ? await Data.GetUserStatus(user.dataValues.id) : "worker"
                 if(role === "project_head")
                 {
                     const oldPH = await Player.findOne({where: {role: "project_head"}})
@@ -278,7 +277,7 @@ class BuildersAndControlsScripts
                     Data.users[user.dataValues.id].state = tools.StayInStartScreen
                 }
                 role = NameLibrary.GetRoleName(role)
-                await api.SendMessageWithKeyboard(user.dataValues.id, `ℹ Пользователь *id${context.player.id}(${context.player.nick}) назначил вас на роль: ${role}`, tools.GetStartMenuKeyboard(context))
+                await api.SendMessageWithKeyboard(user.dataValues.id, `ℹ Пользователь ${context.player.GetName()} назначил вас на роль: ${role}`, tools.GetStartMenuKeyboard(context))
                 await context.send(`ℹ Игрок *id${user.dataValues.id}(${user.dataValues.nick}) назначен на роль: ${role}`, {keyboard: keyboard.build(current_keyboard)})
                 await Data.LoadWorkers()
                 return resolve()
@@ -603,12 +602,19 @@ class BuildersAndControlsScripts
                     await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-
-                await LastWills.create({
-                    userID: context.player.id,
-                    text: lastWillText,
-                    successorID: user.dataValues.id
-                })
+                const lastWill = await LastWills.count({where: {userID: context.player.id}})
+                if(lastWill !== 0)
+                {
+                    await LastWills.update({text: lastWillText, successorID: user.dataValues.id}, {where: {userID: context.player.id}})
+                }
+                else
+                {
+                    await LastWills.create({
+                        userID: context.player.id,
+                        text: lastWillText,
+                        successorID: user.dataValues.id
+                    })
+                }
                 current_keyboard[0][2] = keyboard.deleteLastWillButton
                 await context.send("✅ Добавлено завещание.", {keyboard: keyboard.build(current_keyboard)})
                 await api.SendMessage(user.dataValues.id, `✅ Игрок ${context.player.GetName()} добавил вас в своё завещание.`)
@@ -1228,7 +1234,7 @@ class BuildersAndControlsScripts
                     await context.send("⛺ В городе нет городских построек", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                let building = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать городу", buildingButtons, current_keyboard)
+                let building = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать в государственное владение", buildingButtons, current_keyboard)
                 if(!building) return resolve()
                 building = Data.ParseButtonID(building)
                 for(let i = 0; i < Data.cities.length; i++)
@@ -1251,7 +1257,7 @@ class BuildersAndControlsScripts
                     await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                await Buildings.update({ownerType: "country"}, {where: {id: building.id}})
+                await Buildings.update({ownerType: "country"}, {where: {id: building.id ? building.id : building}})
                 building.ownerType = "country"
                 await context.send("✅ Постройка передана фракции.", {keyboard: keyboard.build(current_keyboard)})
             }
@@ -4848,56 +4854,84 @@ class BuildersAndControlsScripts
             try
             {
                 const users = data.users.split(";")
-                const reason = await InputManager.InputString(context, "1️⃣ Введите краткую причину (для самого игрока)", current_keyboard)
-                if(!reason) return resolve(false)
-                const explanation = await InputManager.InputString(context, "2️⃣ Введите полную причину (для админов)", current_keyboard)
-                if(!explanation) return resolve(false)
-                const time = await InputManager.InputDefaultInteger(context, "Введите время действия предупреждения в днях (от 1 до 365 дней)", current_keyboard, 1, 365, 90)
-                const proof = await InputManager.InputPhoto(context, "3️⃣ Отправьте фото-доказательство (обязательно)", current_keyboard)
-                if(!proof) return resolve(false)
                 let warnCount = 0
-                for(const i of users)
+                const type = await InputManager.InputBoolean(context, "1️⃣ Выберите тип предупреждения\n\n🔸 Устное предупреждение - сообщение от бота в ЛС игрока\n\n🔸 Предупреждение - полноценный варн, добавляет балл предупреждения игроку (3 балла - бан)", current_keyboard, keyboard.warningButton, keyboard.reportButton)
+                if(type === null) return resolve()
+                if(type)
                 {
-                    await Warning.create({
-                        userID: i,
-                        reason: reason,
-                        explanation: explanation,
-                        proofImage: proof,
-                        time: time
-                    })
-                    warnCount = await Warning.count({where: {userID: i}})
-                    await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: i}})
-                    await api.api.messages.send({
-                        user_id: i,
-                        random_id: Math.round(Math.random() * 100000),
-                        message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
-                        attachment: proof
-                    })
-                    if(warnCount >= 3)
+                    const reason = await InputManager.InputString(context, "2️⃣ Введите краткую причину (для самого игрока)", current_keyboard)
+                    if(!reason) return resolve(false)
+                    const explanation = await InputManager.InputString(context, "3️⃣ Введите полную причину (для админов)", current_keyboard)
+                    if(!explanation) return resolve(false)
+                    const time = await InputManager.InputDefaultInteger(context, "4️⃣ Введите время действия предупреждения в днях (от 1 до 365 дней)", current_keyboard, 1, 365, 90)
+                    const proof = await InputManager.InputPhoto(context, "5️⃣ Отправьте фото-доказательство (обязательно)", current_keyboard)
+                    if(!proof) return resolve(false)
+                    for(const i of users)
                     {
-                        await api.SendMessageWithKeyboard(i, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
-                        if(Data.projectHead) await api.SendMessage(Data.projectHead.id, `⚠ Игрок ${context.player.GetName()} выдал предупреждение игроку *id${i}(${i}), количество репортов достигло 3-х, игрок забанен`)
-                        if(Data.users[i]) Data.users[i].isBanned = true
-                        await api.BanUser(i)
-                        await Ban.create({
+                        await Warning.create({
                             userID: i,
-                            reason: "3 предупреждения",
-                            explanation: "Игрок заблокирован потому что имеет 3 предупреждения",
+                            reason: reason,
+                            explanation: explanation,
+                            proofImage: proof,
+                            time: time
                         })
-                        await Warning.update({banned: true}, {where: {userID: i}})
+                        warnCount = await Warning.count({where: {userID: i}})
+                        await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: i}})
+                        await api.api.messages.send({
+                            user_id: i,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
+                            attachment: proof
+                        })
+                        if(warnCount >= 3)
+                        {
+                            await api.SendMessageWithKeyboard(i, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
+                            if(Data.projectHead) await api.SendMessage(Data.projectHead.id, `⚠ Игрок ${context.player.GetName()} выдал предупреждение игроку *id${i}(${i}), количество репортов достигло 3-х, игрок забанен`)
+                            if(Data.users[i]) Data.users[i].isBanned = true
+                            await api.BanUser(i)
+                            await Ban.create({
+                                userID: i,
+                                reason: "3 предупреждения",
+                                explanation: "Игрок заблокирован потому что имеет 3 предупреждения",
+                            })
+                            await Warning.update({banned: true}, {where: {userID: i}})
+                        }
+                        for(const id of Object.keys(Data.supports))
+                        {
+                            await api.api.messages.send({
+                                user_id: id,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}`,
+                                attachment: proof
+                            })
+                        }
+                        for(const id of Object.keys(Data.administrators))
+                        {
+                            await api.api.messages.send({
+                                user_id: id,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}`,
+                                attachment: proof
+                            })
+                        }
+                    }
+                }
+                else
+                {
+                    const reason = await InputManager.InputString(context, "2️⃣ Введите текст предупреждения", current_keyboard)
+                    if(!reason) return resolve(false)
+                    const proof = await InputManager.InputPhoto(context, "3️⃣ Отправьте фото-доказательство (отмена = без фото)", current_keyboard)
+                    for(const i of users)
+                    {
+                        await api.api.messages.send({
+                            user_id: i,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и и не провоцируйте администрацию.`,
+                            attachment: proof
+                        })
                     }
                 }
                 await context.send("✅ Предупреждение выдано", {keyboard: keyboard.build(current_keyboard)})
-                for(const id of Object.keys(Data.supports))
-                {
-                    await api.api.messages.send({
-                        user_id: id,
-                        random_id: Math.round(Math.random() * 100000),
-                        message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}`,
-                        attachment: proof
-                    })
-                }
-                context.player.lastReportTime = new Date()
                 context.player.state = scenes.startMenu
                 return resolve(true)
             }
@@ -4989,53 +5023,68 @@ class BuildersAndControlsScripts
                     await context.send(`⚠ Роль игрока *id${user.dataValues.id}(${user.dataValues.nick}) находится на вашем уровне или выше, у вас нет права выдавать ему предупреждения`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                const reason = await InputManager.InputString(context, "2️⃣ Введите краткую причину (для самого игрока)", current_keyboard)
-                if(!reason) return resolve(false)
-                const explanation = await InputManager.InputString(context, "3️⃣ Введите полную причину (для админов)", current_keyboard)
-                if(!explanation) return resolve(false)
-                const time = await InputManager.InputDefaultInteger(context, "4️⃣ Введите время действия предупреждения в днях (от 1 до 365 дней)", current_keyboard, 1, 365, 90)
-                const proof = await InputManager.InputPhoto(context, "5️⃣ Отправьте фото-доказательство (обязательно)", current_keyboard)
-                if(!proof) return resolve(false)
-                await Warning.create({
-                    userID: user.dataValues.id,
-                    reason: reason,
-                    explanation: explanation,
-                    proofImage: proof,
-                    time: time
-                })
-                let warnCount = await Warning.count({where: {userID: user.dataValues.id}})
-                await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: user.dataValues.id}})
-                await api.api.messages.send({
-                    user_id: user.dataValues.id,
-                    random_id: Math.round(Math.random() * 100000),
-                    message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
-                    attachment: proof
-                })
-                if(warnCount >= 3)
+                const type = await InputManager.InputBoolean(context, "2️⃣ Выберите тип предупреждения\n\n🔸 Устное предупреждение - сообщение от бота в ЛС игрока\n\n🔸 Предупреждение - полноценный варн, добавляет балл предупреждения игроку (3 балла - бан)", current_keyboard, keyboard.warningButton, keyboard.reportButton)
+                if(type === null) return resolve()
+                if(type)
                 {
-                    await api.SendMessageWithKeyboard(user.dataValues.id, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
-                    if(Data.projectHead) await api.SendMessage(Data.projectHead.id, `⚠ Игрок ${context.player.GetName()} выдал предупреждение игроку *id${user.dataValues.id}(${user.dataValues.nick}), количество репортов достигло 3-х, игрок забанен`)
-                    if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].isBanned = true
-                    await Ban.create({
+                    const reason = await InputManager.InputString(context, "3️⃣ Введите краткую причину (для самого игрока)", current_keyboard)
+                    if(!reason) return resolve(false)
+                    const explanation = await InputManager.InputString(context, "4️⃣ Введите полную причину (для админов)", current_keyboard)
+                    if(!explanation) return resolve(false)
+                    const time = await InputManager.InputDefaultInteger(context, "5️⃣ Введите время действия предупреждения в днях (от 1 до 365 дней)", current_keyboard, 1, 365, 90)
+                    const proof = await InputManager.InputPhoto(context, "6️⃣ Отправьте фото-доказательство (обязательно)", current_keyboard)
+                    if(!proof) return resolve(false)
+                    await Warning.create({
                         userID: user.dataValues.id,
-                        reason: "3 предупреждения",
-                        explanation: "Игрок заблокирован потому что имеет 3 предупреждения",
+                        reason: reason,
+                        explanation: explanation,
+                        proofImage: proof,
+                        time: time
                     })
-                    await api.BanUser(user.dataValues.id)
-                    await Warning.update({banned: true}, {where: {userID: user.dataValues.id}})
-                }
-
-                await context.send("✅ Предупреждение выдано", {keyboard: keyboard.build(current_keyboard)})
-                for(const id of Object.keys(Data.supports))
-                {
+                    let warnCount = await Warning.count({where: {userID: user.dataValues.id}})
+                    await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: user.dataValues.id}})
                     await api.api.messages.send({
-                        user_id: id,
+                        user_id: user.dataValues.id,
                         random_id: Math.round(Math.random() * 100000),
-                        message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})`,
+                        message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
+                        attachment: proof
+                    })
+                    if(warnCount >= 3)
+                    {
+                        await api.SendMessageWithKeyboard(user.dataValues.id, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
+                        if(Data.projectHead) await api.SendMessage(Data.projectHead.id, `⚠ Игрок ${context.player.GetName()} выдал предупреждение игроку *id${user.dataValues.id}(${user.dataValues.nick}), количество репортов достигло 3-х, игрок забанен`)
+                        if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].isBanned = true
+                        await Ban.create({
+                            userID: user.dataValues.id,
+                            reason: "3 предупреждения",
+                            explanation: "Игрок заблокирован потому что имеет 3 предупреждения",
+                        })
+                        await api.BanUser(user.dataValues.id)
+                        await Warning.update({banned: true}, {where: {userID: user.dataValues.id}})
+                    }
+                    await context.send("✅ Предупреждение выдано", {keyboard: keyboard.build(current_keyboard)})
+                    for(const id of Object.keys(Data.supports))
+                    {
+                        await api.api.messages.send({
+                            user_id: id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})`,
+                            attachment: proof
+                        })
+                    }
+                }
+                else
+                {
+                    const reason = await InputManager.InputString(context, "2️⃣ Введите текст предупреждения", current_keyboard)
+                    if(!reason) return resolve(false)
+                    const proof = await InputManager.InputPhoto(context, "3️⃣ Отправьте фото-доказательство (отмена = без фото)", current_keyboard)
+                    await api.api.messages.send({
+                        user_id: user.dataValues.id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и и не провоцируйте администрацию.`,
                         attachment: proof
                     })
                 }
-                context.player.lastReportTime = new Date()
                 return resolve(true)
             }
             catch (e)
@@ -5128,7 +5177,7 @@ class BuildersAndControlsScripts
                 }
                 return ["player", citizen ? "citizen" : "stateless"]
             }
-            const data = fs.readFileSync('./files/users.csv', 'utf8');
+            const data = fs.readFileSync('./files/users.csv', 'utf8')
             const rows = data.split("\n")
             let user = null
             let marryID = []

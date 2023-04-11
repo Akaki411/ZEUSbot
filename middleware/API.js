@@ -73,11 +73,23 @@ class VK_API
                         min = Data.countries[i].active
                         activeNegative = i
                     }
+                    if(Data.countries[i].active <= 500)
+                    {
+                        Data.countriesWeekPassiveScore[Data.countries[i].id] += 1
+                        await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} ${Data.countriesWeekPassiveScore[Data.countries[i].id]}-й раз набрала меньше 500 сообщений актива`)
+                        if(Data.countriesWeekPassiveScore[Data.countries[i].id] >= 3)
+                        {
+                            Data.countries[i].warnings ++
+                            await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} получила варн`)
+                            Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
+                        }
+                    }
                     Data.countries[i].active = 0
                 }
             }
             Data.countries[active].rating++
-            if(min < 300)
+            if(min < 200)
             {
                 Data.countries[activeNegative].rating--
                 await Country.update({rating: Data.countries[activeNegative].rating}, {where: {id: Data.countries[activeNegative].id}})
@@ -85,15 +97,7 @@ class VK_API
             await Country.update({rating: Data.countries[active].rating}, {where: {id: Data.countries[active].id}})
             await Data.AddCountryResources(Data.countries[active].id, {money: 100})
             await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 балл, в бюджет передан сладкий подарок в размере 100 монет`)
-            await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 300 ? " и количество сообщений за день не достигло 300, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 300 сообщений, поэтому баллы активности с вас не снимаются."}`)
-            let report = "Результаты подсчета актива за сегодня:\n\n" +
-                "🔝 Наибольший актив: " + Data.countries[active].GetName() + "\n" +
-                "💬 Сообщений: " + max + "\n" +
-                "➕ Выдан балл актива" + "\n\n" +
-                "🔝 Наименьший актив: " + Data.countries[activeNegative].GetName() + "\n" +
-                "💬 Сообщений: " + min + "\n" +
-                "➖ Вычтен балл актива" + "\n\n"
-            await this.SendMessage(Data.projectHead.id, report)
+            await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 200 ? " и количество сообщений за день не достигло 200, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 200 сообщений, поэтому баллы активности с вас не снимаются."}`)
 
             let temp = null
             max = 0
@@ -180,17 +184,14 @@ class VK_API
             this.day ++
             if(this.day > 7)
             {
-                report = "📈 Актив фракций за неделю:\n\n"
                 for(let i = 0; i < Data.countries.length; i++)
                 {
                     if(Data.countries[i])
                     {
-                        report += (Data.projectHead?.platform === "IOS" ? Data.countries[i].name : Data.countries[i].GetName()) + "   -   " + Data.countriesWeekActive[Data.countries[i].id] + " сообщений\n"
+                        Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
                         Data.countriesWeekActive[Data.countries[i].id] = 0
                     }
                 }
-                report += "\nℹ Недельный актив сброшен"
-                await this.SendMessage(Data.projectHead?.id, report)
                 this.day = 0
             }
             await Data.SaveActive()

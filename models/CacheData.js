@@ -3,7 +3,6 @@ const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
-const active = require("../files/active.json");
 
 class CacheData
 {
@@ -28,6 +27,7 @@ class CacheData
         this.musicLovers = {}
         this.countryChats = {}
         this.countriesWeekActive = {}
+        this.countriesWeekPassiveScore = {}
         this.stall = []
 
         this.accessKey = this.GenerateString(8)
@@ -290,9 +290,11 @@ class CacheData
                         {
                             country.active = active[country.id] ? active[country.id] : 0
                             this.countriesWeekActive[country.id] = active["week_" + country.id] ? active["week_" + country.id] : 0
+                            this.countriesWeekPassiveScore[country.id] = active.passiveScore ? active.passiveScore[country.id] ? active.passiveScore[country.id] : 0 : 0
                         }
                     }
                 }
+                this.SaveActive()
             })
             return resolve()
         })
@@ -337,7 +339,9 @@ class CacheData
     async SaveActive()
     {
         return new Promise((resolve) => {
-            let active = {}
+            let active = {
+                passiveScore: {}
+            }
             for(const country of this.countries)
             {
                 if(country)
@@ -350,6 +354,13 @@ class CacheData
                 if(country)
                 {
                     active["week_" + country.id] = this.countriesWeekActive[country.id] ? this.countriesWeekActive[country.id] : 0
+                }
+            }
+            for(const country of this.countries)
+            {
+                if(country)
+                {
+                    active.passiveScore[country.id] = this.countriesWeekPassiveScore[country.id] ? this.countriesWeekPassiveScore[country.id] : 0
                 }
             }
             const serialize = JSON.stringify(active, null, "\t")

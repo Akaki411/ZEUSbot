@@ -1,9 +1,10 @@
 const keyboard = require("../variables/Keyboards")
 const Data = require("../models/CacheData")
 const NameLibrary = require("../variables/NameLibrary")
-const {Chats, Messages, PlayerStatus, Country, City} = require("../database/Models")
+const {Chats, PlayerStatus, Country, City} = require("../database/Models")
 const Builders = require("./BuildersAndControlsScripts")
 const ErrorHandler = require("../error/ErrorHandler")
+const sequelize = require("../database/DataBase");
 
 class SceneController
 {
@@ -1894,12 +1895,13 @@ class SceneController
                 if(context.messagePayload.choice.match(/postbox/))
                 {
                     let request = "📫 Последние 5 сообщений:\n\n"
-                    const messages = await Messages.findAll({limit: 5})
+                    let messages = await sequelize.query("SELECT \"text\", \"createdAt\" FROM \"messages\" ORDER BY id DESC LIMIT 5")
+                    messages = messages[0]
                     if(messages.length > 0)
                     {
-                        for (let i = 0; i < messages.length; i++)
+                        for (let i = messages.length - 1; i >= 0; i--)
                         {
-                            request += "🔸 Сообщение от " + NameLibrary.ParseDateTime(messages[i].dataValues.createdAt) + ":\nℹ " + messages[i].dataValues.text + "\n\n"
+                            request += "🔸 Сообщение от " + NameLibrary.ParseDateTime(messages[i].createdAt) + ":\nℹ " + messages[i].text + "\n\n"
                         }
                     }
                     else
