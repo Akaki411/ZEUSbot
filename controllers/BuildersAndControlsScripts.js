@@ -57,7 +57,7 @@ class BuildersAndControlsScripts
                 if(!location) return resolve()
                 location = Data.ParseButtonID(location)
 
-                await context.send(`ℹ Вы находитесь в столице фракции ${Data.countries[location].GetName(context.player.platform === "IOS")} - городе ${Data.cities[Data.countries[location].capitalID].name}\n\n${Data.countries[location].description}`, {attachment: Data.countries[location].welcomePhotoURL})
+                await context.send(`ℹ Вы находитесь в столице фракции ${Data.countries[location].GetName(false)} - городе ${Data.cities[Data.countries[location].capitalID].name}\n\n${Data.countries[location].description}`, {attachment: Data.countries[location].welcomePhotoURL})
                 const user = await Player.create({
                     id: context.peerId,
                     nick: name,
