@@ -53,12 +53,6 @@ class SceneController
                 })
                 return
             }
-            if(context.command.match(/перезагруз|reload/))
-            {
-                await api.SaveTimeouts()
-                await context.send("123")
-                process.exit(0)
-            }
             if(context.messagePayload?.choice?.match(/menu|admin|mayor_menu|leader_menu|gm_menu/))
             {
                 if(context.messagePayload.choice === "menu")
@@ -115,13 +109,8 @@ class SceneController
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     //Ожидание
-    WaitingWalkMenu = async (context) => {
-        if(context.command.match(/перезагруз|reload/))
-        {
-            await api.SaveTimeouts()
-            await context.send("123")
-            process.exit(0)
-        }
+    WaitingWalkMenu = async (context) =>
+    {
         if(Data.timeouts["user_timeout_walk_" + context.player.id])
         {
             context.send(`♿ Вы находитесь в пути.\n\nДо прибытия ${NameLibrary.ParseFutureTime(Data.timeouts["user_timeout_walk_" + context.player.id].time)}`, {
