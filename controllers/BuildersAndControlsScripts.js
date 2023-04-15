@@ -61,7 +61,8 @@ class BuildersAndControlsScripts
                 const user = await Player.create({
                     id: context.peerId,
                     nick: name,
-                    gender: gender
+                    gender: gender,
+                    platform: "ANDROID"
                 })
                 const status = await PlayerStatus.create({
                     id: context.peerId,
