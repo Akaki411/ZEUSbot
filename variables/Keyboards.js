@@ -585,7 +585,7 @@ class KeyboardButtons
     })
 
     mostActiveButton = Keyboard.textButton({
-        label: '🎆 Самые активные',
+        label: '☢️ Самые активные',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'most_active'

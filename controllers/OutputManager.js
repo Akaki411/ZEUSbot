@@ -1,8 +1,8 @@
-const ErrorHandler = require("../error/ErrorHandler");
 const Data = require("../models/CacheData");
 const {Warning, Player} = require("../database/Models");
 const keyboard = require("../variables/Keyboards")
 const NameLibrary = require("../variables/NameLibrary")
+const api = require("../middleware/API")
 
 class OutputManager
 {
@@ -71,7 +71,7 @@ class OutputManager
         })
     }
 
-    async GetUserWarnings(context, userID, current_keyboard)
+    async GetUserWarnings(adminID, userID)
     {
         return new Promise(async (resolve) => {
             try
@@ -79,25 +79,33 @@ class OutputManager
                 const warnings = await Warning.findAll({where: {userID: userID}})
                 if(warnings.length === 0)
                 {
-                    await context.send("Предупреждений не найдено", {keyboard: keyboard.build(current_keyboard)})
+                    await api.SendMessage(adminID, "Предупреждений не найдено")
                     return resolve()
                 }
                 let user = null
                 for(let i = 0; i < warnings.length; i++)
                 {
                     user = await Player.findOne({where: {id: warnings[i].dataValues.id}})
-                    await context.send(`⚠ Предупреждение от ${NameLibrary.ParseDateTime(warnings[i].dataValues.createdAt)}:\n\nПричина: ${warnings[i].dataValues.reason}\n\nОписание:\n${warnings[i].dataValues.explanation}`, {
+                    await api.api.messages.send({
+                        user_id: adminID,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Предупреждение от ${NameLibrary.ParseDateTime(warnings[i].dataValues.createdAt)}:\n\nПричина: ${warnings[i].dataValues.reason}\n\nОписание:\n${warnings[i].dataValues.explanation}`,
                         attachment: warnings[i].dataValues.proofImage,
                         keyboard: keyboard.build([[keyboard.appealCallbackButton({command: "appeal_warning", item: warnings[i].dataValues.id})], [keyboard.hideCallbackButton()]]).inline()
                     })
                     await this.Timeout(0.5)
                 }
-                await context.send("Назад", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "OutputManager/GetUserWarnings", e)
+                let context = {
+                    player: {
+                        id: adminID,
+                        nick: adminID
+                    }
+                }
+                await api.SendLogs(context, "OutputManager/GetUserWarnings", e)
             }
         })
     }

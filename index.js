@@ -11,6 +11,7 @@ const CacheUserCallbackMiddleware = require('./middleware/CacheUserCallbackMiddl
 const CountStatsMiddleware = require('./middleware/CountStatsMiddleware')
 const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
 const Builders = require("./controllers/BuildersAndControlsScripts")
+const SceneController = require("./controllers/SceneController")
 
 const bot = new VK({token: process.env.VK_BOT_TOKEN})
 const questionManager = new QuestionManager()
@@ -57,6 +58,10 @@ const start = async () => {
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
             Data.variables["import"] && await Builders.ImportUsers()
+            await Data.onLoad({
+                StartScreen: SceneController.StartScreen,
+                Walking: SceneController.WaitingWalkMenu
+            })
         })
         bot.updates.on('message_new', async(msg) =>
         {
@@ -66,11 +71,6 @@ const start = async () => {
         bot.updates.on('message_event', (context) =>
         {
             CallbackEventController.Handler(context)
-        })
-
-        bot.updates.on('group_join', (context) =>
-        {
-            console.log(context)
         })
 
         bot.updates.start().then(() => console.log("Бот запущен"))

@@ -10,6 +10,7 @@ module.exports = (context, next) =>
             for(let i = 0; i < ids?.length; i++)
             {
                 temp = parseInt(ids[i].replace("id", ""))
+                if(temp < 0) continue
                 if(!context.replyPlayers.includes(temp))
                 {
                     context.replyPlayers.push(temp)

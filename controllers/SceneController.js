@@ -3,7 +3,7 @@ const Data = require("../models/CacheData")
 const NameLibrary = require("../variables/NameLibrary")
 const {Chats, PlayerStatus, Country, City} = require("../database/Models")
 const Builders = require("./BuildersAndControlsScripts")
-const ErrorHandler = require("../error/ErrorHandler")
+const api = require("../middleware/API")
 const sequelize = require("../database/DataBase");
 
 class SceneController
@@ -53,6 +53,12 @@ class SceneController
                 })
                 return
             }
+            if(context.command.match(/перезагруз|reload/))
+            {
+                await api.SaveTimeouts()
+                await context.send("123")
+                process.exit(0)
+            }
             if(context.messagePayload?.choice?.match(/menu|admin|mayor_menu|leader_menu|gm_menu/))
             {
                 if(context.messagePayload.choice === "menu")
@@ -100,7 +106,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/StartScreen", e)
+            await api.SendLogs(context, "SceneController/StartScreen", e)
         }
     }
 
@@ -110,9 +116,15 @@ class SceneController
 
     //Ожидание
     WaitingWalkMenu = async (context) => {
-        if(context.player.timeout)
+        if(context.command.match(/перезагруз|reload/))
         {
-            context.send(`♿ Вы находитесь в пути.\n\nДо прибытия ${NameLibrary.ParseFutureTime(context.player.lastActionTime)}`, {
+            await api.SaveTimeouts()
+            await context.send("123")
+            process.exit(0)
+        }
+        if(Data.timeouts["user_timeout_walk_" + context.player.id])
+        {
+            context.send(`♿ Вы находитесь в пути.\n\nДо прибытия ${NameLibrary.ParseFutureTime(Data.timeouts["user_timeout_walk_" + context.player.id].time)}`, {
                 keyboard: keyboard.none
             })
         }
@@ -224,7 +236,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/GMMenu", e)
+            await api.SendLogs(context, "SceneController/GMMenu", e)
         }
     }
 
@@ -284,7 +296,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/GMControlsMenu", e)
+            await api.SendLogs(context, "SceneController/GMControlsMenu", e)
         }
     }
 
@@ -324,7 +336,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/GMCountriesMenu", e)
+            await api.SendLogs(context, "SceneController/GMCountriesMenu", e)
         }
     }
 
@@ -356,7 +368,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/GMBuildingsMenu", e)
+            await api.SendLogs(context, "SceneController/GMBuildingsMenu", e)
         }
     }
 
@@ -392,7 +404,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/GMCitiesMenu", e)
+            await api.SendLogs(context, "SceneController/GMCitiesMenu", e)
         }
     }
 
@@ -432,7 +444,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/GMUsersMenu", e)
+            await api.SendLogs(context, "SceneController/GMUsersMenu", e)
         }
     }
 
@@ -554,7 +566,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/AdminPanel", e)
+            await api.SendLogs(context, "SceneController/AdminPanel", e)
         }
     }
 
@@ -607,6 +619,11 @@ class SceneController
                     await Builders.ChangeVariables(context, current_keyboard)
                 }
             }
+            else if(context.command.match(/перезагруз|reload/))
+            {
+                await api.SaveTimeouts()
+                process.exit(0)
+            }
             else
             {
                 await context.send("👉🏻 Управление",{
@@ -616,7 +633,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/AdminTechnicalMenu", e)
+            await api.SendLogs(context, "SceneController/AdminTechnicalMenu", e)
         }
     }
 
@@ -678,7 +695,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/AdminControlsMenu", e)
+            await api.SendLogs(context, "SceneController/AdminControlsMenu", e)
         }
     }
 
@@ -724,7 +741,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/AdminControlsMenu", e)
+            await api.SendLogs(context, "SceneController/AdminControlsMenu", e)
         }
     }
 
@@ -781,7 +798,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/AdminUsersMenu", e)
+            await api.SendLogs(context, "SceneController/AdminUsersMenu", e)
         }
     }
 
@@ -917,7 +934,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/GovernanceCountryMenu", e)
+            await api.SendLogs(context, "SceneController/GovernanceCountryMenu", e)
         }
     }
 
@@ -972,7 +989,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CountryOfficialsMenu", e)
+            await api.SendLogs(context, "SceneController/CountryOfficialsMenu", e)
         }
     }
 
@@ -1038,7 +1055,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CountryControlsMenu", e)
+            await api.SendLogs(context, "SceneController/CountryControlsMenu", e)
         }
     }
 
@@ -1089,7 +1106,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CountryBuildingsMenu", e)
+            await api.SendLogs(context, "SceneController/CountryBuildingsMenu", e)
         }
     }
 
@@ -1145,7 +1162,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CountryBudgetMenu", e)
+            await api.SendLogs(context, "SceneController/CountryBudgetMenu", e)
         }
     }
 
@@ -1218,7 +1235,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/ChangeCountryMenu", e)
+            await api.SendLogs(context, "SceneController/ChangeCountryMenu", e)
         }
     }
 
@@ -1277,7 +1294,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CountryInfoMenu", e)
+            await api.SendLogs(context, "SceneController/CountryInfoMenu", e)
         }
     }
 
@@ -1388,7 +1405,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CityControlsMenu", e)
+            await api.SendLogs(context, "SceneController/CityControlsMenu", e)
         }
     }
 
@@ -1444,7 +1461,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/ControlsCityMenu", e)
+            await api.SendLogs(context, "SceneController/ControlsCityMenu", e)
         }
     }
 
@@ -1509,7 +1526,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/ChangeCityMenu", e)
+            await api.SendLogs(context, "SceneController/ChangeCityMenu", e)
         }
     }
 
@@ -1568,7 +1585,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CityBuildingsMenu", e)
+            await api.SendLogs(context, "SceneController/CityBuildingsMenu", e)
         }
     }
 
@@ -1637,7 +1654,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/CityInfoMenu", e)
+            await api.SendLogs(context, "SceneController/CityInfoMenu", e)
         }
     }
 
@@ -1648,10 +1665,12 @@ class SceneController
     // Меню
     GetMenuKeyboard = () =>
     {
-        return [[keyboard.extractButton],
+        return [
+            [keyboard.extractButton],
             [keyboard.locationButton, keyboard.profileButton],
             [keyboard.ratingsButton, keyboard.parametersButton],
-            [keyboard.backButton]]
+            [keyboard.backButton]
+        ]
     }
 
     GetProfileMenuKeyboard = async (context) =>
@@ -1836,7 +1855,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Menu", e)
+            await api.SendLogs(context, "SceneController/Menu", e)
         }
     }
 
@@ -1930,7 +1949,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Params", e)
+            await api.SendLogs(context, "SceneController/Params", e)
         }
     }
 
@@ -1978,7 +1997,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/ChangeAccount", e)
+            await api.SendLogs(context, "SceneController/ChangeAccount", e)
         }
     }
 
@@ -2012,7 +2031,7 @@ class SceneController
                     {
                         for (let i = 0; i < j; i++)
                         {
-                            if (array[i][0] < array[i + 1][0])
+                            if (array[i][0] < array[i + 1])
                             {
                                 let temp = array[i];
                                 array[i] = array[i + 1];
@@ -2131,7 +2150,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Ratings", e)
+            await api.SendLogs(context, "SceneController/Ratings", e)
         }
     }
 
@@ -2176,7 +2195,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/RelaxingInTheHouse", e)
+            await api.SendLogs(context, "SceneController/RelaxingInTheHouse", e)
         }
     }
 
@@ -2275,7 +2294,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Profile", e)
+            await api.SendLogs(context, "SceneController/Profile", e)
         }
     }
 
@@ -2338,7 +2357,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Property", e)
+            await api.SendLogs(context, "SceneController/Property", e)
         }
     }
 
@@ -2424,7 +2443,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Location", e)
+            await api.SendLogs(context, "SceneController/Location", e)
         }
     }
 
@@ -2465,7 +2484,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/InBuilding", e)
+            await api.SendLogs(context, "SceneController/InBuilding", e)
         }
     }
 
@@ -2665,7 +2684,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/Extracting", e)
+            await api.SendLogs(context, "SceneController/Extracting", e)
         }
     }
 
@@ -2706,7 +2725,7 @@ class SceneController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "SceneController/FillingOutTheForm", e)
+            await api.SendLogs(context, "SceneController/FillingOutTheForm", e)
         }
     }
 }

@@ -29,6 +29,9 @@ class CacheData
         this.countriesWeekActive = {}
         this.countriesWeekPassiveScore = {}
         this.stall = []
+        this.repeat = {}
+        this.timeouts = {}
+        this.onLoad = () => {}
 
         this.accessKey = this.GenerateString(8)
         this.StartLoop()

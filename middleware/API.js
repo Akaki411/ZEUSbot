@@ -1,19 +1,25 @@
-const {API} = require('vk-io')
+const {API, Upload} = require('vk-io')
 const keyboard = require('../variables/Keyboards')
 const Data = require("../models/CacheData")
-const {PlayerStatus, Warning, Player, Country, PlayerInfo} = require("../database/Models");
+const {PlayerStatus, Warning, Player, Country, PlayerInfo, PlayerResources} = require("../database/Models");
 const NameLibrary = require("../variables/NameLibrary")
+const fs = require("fs");
+const User = require("../models/User")
 
 class VK_API
 {
     constructor(token)
     {
         this.api = new API({token: token})
+        this.upload = new Upload({api: this.api})
         this.day = 0
         this.StartLoop()
         let time = new Date()
         this.day = time.getDay()
         this.day = this.day === 0 ? 7 : this.day
+        Data.onLoad = async (scenes) => {
+            await this.LoadTimeouts(scenes)
+        }
     }
 
     StartLoop()
@@ -202,6 +208,271 @@ class VK_API
         }
     }
 
+    async LoadTimeouts(scenes)
+    {
+        return new Promise(async (resolve) =>
+        {
+            const now = new Date()
+            const getTime = (time) => {
+                let date = new Date(time)
+                return {
+                    date: date,
+                    timeout: date - now
+                }
+            }
+            fs.access("./files/cache.json", async (error) => {
+                if(error)
+                {
+                    for (const key of Object.keys(Data.supports))
+                    {
+                        await this.SendMessage(Data.supports[key].id, "⚠ Бот был перезагружен, но после загрузки не был найден файл с кэшем, возможно перезапуск был связан с критической ошибкой.")
+                    }
+                    return resolve()
+                }
+                else
+                {
+                    const active = require("../files/cache.json")
+                    let player, playerInfo, playerRes, playerStats, time, future
+                    for(const key of active)
+                    {
+                        if(key.type === "user_timeout")
+                        {
+                            if(!Data.users[key.userId])
+                            {
+                                player = await Player.findOne({where: {id: key.userId}})
+                                if(!player) continue
+                                playerInfo = await PlayerInfo.findOne({where: {id: key.userId}})
+                                playerRes = await PlayerResources.findOne({where: {id: key.userId}})
+                                playerStats = await PlayerStatus.findOne({where: {id: key.userId}})
+                                Data.users[parseInt(key.userId)] = new User(player, playerStats, playerInfo, playerRes)
+                                Data.users[parseInt(key.userId)].state = scenes.StartScreen
+                            }
+                            if(key.subtype === "sleep")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0)
+                                {
+                                    await this.SendMessage(key.userId, "☕ Ваши силы восстановлены")
+                                    continue
+                                }
+                                Data.users[key.userId].fatigue = 100 - Math.round(time.timeout / 216000)
+                                Data.users[key.userId].isRelaxing = true
+                                Data.timeouts["user_timeout_sleep_" + key.userId] = {
+                                    type: "user_timeout",
+                                    subtype: "sleep",
+                                    userId: key.userId,
+                                    time: time.date,
+                                    timeout: setTimeout(async () => {
+                                        await this.SendMessage(key.userId, "☕ Ваши силы восстановлены")
+                                        Data.users[key.userId].fatigue = 100
+                                        Data.users[key.userId].isRelaxing = false
+                                        delete Data.timeouts["user_timeout_sleep_" + key.userId]
+                                    }, time.timeout)
+                                }
+                            }
+                            if(key.subtype === "walk")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0)
+                                {
+                                    await this.SendMessage(key.userId, "🏙 Вы пришли в город " + Data.cities[key.cityID].name + "\n" + Data.cities[key.cityID].description)
+                                    continue
+                                }
+                                Data.users[key.userId].state = scenes.Walking
+                                Data.timeouts["user_timeout_walk_" + key.userId] = {
+                                    type: "user_timeout",
+                                    subtype: "walk",
+                                    userId: key.userId,
+                                    cityID: key.cityID,
+                                    time: time.date,
+                                    timeout: setTimeout(async () => {
+                                        await this.SendMessage(key.userId, "🏙 Вы пришли в город " + Data.cities[key.cityID].name + "\n" + Data.cities[key.cityID].description)
+                                        Data.users[key.userId].location = key.cityID
+                                        await PlayerStatus.update(
+                                            {location: key.cityID},
+                                            {where: {id: key.userId}}
+                                        )
+                                        if(Data.cities[key.cityID].notifications)
+                                        {
+                                            await this.SendMessage(Data.cities[key.cityID].leaderID, `ℹ Игрок ${Data.users[key.userId].GetName()} зашел в город ${Data.cities[key.cityID].name}`)
+                                        }
+                                        let stayTime = new Date()
+                                        stayTime.setMinutes(stayTime.getMinutes() + 30)
+                                        Data.users[key.userId].stayInCityTime = stayTime
+                                        Data.users[key.userId].state = scenes.StartScreen
+                                        delete Data.timeouts["user_timeout_walk_" + key.userId]
+                                    }, time.timeout)
+                                }
+                            }
+                        }
+                        if(key.type === "city_timeout")
+                        {
+                            if(!Data.cities[key.cityID])
+                            {
+                                continue
+                            }
+                            if(key.subtype === "resources_ready")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0)
+                                {
+                                    await this.SendMessage(key.userId, `✅ Постройки города ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                    continue
+                                }
+                                future = new Date()
+                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                                for(let k = 0; k < Data.cities.length; k++)
+                                {
+                                    for(let i = 0; i < Data.buildings[Data.cities[k]?.id]?.length; i++)
+                                    {
+                                        if(Data.buildings[Data.cities[k].id][i].ownerType === "city" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/))
+                                        {
+                                            Data.buildings[Data.cities[k].id][i].lastActivityTime = future
+                                        }
+                                    }
+                                }
+                                Data.timeouts["city_timeout_resources_ready_" + key.cityID] = {
+                                    type: "city_timeout",
+                                    subtype: "resources_ready",
+                                    userId: key.userId,
+                                    cityID: key.cityID,
+                                    time: key.date,
+                                    timeout: setTimeout(async () =>
+                                    {
+                                        await this.SendMessage(key.userId, `✅ Постройки города ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                        delete Data.timeouts["city_timeout_resources_ready_" + key.cityID]
+                                    }, time.timeout)
+                                }
+                            }
+                        }
+                        if(key.type === "country_timeout")
+                        {
+                            if(!Data.countries[key.countryID])
+                            {
+                                continue
+                            }
+                            if(key.subtype === "resources_ready")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0)
+                                {
+                                    await this.SendMessage(key.userId, `✅ Постройки фракции ${Data.countries[key.countryID].GetName(false)} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                    continue
+                                }
+                                future = new Date()
+                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                                for(let k = 0; k < Data.cities.length; k++)
+                                {
+                                    if(Data.cities[k]?.countryID === key.countryID)
+                                    {
+                                        for(let i = 0; i < Data.buildings[Data.cities[k]?.id]?.length; i++)
+                                        {
+                                            if(Data.buildings[Data.cities[k].id][i].ownerType === "country" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/))
+                                            {
+                                                Data.buildings[Data.cities[k].id][i].lastActivityTime = future
+                                            }
+                                        }
+                                    }
+                                }
+                                Data.timeouts["country_timeout_resources_ready_" + key.countryID] = {
+                                    type: "country_timeout",
+                                    subtype: "resources_ready",
+                                    userId: key.userId,
+                                    countryID: key.countryID,
+                                    time: key.date,
+                                    timeout: setTimeout(async () =>
+                                    {
+                                        await this.SendMessage(key.userId, `✅ Постройки фракции ${Data.countries[key.countryID].GetName(false)} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                        delete Data.timeouts["country_timeout_resources_ready_" + key.countryID]
+                                    }, time.timeout)
+                                }
+                            }
+                        }
+                    }
+                    fs.unlink("./files/cache.json", (err) => {
+                        if (err) throw err
+                    })
+                    for (const key of Object.keys(Data.supports))
+                    {
+                        await this.SendMessage(Data.supports[key].id, "✅ Бот загружен, данные игроков восстановлены")
+                    }
+                }
+                return resolve()
+            })
+        })
+    }
+
+    async SaveTimeouts()
+    {
+        return new Promise(async (resolve) =>
+        {
+            let data = []
+            for(const key of Object.keys(Data.timeouts))
+            {
+                if(Data.timeouts[key].type === "user_timeout")
+                {
+                    if(Data.timeouts[key].subtype === "sleep")
+                    {
+                        data.push({
+                            type: "user_timeout",
+                            subtype: "sleep",
+                            userId: Data.timeouts[key].userId,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                }
+                if(Data.timeouts[key].type === "user_timeout")
+                {
+                    if(Data.timeouts[key].subtype === "walk")
+                    {
+                        data.push({
+                            type: "user_timeout",
+                            subtype: "walk",
+                            cityID: Data.timeouts[key].cityID,
+                            userId: Data.timeouts[key].userId,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                }
+                if(Data.timeouts[key].type === "city_timeout")
+                {
+                    if(Data.timeouts[key].subtype === "resources_ready")
+                    {
+                        data.push({
+                            type: "city_timeout",
+                            subtype: "resources_ready",
+                            userId: Data.timeouts[key].userId,
+                            cityID: Data.timeouts[key].cityID,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                }
+                if(Data.timeouts[key].type === "country_timeout")
+                {
+                    if(Data.timeouts[key].subtype === "resources_ready")
+                    {
+                        data.push({
+                            type: "country_timeout",
+                            subtype: "resources_ready",
+                            userId: Data.timeouts[key].userId,
+                            countryID: key.countryID,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                }
+            }
+            const serialize = JSON.stringify(data, null, "\t")
+            fs.writeFile("./files/cache.json", serialize, (e) => {
+                if(e) console.log(e)
+            })
+            for (const key of Object.keys(Data.supports))
+            {
+                await this.SendMessage(Data.supports[key].id, "✅ Данные сохранены, бот готов к перезагрузке")
+            }
+            return resolve()
+        })
+    }
+
     async KickUser(chatID, userID)
     {
         if(!chatID || !userID) return
@@ -353,6 +624,44 @@ class VK_API
                     message: `ℹ Ключ доступа для действия: ${reason}\n\nКлюч: ${Data.accessKey}`
                 })
             }
+        }
+        catch (e)
+        {
+            console.log(e)
+        }
+    }
+
+    SendLogs = async (context, place, error) =>
+    {
+        try
+        {
+            await this.SendMessage(context.player.id, "⚠ Ошибка")
+            console.log(error)
+            const filename = `error_${NameLibrary.GetDate() + "_" + NameLibrary.GetTime()}.log`
+            await new Promise(res => {
+                fs.appendFile("./logs/" + filename, error.stack,  (err) => {
+                    if (err) throw err
+                    return res()
+                })
+            })
+            await this.upload.messageDocument({
+                peer_id: context.player.id,
+                source: {
+                    value: "./logs/" + filename
+                },
+                title: filename
+            }).then(async (log) => {
+
+                for (const key of Object.keys(Data.supports))
+                {
+                    await this.api.messages.send({
+                        user_id: Data.supports[key].id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠Произошла ошибка⚠\nИгрок: *id${context.player.id}(${context.player.nick})\nМесто: ${place}\nКод ошибки: ${error.message}`,
+                        attachment: log
+                    })
+                }
+            })
         }
         catch (e)
         {

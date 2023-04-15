@@ -1,7 +1,6 @@
 const api = require("../middleware/API")
 const {PlayerInfo, PlayerStatus, Country, Player, Buildings, Keys, City, Warning, Ban, CityRoads} = require("../database/Models");
-const Data = require("../models/CacheData");
-const ErrorHandler = require("../error/ErrorHandler")
+const Data = require("../models/CacheData")
 const keyboard = require("../variables/Keyboards")
 const NameLibrary = require("../variables/NameLibrary");
 const Prices = require("../variables/Prices");
@@ -69,7 +68,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/Merry", e)
+            await api.SendLogs(context, "CallbackEventController/Merry", e)
         }
     }
 
@@ -93,7 +92,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineMerry", e)
+            await api.SendLogs(context, "CallbackEventController/DeclineMerry", e)
         }
     }
 
@@ -130,7 +129,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/Divorce", e)
+            await api.SendLogs(context, "CallbackEventController/Divorce", e)
         }
     }
 
@@ -153,7 +152,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineDivorce", e)
+            await api.SendLogs(context, "CallbackEventController/DeclineDivorce", e)
         }
     }
 
@@ -200,7 +199,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/GiveCitizenship", e)
+            await api.SendLogs(context, "CallbackEventController/GiveCitizenship", e)
         }
     }
 
@@ -237,7 +236,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineCitizenship", e)
+            await api.SendLogs(context, "CallbackEventController/DeclineCitizenship", e)
         }
     }
 
@@ -272,7 +271,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/GiveRegistration", e)
+            await api.SendLogs(context, "CallbackEventController/GiveRegistration", e)
         }
     }
 
@@ -305,7 +304,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineRegistration", e)
+            await api.SendLogs(context, "CallbackEventController/DeclineRegistration", e)
         }
     }
 
@@ -400,7 +399,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/AllowUserBuilding", e)
+            await api.SendLogs(context, "CallbackEventController/AllowUserBuilding", e)
         }
     }
 
@@ -465,7 +464,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/DeclineUserBuilding", e)
+            await api.SendLogs(context, "CallbackEventController/DeclineUserBuilding", e)
         }
     }
 
@@ -499,7 +498,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/HideRoadDistance", e)
+            await api.SendLogs(context, "CallbackEventController/HideRoadDistance", e)
         }
     }
 
@@ -528,6 +527,38 @@ class CallbackEventController
                     if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].warningScore = warnCount
                 }
                 await api.SendMessage(user.dataValues.id, request)
+                if(Data.owner)
+                {
+                    await api.api.messages.send({
+                        user_id: Data.owner.id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал репорт игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
+                if(Data.projectHead)
+                {
+                    await api.api.messages.send({
+                        user_id: Data.projectHead.id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал репорт игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
+                for(const id of Object.keys(Data.supports))
+                {
+                    await api.api.messages.send({
+                        user_id: id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал репорт игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
+                for(const id of Object.keys(Data.administrators))
+                {
+                    await api.api.messages.send({
+                        user_id: id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал репорт игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
                 await api.api.messages.edit({
                     peer_id: context.peerId,
                     message: "✅ Обжаловано",
@@ -547,7 +578,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/AppealWarning", e)
+            await api.SendLogs(context, "CallbackEventController/AppealWarning", e)
         }
     }
 
@@ -565,6 +596,38 @@ class CallbackEventController
                 await Player.update({warningScore: 0, isBanned: false}, {where: {id: user.dataValues.id}})
                 if(Data.users[user.dataValues.id]) delete Data.users[user.dataValues.id]
                 await api.SendMessage(user.dataValues.id, `✅ Администрация проекта приняла решение обжаловать ваш бан от ${NameLibrary.ParseDateTime(ban.dataValues.createdAt)}\n\n✅ Теперь вы можете свободно пользоваться ботом и писать в чатах`)
+                if(Data.owner)
+                {
+                    await api.api.messages.send({
+                        user_id: Data.owner.id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал бан игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
+                if(Data.projectHead)
+                {
+                    await api.api.messages.send({
+                        user_id: Data.projectHead.id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал бан игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
+                for(const id of Object.keys(Data.supports))
+                {
+                    await api.api.messages.send({
+                        user_id: id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал бан игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
+                for(const id of Object.keys(Data.administrators))
+                {
+                    await api.api.messages.send({
+                        user_id: id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал бан игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
                 await api.api.messages.edit({
                     peer_id: context.peerId,
                     message: "✅ Обжаловано",
@@ -584,7 +647,7 @@ class CallbackEventController
         }
         catch (e)
         {
-            await ErrorHandler.SendLogs(context, "CallbackEventController/AppealBan", e)
+            await api.SendLogs(context, "CallbackEventController/AppealBan", e)
         }
     }
 }

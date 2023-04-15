@@ -7,12 +7,10 @@ const {City, Country, PlayerStatus, Player, Ban, LastWills, Buildings,
     Warning, CityRoads
 } = require("../database/Models");
 const api = require("../middleware/API");
-const ErrorHandler = require("../error/ErrorHandler")
 const NameLibrary = require("../variables/NameLibrary")
 const Prices = require("../variables/Prices")
 const Nations = require("../variables/Nations")
 const sequelize = require("../database/DataBase")
-const upload = require("../middleware/Upload")
 const Effects = require("../variables/Effects")
 const User = require("../models/User")
 const fs = require('fs')
@@ -59,7 +57,7 @@ class BuildersAndControlsScripts
                 if(!location) return resolve()
                 location = Data.ParseButtonID(location)
 
-                await context.send(`ℹ Вы находитесь в столице фракции ${Data.countries[location].GetName()} - городе ${Data.cities[Data.countries[location].capitalID].name}\n\n${Data.countries[location].description}`, {attachment: Data.countries[location].welcomePhotoURL})
+                await context.send(`ℹ Вы находитесь в столице фракции ${Data.countries[location].GetName(context.player.platform === "IOS")} - городе ${Data.cities[Data.countries[location].capitalID].name}\n\n${Data.countries[location].description}`, {attachment: Data.countries[location].welcomePhotoURL})
                 const user = await Player.create({
                     id: context.peerId,
                     nick: name,
@@ -94,7 +92,7 @@ class BuildersAndControlsScripts
                     id: context.peerId,
                     nick: "Незарегистрированный пользователь"
                 }
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Registration", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Registration", e)
             }
         })
     }
@@ -222,7 +220,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/NewCountry", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/NewCountry", e)
             }
         })
     }
@@ -284,7 +282,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeRole", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeRole", e)
             }
         })
     }
@@ -322,7 +320,7 @@ class BuildersAndControlsScripts
                         break
                     }
                 }
-                const access = await InputManager.InputBoolean(context, `ℹ Назначить игрока *id${user.dataValues.id}(${user.dataValues.nick}) правителем фракции ${country.GetName()}?`, current_keyboard)
+                const access = await InputManager.InputBoolean(context, `ℹ Назначить игрока *id${user.dataValues.id}(${user.dataValues.nick}) правителем фракции ${country.GetName(context.player.platform === "IOS")}?`, current_keyboard)
                 if(!access)
                 {
                     context.send("Отменено", {keyboard: keyboard.build(current_keyboard)})
@@ -333,7 +331,7 @@ class BuildersAndControlsScripts
                     oldCountry.set({leaderID: null})
                     await oldCountry.save()
                     Data.countries[oldCountry.dataValues.id].leaderID = null
-                    await context.send(`⚠ Фракция ${Data.countries[oldCountry.dataValues.id].GetName()} осталась без правителя.`)
+                    await context.send(`⚠ Фракция ${Data.countries[oldCountry.dataValues.id].GetName(context.player.platform === "IOS")} осталась без правителя.`)
                 }
                 await Country.update({leaderID: user.dataValues.id}, {where: {id: country.id}})
                 Data.countries[country.id].leaderID = user.dataValues.id
@@ -357,7 +355,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AppointLeader", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/AppointLeader", e)
             }
         })
     }
@@ -379,7 +377,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ShowListWarnings", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ShowListWarnings", e)
             }
         })
     }
@@ -391,11 +389,12 @@ class BuildersAndControlsScripts
             {
                 const user = await InputManager.InputUser(context, "1️⃣ Выберите пользователя.", current_keyboard)
                 if(!user) return resolve()
-                await OutputManager.GetUserWarnings(context, user.dataValues.id, current_keyboard)
+                await OutputManager.GetUserWarnings(context.player.id, user.dataValues.id)
+                await context.send("Назад", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ShowListWarnings", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ShowListWarnings", e)
             }
         })
     }
@@ -417,7 +416,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ShowListWarnings", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ShowListWarnings", e)
             }
         })
     }
@@ -449,7 +448,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ShowBan", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ShowBan", e)
             }
         })
     }
@@ -496,7 +495,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CheatingUserResources", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CheatingUserResources", e)
             }
         })
     }
@@ -538,7 +537,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CheatingCityResources", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CheatingCityResources", e)
             }
         })
     }
@@ -556,7 +555,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${country.GetName()}?`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${country.GetName(context.player.platform === "IOS")}?`, resources, current_keyboard)
                 if (resource === "cancel")
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -564,7 +563,7 @@ class BuildersAndControlsScripts
                 }
                 let count = await InputManager.InputInteger(context, `3️⃣ Введите количество`, current_keyboard)
                 if(count === null) return resolve()
-                const accept = await InputManager.InputBoolean(context, `4️⃣ Подтвердите перевод:\nКому: Фракция ${country.GetName()}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
+                const accept = await InputManager.InputBoolean(context, `4️⃣ Подтвердите перевод:\nКому: Фракция ${country.GetName(context.player.platform === "IOS")}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -573,12 +572,12 @@ class BuildersAndControlsScripts
                 let objIN = {}
                 objIN[resource] = count
                 await Data.AddCountryResources(country.id, objIN)
-                await api.SendMessage(country.leaderID, `ℹ Поступил перевод в бюджет фракции ${country.GetName()} в размере:\n${NameLibrary.GetResourceName(resource)}: ${count}`)
+                await api.SendMessage(country.leaderID, `ℹ Поступил перевод в бюджет фракции ${country.GetName(context.player.platform === "IOS")} в размере:\n${NameLibrary.GetResourceName(resource)}: ${count}`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CheatingCountryResources", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CheatingCountryResources", e)
             }
         })
     }
@@ -621,7 +620,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateLastWill", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateLastWill", e)
             }
         })
     }
@@ -644,7 +643,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteLastWill", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/DeleteLastWill", e)
             }
         })
     }
@@ -657,24 +656,30 @@ class BuildersAndControlsScripts
                 const need = (100 - context.player.fatigue) * 3.6
                 const time = new Date()
                 time.setMinutes(time.getMinutes() + need)
-                Data.users[context.player.id].relaxingEndTime = time
-                if (Data.users[context.player.id].relaxingEndTimeout)
+                if (Data.timeouts["user_timeout_sleep_" + context.player.id])
                 {
-                    clearTimeout(Data.users[context.player.id].relaxingEndTimeout)
+                    clearTimeout(delete Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
+                    delete Data.timeouts["user_timeout_sleep_" + context.player.id]
                 }
-                Data.users[context.player.id].relaxingEndTimeout = setTimeout(() => {
-                    current_keyboard[0][0] = keyboard.relaxButton
-                    context.send("☕ Ваши силы восстановлены", {keyboard: keyboard.build(current_keyboard)})
-                    context.player.fatigue = 100
-                    context.player.isRelaxing = false
-                }, need * 60000)
+                Data.timeouts["user_timeout_sleep_" + context.player.id] = {
+                    type: "user_timeout",
+                    subtype: "sleep",
+                    userId: context.player.id,
+                    time: time,
+                    timeout: setTimeout(() => {
+                        context.send("☕ Ваши силы восстановлены")
+                        context.player.fatigue = 100
+                        context.player.isRelaxing = false
+                        delete Data.timeouts["user_timeout_sleep_" + context.player.id]
+                    }, need * 60000)
+                }
                 Data.users[context.player.id].isRelaxing = true
                 await context.send(`💤 Вы перешли в режим отдыха, до полного восстановления сил ${NameLibrary.ParseFutureTime(time)}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Relax", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Relax", e)
             }
         })
     }
@@ -684,20 +689,22 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                if(context.player.relaxingEndTimeout)
+                if(Data.timeouts["user_timeout_sleep_" + context.player.id])
                 {
-                    clearTimeout(context.player.relaxingEndTimeout)
+                    clearTimeout(Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
+                    const now = new Date()
+                    const time = Math.max(0, Math.round((Data.timeouts["user_timeout_sleep_" + context.player.id].time - now) / 60000))
+                    context.player.isRelaxing = false
+                    context.player.fatigue = Math.round(100 - (time * (100 / 360)))
+                    await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(current_keyboard)})
+                    delete Data.timeouts["user_timeout_sleep_" + context.player.id]
+                    return resolve()
                 }
-                const now = new Date()
-                const time = Math.max(0, Math.round((context.player.relaxingEndTime - now) / 60000))
-                context.player.isRelaxing = false
-                context.player.fatigue = Math.round(100 - (time * (100 / 360)))
                 await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(current_keyboard)})
-                return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Relax", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Relax", e)
             }
         })
     }
@@ -728,7 +735,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityName", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCityName", e)
             }
         })
     }
@@ -752,7 +759,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityDescription", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCityDescription", e)
             }
         })
     }
@@ -784,7 +791,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityPhoto", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCityPhoto", e)
             }
         })
     }
@@ -808,7 +815,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
             }
         })
     }
@@ -865,7 +872,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
             }
         })
     }
@@ -884,7 +891,7 @@ class BuildersAndControlsScripts
                 })
                 if(buttons.length === 0)
                 {
-                    context.send(`ℹ Город ${Data.cities[context.cityID].name} единственный в фракции ${Data.GetCountryForCity(context.cityID)?.GetName()}`, {keyboard: keyboard.build(current_keyboard)})
+                    context.send(`ℹ Город ${Data.cities[context.cityID].name} единственный в фракции ${Data.GetCountryForCity(context.cityID)?.GetName(context.player.platform === "IOS")}`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 let city = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите город", buttons, current_keyboard)
@@ -935,7 +942,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
             }
         })
     }
@@ -970,7 +977,7 @@ class BuildersAndControlsScripts
                 {
                     count = 1
                 }
-                const accept = await InputManager.InputBoolean(context, `3️⃣ Подтвердите перевод:\n\nКому: фракция ${Data.GetCountryForCity(context.cityID).GetName()}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
+                const accept = await InputManager.InputBoolean(context, `3️⃣ Подтвердите перевод:\n\nКому: фракция ${Data.GetCountryForCity(context.cityID).GetName(context.player.platform === "IOS")}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -984,12 +991,12 @@ class BuildersAndControlsScripts
 
                 await Data.AddCityResources(context.cityID, objIN)
                 await Data.AddCountryResources(Data.GetCountryForCity(context.cityID).id, objOUT)
-                await api.SendMessage(Data.GetCountryForCity(context.cityID).leaderID, `✅ Из бюджета города ${Data.cities[context.cityID].name} в бюджет фракции ${Data.GetCountryForCity(context.cityID).GetName()} поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
+                await api.SendMessage(Data.GetCountryForCity(context.cityID).leaderID, `✅ Из бюджета города ${Data.cities[context.cityID].name} в бюджет фракции ${Data.GetCountryForCity(context.cityID).GetName(context.player.platform === "IOS")} поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CityToCountryTransaction", e)
             }
         })
     }
@@ -1047,7 +1054,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteCityBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/DeleteCityBuilding", e)
             }
         })
     }
@@ -1134,7 +1141,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateCityBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateCityBuilding", e)
             }
         })
     }
@@ -1204,7 +1211,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeCityBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/UpgradeCityBuilding", e)
             }
         })
     }
@@ -1263,7 +1270,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GiveToCountryBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GiveToCountryBuilding", e)
             }
         })
     }
@@ -1297,7 +1304,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ExpandCity", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ExpandCity", e)
             }
         })
     }
@@ -1352,11 +1359,21 @@ class BuildersAndControlsScripts
                 }
                 if(!isVoid)
                 {
-                    if(Data.cities[context.cityID].getResourcesTimeout) clearTimeout(Data.cities[context.cityID].getResourcesTimeout)
-                    Data.cities[context.cityID].getResourcesTimeout = setTimeout(async () =>
+                    if(Data.timeouts["city_timeout_resources_ready_" + context.cityID])
                     {
-                        await context.send(`✅ Постройки города ${Data.cities[context.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                    }, 21600000)
+                        clearTimeout(Data.timeouts["city_timeout_resources_ready_" + context.cityID].timeout)
+                        delete Data.timeouts["city_timeout_resources_ready_" + context.cityID]
+                    }
+                    Data.timeouts["city_timeout_resources_ready_" + context.cityID] = {
+                        type: "city_timeout",
+                        subtype: "resources_ready",
+                        time: future,
+                        timeout: setTimeout(async () =>
+                        {
+                            await context.send(`✅ Постройки города ${Data.cities[context.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                            delete Data.timeouts["city_timeout_resources_ready_" + context.cityID]
+                        }, 21600000)
+                    }
                 }
                 request += isVoid ? "" : ("\n\nДобыто всего:\n" + NameLibrary.GetPrice(extraction))
                 extraction = NameLibrary.ReversePrice(extraction)
@@ -1365,7 +1382,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetAllCityResources", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetAllCityResources", e)
             }
         })
     }
@@ -1375,7 +1392,7 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                let request = "ℹ Список городов в фракции " + context.country.GetName() + ":\n\n"
+                let request = "ℹ Список городов в фракции " + context.country.GetName(context.player.platform === "IOS") + ":\n\n"
                 for(let i = 0, j = 0; i < Data.cities.length; i++)
                 {
                     if(Data.cities[i]?.countryID === context.country.id)
@@ -1389,7 +1406,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryCities", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCountryCities", e)
             }
         })
     }
@@ -1408,7 +1425,7 @@ class BuildersAndControlsScripts
                     if(!name) return resolve()
                     country = await Country.findOne({where: {name: name}})
                 }
-                const accept = await InputManager.InputBoolean(context, `❓ Переименовать фракцию ${context.country.GetName()} в "${"*public" + context.country.groupID + "(" + name + ")"}"?`, current_keyboard)
+                const accept = await InputManager.InputBoolean(context, `❓ Переименовать фракцию ${context.country.GetName(context.player.platform === "IOS")} в "${"*public" + context.country.groupID + "(" + name + ")"}"?`, current_keyboard)
                 if(!accept)
                 {
                     await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
@@ -1420,7 +1437,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryName", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryName", e)
             }
         })
     }
@@ -1444,7 +1461,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryDescription", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryDescription", e)
             }
         })
     }
@@ -1476,7 +1493,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryPhoto", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryPhoto", e)
             }
         })
     }
@@ -1508,7 +1525,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryWelcomePhoto", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryWelcomePhoto", e)
             }
         })
     }
@@ -1532,7 +1549,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryGroup", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryGroup", e)
             }
         })
     }
@@ -1599,11 +1616,23 @@ class BuildersAndControlsScripts
                 }
                 if(!isVoid)
                 {
-                    if(context.country.getResourcesTimeout) clearTimeout(context.country.getResourcesTimeout)
-                    context.country.getResourcesTimeout = setTimeout(async () =>
+                    if(Data.timeouts["country_timeout_resources_ready_" + context.country.id])
                     {
-                        await context.send(`✅ Постройки фракции ${context.country.GetName()} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                    }, 21600000)
+                        clearTimeout(Data.timeouts["country_timeout_resources_ready_" + context.country.id].timeout)
+                        delete Data.timeouts["country_timeout_resources_ready_" + context.country.id]
+                    }
+                    Data.timeouts["country_timeout_resources_ready_" + context.cityID] = {
+                        type: "country_timeout",
+                        subtype: "resources_ready",
+                        userId: context.player.id,
+                        countryID: context.country.id,
+                        time: future,
+                        timeout: setTimeout(async () =>
+                        {
+                            await context.send(`✅ Постройки фракции ${context.country.GetName(context.player.platform === "IOS")} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                            delete Data.timeouts["country_timeout_resources_ready_" + context.country.id]
+                        }, 21600000)
+                    }
                 }
                 request += isVoid ? "" : ("\n\nДобыто всего:\n" + NameLibrary.GetPrice(extraction))
                 extraction = NameLibrary.ReversePrice(extraction)
@@ -1612,7 +1641,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetAllCountryResources", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetAllCountryResources", e)
             }
         })
     }
@@ -1634,7 +1663,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryToCityTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CountryToCityTransaction", e)
             }
         })
     }
@@ -1685,12 +1714,12 @@ class BuildersAndControlsScripts
 
                 await Data.AddCountryResources(context.country.id, objIN)
                 await Data.AddPlayerResources(user.id, objOUT)
-                await api.SendMessage(user.id, `✅ Из бюджета фракции ${context.country.GetName()} к вам в инвентарь поступил перевод в размере:\n\n${NameLibrary.GetPrice(objOUT)}`)
+                await api.SendMessage(user.id, `✅ Из бюджета фракции ${context.country.GetName(context.player.platform === "IOS")} к вам в инвентарь поступил перевод в размере:\n\n${NameLibrary.GetPrice(objOUT)}`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryToUserTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CountryToUserTransaction", e)
             }
         })
     }
@@ -1742,12 +1771,12 @@ class BuildersAndControlsScripts
 
                 await Data.AddCountryResources(context.country.id, objIN)
                 await Data.AddCityResources(cityID, objOUT)
-                await api.SendMessage(Data.cities[cityID].leaderID, `✅ Из бюджета фракции ${context.country.GetName()} поступил перевод в бюджет города ${Data.cities[cityID].name} в размере:\n${NameLibrary.GetPrice(objOUT)}`)
+                await api.SendMessage(Data.cities[cityID].leaderID, `✅ Из бюджета фракции ${context.country.GetName(context.player.platform === "IOS")} поступил перевод в бюджет города ${Data.cities[cityID].name} в размере:\n${NameLibrary.GetPrice(objOUT)}`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryToCityTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CountryToCityTransaction", e)
             }
         })
     }
@@ -1780,7 +1809,7 @@ class BuildersAndControlsScripts
                         count++
                         taxIncome = NameLibrary.ReversePrice(taxIncome)
                         await Data.AddCityResources(Data.cities[i].id, taxIncome)
-                        await api.SendMessage(Data.cities[i].leaderID, `ℹ Правитель фракции ${context.country.GetName()} собрал с городов фракции налоги в размере ${context.country.tax}%, из бюджета города \"${Data.cities[i].name}\" собрано:\n${NameLibrary.GetPrice(taxIncome)}`)
+                        await api.SendMessage(Data.cities[i].leaderID, `ℹ Правитель фракции ${context.country.GetName(context.player.platform === "IOS")} собрал с городов фракции налоги в размере ${context.country.tax}%, из бюджета города \"${Data.cities[i].name}\" собрано:\n${NameLibrary.GetPrice(taxIncome)}`)
                     }
                 }
                 await Data.AddCountryResources(context.country.id, totalIncome)
@@ -1791,7 +1820,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryTax", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCountryTax", e)
             }
         })
     }
@@ -1847,7 +1876,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SetMayor", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/SetMayor", e)
             }
         })
     }
@@ -1882,7 +1911,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SetTax", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/SetTax", e)
             }
         })
     }
@@ -1902,7 +1931,7 @@ class BuildersAndControlsScripts
                 let leaderInfo = await PlayerStatus.findOne({where: {id: leader.dataValues.id}})
                 if(leaderInfo.dataValues.citizenship !== context.country.id)
                 {
-                    await context.send(`⚠ Игрок не является гражданином фракции ${context.country.GetName()}`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ Игрок не является гражданином фракции ${context.country.GetName(context.player.platform === "IOS")}`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(!context.country.CanPay(Prices["new_city"]))
@@ -1923,7 +1952,7 @@ class BuildersAndControlsScripts
                     leaderInfo = await PlayerStatus.findOne({where: {id: leader.dataValues.id}})
                     if(leaderInfo.dataValues.citizenship !== context.country.id)
                     {
-                        await context.send(`⚠ Игрок *id${leader.dataValues.id}(${leader.dataValues.nick}) не является гражданином фракции ${context.country.GetName()}\`, {keyboard: keyboard.build(current_keyboard)}`, {keyboard: keyboard.build(current_keyboard)})
+                        await context.send(`⚠ Игрок *id${leader.dataValues.id}(${leader.dataValues.nick}) не является гражданином фракции ${context.country.GetName(context.player.platform === "IOS")}\`, {keyboard: keyboard.build(current_keyboard)}`, {keyboard: keyboard.build(current_keyboard)})
                         return resolve()
                     }
                     city = await City.findOne({where: {leaderID: leader.dataValues.id}})
@@ -1960,13 +1989,13 @@ class BuildersAndControlsScripts
                 }
                 await Data.AddCountryResources(context.country.id, Prices["new_city"])
                 await Data.ResetCities()
-                await api.SendMessage(leader.dataValues.id, `✅ Правитель фракции ${context.country.GetName()} построил новый город \"${newCity.dataValues.name}\" и вы были назначены его главой, ваш статус изменен на "Чиновник"`)
+                await api.SendMessage(leader.dataValues.id, `✅ Правитель фракции ${context.country.GetName(context.player.platform === "IOS")} построил новый город \"${newCity.dataValues.name}\" и вы были назначены его главой, ваш статус изменен на "Чиновник"`)
                 await context.send("✅ Город создан.", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BuildNewCity", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/BuildNewCity", e)
             }
         })
     }
@@ -2029,7 +2058,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BuildTheRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/BuildTheRoad", e)
             }
         })
     }
@@ -2083,7 +2112,7 @@ class BuildersAndControlsScripts
                             {
                                 if(Data.buildings[Data.cities[i].id][j]?.type === "building_of_" + building)
                                 {
-                                    await context.send(`⚠ В фракции ${context.country.GetName()} уже имеется ${NameLibrary.GetBuildingType("building_of_" + building)}`, {keyboard: keyboard.build(current_keyboard)})
+                                    await context.send(`⚠ В фракции ${context.country.GetName(context.player.platform === "IOS")} уже имеется ${NameLibrary.GetBuildingType("building_of_" + building)}`, {keyboard: keyboard.build(current_keyboard)})
                                     return resolve()
                                 }
                             }
@@ -2110,12 +2139,12 @@ class BuildersAndControlsScripts
                     await City.update({buildingsScore: Data.cities[city].buildingsScore}, {where: {id: city}})
                 }
                 await Data.ResetBuildings()
-                await api.SendMessage(Data.cities[city].leaderID, `ℹ Правитель фракции ${context.country.GetName()} возвел в вашем городе ${NameLibrary.GetBuildingType("building_of_" + building)}`)
+                await api.SendMessage(Data.cities[city].leaderID, `ℹ Правитель фракции ${context.country.GetName(context.player.platform === "IOS")} возвел в вашем городе ${NameLibrary.GetBuildingType("building_of_" + building)}`)
                 await context.send("✅ Постройка возведена.", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateCountryBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateCountryBuilding", e)
             }
         })
     }
@@ -2184,7 +2213,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeCountryBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/UpgradeCountryBuilding", e)
             }
         })
     }
@@ -2270,7 +2299,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeCountryBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/UpgradeCountryBuilding", e)
             }
         })
     }
@@ -2280,7 +2309,7 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                let request = `ℹ Чиновники фракции ${context.country.GetName()}:\n\n`
+                let request = `ℹ Чиновники фракции ${context.country.GetName(context.player.platform === "IOS")}:\n\n`
                 let flag = true
                 if(Data.officials[context.country.id])
                 {
@@ -2332,7 +2361,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryOfficials", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCountryOfficials", e)
             }
         })
     }
@@ -2374,12 +2403,12 @@ class BuildersAndControlsScripts
                 await Player.update({status: "official"}, {where: {id: user.dataValues.id}})
                 if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "official"
                 await Data.LoadOfficials()
-                await api.SendMessage(user.dataValues.id, `Правитель фракции ${context.country.GetName()} назначил вас чиновником`)
+                await api.SendMessage(user.dataValues.id, `Правитель фракции ${context.country.GetName(context.player.platform === "IOS")} назначил вас чиновником`)
                 await context.send(`✅ Игрок *id${user.dataValues.id}(${user.dataValues.nick}) назначен чиновником`, {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SetOfficial", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/SetOfficial", e)
             }
         })
     }
@@ -2428,7 +2457,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeOfficial", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeOfficial", e)
             }
         })
     }
@@ -2469,14 +2498,14 @@ class BuildersAndControlsScripts
                     await user.save()
                     if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "citizen"
                 }
-                await api.SendMessage(official.id, `⚠ Правитель фракции ${context.country.GetName()} забрал у вас права чиновника.`)
+                await api.SendMessage(official.id, `⚠ Правитель фракции ${context.country.GetName(context.player.platform === "IOS")} забрал у вас права чиновника.`)
                 await Data.LoadOfficials()
                 await context.send(`✅ Игрок *id${user.dataValues.id}(${user.dataValues.nick}) лишен статуса чиновника`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TakeAwayOfficial", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/TakeAwayOfficial", e)
             }
         })
     }
@@ -2491,7 +2520,7 @@ class BuildersAndControlsScripts
                 const status = await PlayerStatus.findOne({where: {id: user.dataValues.id}})
                 if(status.dataValues.citizenship !== context.country.id)
                 {
-                    await context.send(`⚠ Игрок *id${user.dataValues.id}(${user.dataValues.nick}) не является гражданином фракции ${context.country.GetName()}`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ Игрок *id${user.dataValues.id}(${user.dataValues.nick}) не является гражданином фракции ${context.country.GetName(context.player.platform === "IOS")}`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 if(user.dataValues.id === context.country.leaderID)
@@ -2504,7 +2533,7 @@ class BuildersAndControlsScripts
                     await context.send(`⚠ Перед тем как забрать гражданство у игрока необходимо сместить его с должности чиновника`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                const accept = await InputManager.InputBoolean(context, `❓ Лишить игрока *id${user.dataValues.id}(${user.dataValues.nick}) гражданства фракции ${context.country.GetName()}?`, current_keyboard)
+                const accept = await InputManager.InputBoolean(context, `❓ Лишить игрока *id${user.dataValues.id}(${user.dataValues.nick}) гражданства фракции ${context.country.GetName(context.player.platform === "IOS")}?`, current_keyboard)
                 if(!accept)
                 {
                     await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
@@ -2524,13 +2553,13 @@ class BuildersAndControlsScripts
                 {
                     Data.users[user.dataValues.id].citizenship = null
                 }
-                await api.SendMessage(user.dataValues.id, `⚠ Правительство фракции ${context.country.GetName()} лишило вас гражданства`)
+                await api.SendMessage(user.dataValues.id, `⚠ Правительство фракции ${context.country.GetName(context.player.platform === "IOS")} лишило вас гражданства`)
                 await context.send("✅ Игрок лишен гражданства", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TakeAwayCitizenship", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/TakeAwayCitizenship", e)
             }
         })
     }
@@ -2564,7 +2593,7 @@ class BuildersAndControlsScripts
                 }
                 let state = await InputManager.KeyboardBuilder(context, "Выберите, кем вы станете после оставления трона", kb, current_keyboard)
                 if(!state) return resolve()
-                let access = await InputManager.InputBoolean(context, `Назначить *id${user.dataValues.id}(${user.dataValues.nick}) новым правителем фракции ${context.country.GetName()}?`, current_keyboard)
+                let access = await InputManager.InputBoolean(context, `Назначить *id${user.dataValues.id}(${user.dataValues.nick}) новым правителем фракции ${context.country.GetName(context.player.platform === "IOS")}?`, current_keyboard)
                 if(!access) return resolve()
                 access = await InputManager.InputBoolean(context, `Вы будете назначены ${giveState(state)}`, current_keyboard)
                 if(!access) return resolve()
@@ -2582,14 +2611,14 @@ class BuildersAndControlsScripts
                 context.country.leaderID = user.dataValues.id
                 if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "leader"
                 await Country.update({leaderID: user.dataValues.id}, {where: {id: context.country.id}})
-                await api.SendMessage(user.dataValues.id, `👑 Правитель фракции ${context.country.GetName()} передал вам власть, ваш статус изменен на "👑 Правитель"`)
+                await api.SendMessage(user.dataValues.id, `👑 Правитель фракции ${context.country.GetName(context.player.platform === "IOS")} передал вам власть, ваш статус изменен на "👑 Правитель"`)
                 await context.send(`Власть передана, вы стали ${giveState(state)}`, {keyboard: keyboard.build(scenes.GetMenuKeyboard(context))})
                 context.player.state = scenes.MenuScene
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/TakeAwayCitizenship", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/TakeAwayCitizenship", e)
             }
         })
     }
@@ -2638,7 +2667,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/OfferMarry", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/OfferMarry", e)
             }
         })
     }
@@ -2669,7 +2698,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Divorce", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Divorce", e)
             }
         })
     }
@@ -2739,7 +2768,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCitizenship", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCitizenship", e)
             }
         })
     }
@@ -2777,12 +2806,12 @@ class BuildersAndControlsScripts
                 }
                 context.player.citizenship = null
                 context.player.registration = null
-                await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} отказался от гражданства фракции ${country.GetName()}`)
+                await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} отказался от гражданства фракции ${country.GetName(context.player.platform === "IOS")}`)
                 await context.send("ℹ Теперь вы апатрид.", {keyboard: keyboard.build(await scenes.keyboard(context))})
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RefuseCitizenship", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RefuseCitizenship", e)
             }
         })
     }
@@ -2811,7 +2840,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetRegistration", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetRegistration", e)
             }
         })
     }
@@ -2839,7 +2868,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RefuseRegistration", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RefuseRegistration", e)
             }
         })
     }
@@ -2863,7 +2892,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Transaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Transaction", e)
             }
         })
     }
@@ -2877,7 +2906,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `${context.player.GetResources()}\n\n2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${Data.countries[context.player.countryID].GetName()}:`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `${context.player.GetResources()}\n\n2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${Data.countries[context.player.countryID].GetName(context.player.platform === "IOS")}:`, resources, current_keyboard)
                 if (!resource) return resolve()
                 if(resource.match(/cancel/))
                 {
@@ -2899,7 +2928,7 @@ class BuildersAndControlsScripts
                 {
                     count = 1
                 }
-                const accept = await InputManager.InputBoolean(context, `4️⃣ Подтвердите перевод:\n\nКому: фракция ${Data.countries[context.player.countryID].GetName()}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
+                const accept = await InputManager.InputBoolean(context, `4️⃣ Подтвердите перевод:\n\nКому: фракция ${Data.countries[context.player.countryID].GetName(context.player.platform === "IOS")}\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
                 if(!accept)
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -2913,13 +2942,13 @@ class BuildersAndControlsScripts
 
                 await Data.AddCountryResources(context.player.countryID, objOUT)
                 await Data.AddPlayerResources(context.player.id, objIN)
-                await api.SendMessage(Data.countries[context.player.countryID].leaderID, `✅ В бюджет фракции ${Data.countries[context.player.countryID].GetName()} поступил перевод:\n\nОт кого: *id${context.player.id}(${context.player.nick})\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт`)
+                await api.SendMessage(Data.countries[context.player.countryID].leaderID, `✅ В бюджет фракции ${Data.countries[context.player.countryID].GetName(context.player.platform === "IOS")} поступил перевод:\n\nОт кого: *id${context.player.id}(${context.player.nick})\nРесурс: ${NameLibrary.GetResourceName(resource)}\nКоличество: ${count} шт`)
                 await context.send("✅ Успешно", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UserToCountryTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/UserToCountryTransaction", e)
             }
         })
     }
@@ -2975,7 +3004,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UserToCityTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/UserToCityTransaction", e)
             }
         })
     }
@@ -3039,7 +3068,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UserToUserTransaction", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/UserToUserTransaction", e)
             }
         })
     }
@@ -3067,7 +3096,7 @@ class BuildersAndControlsScripts
                 }
                 if(Data.countries[context.player.countryID].roadMap)
                 {
-                    await context.send(`ℹ Карта фракции ${Data.countries[context.player.countryID].GetName()}`, {attachment: Data.countries[context.player.countryID].roadMap})
+                    await context.send(`ℹ Карта фракции ${Data.countries[context.player.countryID].GetName(context.player.platform === "IOS")}`, {attachment: Data.countries[context.player.countryID].roadMap})
                 }
                 const cityButtons = []
                 const roads = await CityRoads.findAll({where: {fromID: context.player.location}, attributes: ["toID", "isBlocked", "time"]})
@@ -3131,28 +3160,37 @@ class BuildersAndControlsScripts
                     time.setMinutes(time.getMinutes() + parseInt(road.time))
                     context.player.lastActionTime = time
                     context.player.state = scenes.moving
-                    context.send("ℹ Вы отправились в город " + city.name, {keyboard: keyboard.none})
-                    context.player.timeout = setTimeout(async () => {
-                        await context.send("🏙 Вы пришли в город " + city.name + "\n" + city.description, {attachment: city.photoURL, keyboard: keyboard.build(scenes.finishKeyboard(context))})
-                        context.player.location = city.id
-                        context.player.state = scenes.finish
-                        await PlayerStatus.update(
-                            {location: city.id},
-                            {where: {id: context.player.id}}
-                        )
-                        if(city.notifications)
-                        {
-                            await api.SendMessage(city.leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${city.name}`)
-                        }
-                        let stayTime = new Date()
-                        stayTime.setMinutes(stayTime.getMinutes() + 30)
-                        context.player.stayInCityTime = stayTime
-                    }, road.time * 60000)
+                    await context.send("ℹ Вы отправились в город " + city.name, {keyboard: keyboard.none})
+                    Data.timeouts["user_timeout_walk_" + context.player.id] = {
+                        type: "user_timeout",
+                        subtype: "walk",
+                        userId: context.player.id,
+                        cityID: city.id,
+                        time: time,
+                        timeout: setTimeout(async () => {
+                            await context.send("🏙 Вы пришли в город " + city.name + "\n" + city.description, {attachment: city.photoURL, keyboard: keyboard.build(scenes.finishKeyboard(context))})
+                            context.player.location = city.id
+                            context.player.countryID = city.countryID
+                            await PlayerStatus.update(
+                                {location: city.id, countryID: city.countryID},
+                                {where: {id: context.player.id}}
+                            )
+                            if(city.notifications)
+                            {
+                                await api.SendMessage(city.leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${city.name}`)
+                            }
+                            let stayTime = new Date()
+                            stayTime.setMinutes(stayTime.getMinutes() + 30)
+                            context.player.stayInCityTime = stayTime
+                            context.player.state = scenes.StartScreen
+                            delete Data.timeouts["user_timeout_walk_" + context.player.id]
+                        }, road.time * 60000)
+                    }
                 }
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GoToOtherCity", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GoToOtherCity", e)
             }
         })
     }
@@ -3251,42 +3289,49 @@ class BuildersAndControlsScripts
                 }
                 else
                 {
-                    time.setMinutes(time.getMinutes() + road.time)
-                    context.player.state = scenes.moving
-                    await context.send("ℹ Вы отправились в фракцию " + Data.countries[country].GetName(), {keyboard: keyboard.none})
+                    time.setMinutes(time.getMinutes() + parseInt(road.time))
                     context.player.lastActionTime = time
-                    context.player.timeout = setTimeout(async () =>
-                    {
-                        await context.send("🏙 Вы пришли в город " + Data.GetCityName(Data.countries[country].capitalID) + "\n" + Data.cities[Data.countries[country].capitalID].description, {attachment: Data.countries[country].welcomePhotoURL, keyboard: keyboard.build(scenes.finishKeyboard(context))})
-                        context.player.location = Data.countries[country].capitalID
-                        context.player.countryID = Data.countries[country].id
-                        if (Data.countries[country].entranceFee !== 0)
-                        {
-                            await Data.AddPlayerResources(context.player.id, {money: -Data.countries[country].entranceFee})
-                            await Data.AddCountryResources(country, {money: Data.countries[country].entranceFee})
-                        }
-                        await PlayerStatus.update(
-                            {location: Data.countries[country].capitalID, countryID: Data.countries[country].id},
-                            {where: {id: context.player.id}}
-                        )
-                        if(Data.countries[country].notifications)
-                        {
-                            await api.SendMessage(Data.countries[country].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${Data.countries[country].name}`)
-                        }
-                        if(Data.cities[Data.countries[country].capitalID].notifications)
-                        {
-                            await api.SendMessage(Data.cities[Data.countries[country].capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[Data.countries[country].capitalID].name}`)
-                        }
-                        let stayTime = new Date()
-                        stayTime.setMinutes(stayTime.getMinutes() + 30)
-                        context.player.stayInCityTime = stayTime
-                        context.player.state = scenes.finish
-                    }, road.time * 60000)
+                    context.player.state = scenes.moving
+                    await context.send("ℹ Вы отправились в фракцию " + Data.countries[country].GetName(context.player.platform === "IOS"), {keyboard: keyboard.none})
+                    Data.timeouts["user_timeout_walk_" + context.player.id] = {
+                        type: "user_timeout",
+                        subtype: "walk",
+                        userId: context.player.id,
+                        cityID: Data.countries[country].capitalID,
+                        time: time,
+                        timeout: setTimeout(async () => {
+                            await context.send("🏙 Вы пришли в город " + Data.GetCityName(Data.countries[country].capitalID) + "\n" + Data.cities[Data.countries[country].capitalID].description, {attachment: Data.countries[country].welcomePhotoURL, keyboard: keyboard.build(scenes.finishKeyboard(context))})
+                            context.player.location = Data.countries[country].capitalID
+                            context.player.countryID = Data.countries[country].id
+                            if (Data.countries[country].entranceFee !== 0)
+                            {
+                                await Data.AddPlayerResources(context.player.id, {money: -Data.countries[country].entranceFee})
+                                await Data.AddCountryResources(country, {money: Data.countries[country].entranceFee})
+                            }
+                            await PlayerStatus.update(
+                                {location: Data.countries[country].capitalID, countryID: Data.countries[country].id},
+                                {where: {id: context.player.id}}
+                            )
+                            if(Data.countries[country].notifications)
+                            {
+                                await api.SendMessage(Data.countries[country].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${Data.countries[country].name}`)
+                            }
+                            if(Data.cities[Data.countries[country].capitalID].notifications)
+                            {
+                                await api.SendMessage(Data.cities[Data.countries[country].capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[Data.countries[country].capitalID].name}`)
+                            }
+                            let stayTime = new Date()
+                            stayTime.setMinutes(stayTime.getMinutes() + 30)
+                            context.player.stayInCityTime = stayTime
+                            context.player.state = scenes.finish
+                            delete Data.timeouts["user_timeout_walk_" + context.player.id]
+                        }, road.time * 60000)
+                    }
                 }
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GoToOtherCountry", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GoToOtherCountry", e)
             }
         })
     }
@@ -3322,7 +3367,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GiveKey", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GiveKey", e)
             }
         })
     }
@@ -3362,7 +3407,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CopyKey", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CopyKey", e)
             }
         })
     }
@@ -3407,7 +3452,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetAllProperty", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetAllProperty", e)
             }
         })
     }
@@ -3511,7 +3556,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/NewUserBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/NewUserBuilding", e)
             }
         })
     }
@@ -3583,7 +3628,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/UpgradeUserBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/UpgradeUserBuilding", e)
             }
         })
     }
@@ -3653,7 +3698,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/EnterBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/EnterBuilding", e)
             }
         })
     }
@@ -3688,7 +3733,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetResourcesFormBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetResourcesFormBuilding", e)
             }
         })
     }
@@ -3751,7 +3796,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetChangeSilverInMintBuilding", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetChangeSilverInMintBuilding", e)
             }
         })
     }
@@ -3793,7 +3838,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RelaxInTheHouse", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RelaxInTheHouse", e)
             }
         })
     }
@@ -3823,7 +3868,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/FillingOutTheRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/FillingOutTheRoad", e)
             }
         })
     }
@@ -3857,7 +3902,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SQLSession", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/SQLSession", e)
             }
         })
     }
@@ -3871,7 +3916,7 @@ class BuildersAndControlsScripts
                 if(!log) return resolve()
                 try
                 {
-                    const file = await upload.messageDocument({
+                    const file = await api.upload.messageDocument({
                         peer_id: context.player.id,
                         source: {
                             value: "./logs/" + log
@@ -3887,7 +3932,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SendLog", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/SendLog", e)
             }
         })
     }
@@ -3908,7 +3953,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/SendLogList", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/SendLogList", e)
             }
         })
     }
@@ -3923,8 +3968,8 @@ class BuildersAndControlsScripts
 
                     for (const file of files) {
                         fs.unlink(path.join("./logs/", file), (err) => {
-                            if (err) throw err;
-                        });
+                            if (err) throw err
+                        })
                     }
                 })
                 await context.send("✅ Логи очищены.", {keyboard: keyboard.build(current_keyboard)})
@@ -3932,7 +3977,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ClearLogs", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ClearLogs", e)
             }
         })
     }
@@ -3954,7 +3999,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ClearUserCache", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ClearUserCache", e)
             }
         })
     }
@@ -3980,7 +4025,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
             }
         })
     }
@@ -3999,7 +4044,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
             }
         })
     }
@@ -4018,7 +4063,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
             }
         })
     }
@@ -4042,7 +4087,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
             }
         })
     }
@@ -4072,7 +4117,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeVariables", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeVariables", e)
             }
         })
     }
@@ -4109,7 +4154,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddMessage", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/AddMessage", e)
             }
         })
     }
@@ -4137,7 +4182,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeTheRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeTheRoad", e)
             }
         })
     }
@@ -4162,7 +4207,7 @@ class BuildersAndControlsScripts
                 }
                 if(roadButtons.length === 0)
                 {
-                    await context.send(`⚠ В фракции ${country.GetName()} нет междугородних дорог`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ В фракции ${country.GetName(context.player.platform === "IOS")} нет междугородних дорог`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 let road = await InputManager.KeyboardBuilder(context, request, roadButtons, current_keyboard)
@@ -4178,7 +4223,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCityRoad", e)
             }
         })
     }
@@ -4203,7 +4248,7 @@ class BuildersAndControlsScripts
                 }
                 if(roadButtons.length === 0)
                 {
-                    await context.send(`⚠ В фракции ${country.GetName()} нет междугородних дорог`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ В фракции ${country.GetName(context.player.platform === "IOS")} нет междугородних дорог`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 let road = await InputManager.KeyboardBuilder(context, request, roadButtons, current_keyboard)
@@ -4219,7 +4264,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCityRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCityRoad", e)
             }
         })
     }
@@ -4236,7 +4281,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.countries[i])
                     {
-                        request += "🔸 " + Data.countries[i].GetName() + "  -  " + Data.countries[i].id + "\n"
+                        request += "🔸 " + Data.countries[i].GetName(context.player.platform === "IOS") + "  -  " + Data.countries[i].id + "\n"
                     }
                 }
                 request += "\nℹ Дороги удаляются попарно, если удалить дорогу A->B, то удалится и дорога B->A"
@@ -4248,7 +4293,7 @@ class BuildersAndControlsScripts
                 if(!road) return resolve()
                 road = Data.ParseButtonID(road)
                 road = roads[road]
-                const accept = await InputManager.InputBoolean(context, `❓ Удалить дорогу соединяющую ${Data.countries[road.dataValues.fromID].GetName()} и ${Data.countries[road.dataValues.toID].GetName()}`)
+                const accept = await InputManager.InputBoolean(context, `❓ Удалить дорогу соединяющую ${Data.countries[road.dataValues.fromID].GetName(context.player.platform === "IOS")} и ${Data.countries[road.dataValues.toID].GetName(context.player.platform === "IOS")}`)
                 if(!accept)
                 {
                     await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
@@ -4261,7 +4306,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/DeleteRoad", e)
             }
         })
     }
@@ -4306,7 +4351,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateRoad", e)
             }
         })
     }
@@ -4323,7 +4368,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.countries[i])
                     {
-                        request += "🔸 " + Data.countries[i].GetName() + "  -  " + Data.countries[i].id + "\n"
+                        request += "🔸 " + Data.countries[i].GetName(context.player.platform === "IOS") + "  -  " + Data.countries[i].id + "\n"
                     }
                 }
                 request += "\nℹ Дороги изменяются попарно, если изменить дорогу A->B, то изменится и дорога B->A"
@@ -4344,7 +4389,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeTheRoad", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeTheRoad", e)
             }
         })
     }
@@ -4366,7 +4411,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChatControls", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChatControls", e)
             }
         })
     }
@@ -4392,11 +4437,11 @@ class BuildersAndControlsScripts
                 const chats = await Chats.findAll({where: {countryID: country.id}})
                 if(chats.length === 0)
                 {
-                    await context.send(`⚠ Для фракции ${country.GetName()} не добавлено чатов`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ Для фракции ${country.GetName(context.player.platform === "IOS")} не добавлено чатов`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 buttons = []
-                let request = `Список чатов фракции ${country.GetName()}:\n\n`
+                let request = `Список чатов фракции ${country.GetName(context.player.platform === "IOS")}:\n\n`
                 for(let i = 0; i < chats.length; i++)
                 {
                     if(chats[i])
@@ -4413,7 +4458,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/DeleteChat", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/DeleteChat", e)
             }
         })
     }
@@ -4460,7 +4505,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddTheChat", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/AddTheChat", e)
             }
         })
     }
@@ -4474,12 +4519,12 @@ class BuildersAndControlsScripts
                 if(!country) return resolve()
                 country = Data.ParseButtonID(country)
                 country = Data.countries[country]
-                await context.send("ℹ Информация о фракции " + country.GetName() + "\n\n" + await country.GetAllInfo() + "\n\n" + country.GetResources(), {keyboard: keyboard.build(current_keyboard)})
+                await context.send("ℹ Информация о фракции " + country.GetName(context.player.platform === "IOS") + "\n\n" + await country.GetAllInfo() + "\n\n" + country.GetResources(), {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryInfo", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCountryInfo", e)
             }
         })
     }
@@ -4498,7 +4543,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCityInfo", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCityInfo", e)
             }
         })
     }
@@ -4515,7 +4560,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetUserInfo", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetUserInfo", e)
             }
         })
     }
@@ -4549,7 +4594,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetBuildingInfo", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetBuildingInfo", e)
             }
         })
     }
@@ -4573,7 +4618,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveEffect", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RemoveEffect", e)
             }
         })
     }
@@ -4614,7 +4659,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddEffect", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/AddEffect", e)
             }
         })
     }
@@ -4646,7 +4691,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Events", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Events", e)
             }
         })
     }
@@ -4663,7 +4708,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.countries[i])
                     {
-                        request += "🔸 " + Data.countries[i].GetName() + "  -  " + Data.countries[i].id + "\n"
+                        request += "🔸 " + Data.countries[i].GetName(context.player.platform === "IOS") + "  -  " + Data.countries[i].id + "\n"
                     }
                 }
                 request += `\nℹ Дороги блокируются попарно, если заблокировать дорогу A->B, то изменится и дорога B->A\n\nВыберите какую дорогу вы хотите ${action ? "заблокировать" : "разблокировать"}`
@@ -4682,14 +4727,14 @@ class BuildersAndControlsScripts
                 road = roads[road].dataValues
                 await CountryRoads.update({isBlocked: action}, {where: {fromID: road.fromID, toID: road.toID}})
                 await CountryRoads.update({isBlocked: action}, {where: {fromID: road.toID, toID: road.fromID}})
-                await api.SendMessage(Data.countries[road.fromID].leaderID, `ℹ Дорога соединяющая фракции ${Data.countries[road.fromID].GetName()} и ${Data.countries[road.toID].GetName()} ${action ? "заблокирована" : "разблокирована"}`)
-                await api.SendMessage(Data.countries[road.toID].leaderID, `ℹ Дорога соединяющая фракции ${Data.countries[road.toID].GetName()} и ${Data.countries[road.fromID].GetName()} ${action ? "заблокирована" : "разблокирована"}`)
+                await api.SendMessage(Data.countries[road.fromID].leaderID, `ℹ Дорога соединяющая фракции ${Data.countries[road.fromID].GetName(context.player.platform === "IOS")} и ${Data.countries[road.toID].GetName(context.player.platform === "IOS")} ${action ? "заблокирована" : "разблокирована"}`)
+                await api.SendMessage(Data.countries[road.toID].leaderID, `ℹ Дорога соединяющая фракции ${Data.countries[road.toID].GetName(context.player.platform === "IOS")} и ${Data.countries[road.fromID].GetName(context.player.platform === "IOS")} ${action ? "заблокирована" : "разблокирована"}`)
                 await context.send(`✅ Дорога ${action ? "заблокирована" : "разблокирована"}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BlockRoadEvent", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/BlockRoadEvent", e)
             }
         })
     }
@@ -4728,7 +4773,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BlockCityEvent", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/BlockCityEvent", e)
             }
         })
     }
@@ -4760,13 +4805,13 @@ class BuildersAndControlsScripts
                 {
                     await api.SendMessage(user.dataValues.id, `⚠ Фракция в которой вы находитесь ${action ? "попала в блокаду, теперь вы не можете перемещаться до конца блокады" : "вышел из блокады, теперь вы можете свободно перемещаться"}`)
                 }
-                await api.SendMessage(country.leaderID, `⚠ Ваша фракция ${country.GetName()} ${action ? "попала в блокаду" : "больше не в блокаде"}`)
+                await api.SendMessage(country.leaderID, `⚠ Ваша фракция ${country.GetName(context.player.platform === "IOS")} ${action ? "попала в блокаду" : "больше не в блокаде"}`)
                 await context.send(`✅ Фракция ${action ? "теперь в блокаде" : "больше не в блокаде"}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/BlockCountryEvent", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/BlockCountryEvent", e)
             }
         })
     }
@@ -4805,7 +4850,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CitySanctionsEvent", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CitySanctionsEvent", e)
             }
         })
     }
@@ -4837,13 +4882,13 @@ class BuildersAndControlsScripts
                 {
                     await api.SendMessage(user.dataValues.id, `⚠ Фракция в которой вы являетесь гражданином ${action ? "попала под санкции, теперь вы не сможете переводить ресурсы и пользоваться имуществом" : "вышла из под санкций, теперь вы можете переводить ресурсы и пользоваться имуществом"}`)
                 }
-                await api.SendMessage(country.leaderID, `⚠ Ваша фракция ${country.GetName()} ${action ? "попала под санкции" : "больше не под санкциями"}`)
+                await api.SendMessage(country.leaderID, `⚠ Ваша фракция ${country.GetName(context.player.platform === "IOS")} ${action ? "попала под санкции" : "больше не под санкциями"}`)
                 await context.send(`✅ Фракция ${action ? "теперь под санкциями" : "больше не под санкциями"}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountrySanctionsEvent", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CountrySanctionsEvent", e)
             }
         })
     }
@@ -4896,12 +4941,30 @@ class BuildersAndControlsScripts
                             })
                             await Warning.update({banned: true}, {where: {userID: i}})
                         }
+                        if(Data.owner)
+                        {
+                            await api.api.messages.send({
+                                user_id: Data.owner.id,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                attachment: proof
+                            })
+                        }
+                        if(Data.projectHead)
+                        {
+                            await api.api.messages.send({
+                                user_id: Data.projectHead.id,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                attachment: proof
+                            })
+                        }
                         for(const id of Object.keys(Data.supports))
                         {
                             await api.api.messages.send({
                                 user_id: id,
                                 random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}`,
+                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
                                 attachment: proof
                             })
                         }
@@ -4910,7 +4973,16 @@ class BuildersAndControlsScripts
                             await api.api.messages.send({
                                 user_id: id,
                                 random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}`,
+                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                attachment: proof
+                            })
+                        }
+                        for(const id of Object.keys(Data.moderators))
+                        {
+                            await api.api.messages.send({
+                                user_id: id,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
                                 attachment: proof
                             })
                         }
@@ -4937,7 +5009,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateWarning", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateWarning", e)
             }
         })
     }
@@ -4967,7 +5039,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateWarning", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateWarning", e)
             }
         })
     }
@@ -5006,7 +5078,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Ban", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Ban", e)
             }
         })
     }
@@ -5063,12 +5135,48 @@ class BuildersAndControlsScripts
                         await Warning.update({banned: true}, {where: {userID: user.dataValues.id}})
                     }
                     await context.send("✅ Предупреждение выдано", {keyboard: keyboard.build(current_keyboard)})
+                    if(Data.owner)
+                    {
+                        await api.api.messages.send({
+                            user_id: Data.owner.id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})\n\nПричина: ${explanation}`,
+                            attachment: proof
+                        })
+                    }
+                    if(Data.projectHead)
+                    {
+                        await api.api.messages.send({
+                            user_id: Data.projectHead.id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})\n\nПричина: ${explanation}`,
+                            attachment: proof
+                        })
+                    }
                     for(const id of Object.keys(Data.supports))
                     {
                         await api.api.messages.send({
                             user_id: id,
                             random_id: Math.round(Math.random() * 100000),
-                            message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})`,
+                            message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})\n\nПричина: ${explanation}`,
+                            attachment: proof
+                        })
+                    }
+                    for(const id of Object.keys(Data.administrators))
+                    {
+                        await api.api.messages.send({
+                            user_id: id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})\n\nПричина: ${explanation}`,
+                            attachment: proof
+                        })
+                    }
+                    for(const id of Object.keys(Data.moderators))
+                    {
+                        await api.api.messages.send({
+                            user_id: id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрока *id${user.dataValues.id}(${user.dataValues.nick})\n\nПричина: ${explanation}`,
                             attachment: proof
                         })
                     }
@@ -5089,7 +5197,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateWarning", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateWarning", e)
             }
         })
     }
@@ -5126,13 +5234,22 @@ class BuildersAndControlsScripts
                 await api.BanUser(user.dataValues.id)
                 await Warning.update({banned: true}, {where: {userID: user.dataValues.id}})
                 await context.send("✅ Бан выдан", {keyboard: keyboard.build(current_keyboard)})
+                if(Data.owner) await api.SendMessage(Data.owner.id, `⚠ Игрок ${context.player.GetName()} выдал бан игроку *id${user.dataValues.id}(${user.dataValues.nick})`)
                 if(Data.projectHead) await api.SendMessage(Data.projectHead.id, `⚠ Игрок ${context.player.GetName()} выдал бан игроку *id${user.dataValues.id}(${user.dataValues.nick})`)
+                for (const key of Object.keys(Data.supports))
+                {
+                    await api.SendMessage(Data.supports[key].id, `⚠ Игрок ${context.player.GetName()} выдал бан игроку *id${user.dataValues.id}(${user.dataValues.nick})`)
+                }
+                for (const key of Object.keys(Data.administrators))
+                {
+                    await api.SendMessage(Data.administrators[key].id, `⚠ Игрок ${context.player.GetName()} выдал бан игроку *id${user.dataValues.id}(${user.dataValues.nick})`)
+                }
                 context.player.lastReportTime = new Date()
                 return resolve(true)
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/Ban", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Ban", e)
             }
         })
     }
@@ -5345,7 +5462,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CheatingUserResources", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CheatingUserResources", e)
             }
         })
     }
@@ -5415,7 +5532,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CreateNewCity", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateNewCity", e)
             }
         })
     }
@@ -5453,7 +5570,7 @@ class BuildersAndControlsScripts
                     await user.save()
                     if(user.dataValues.notifications)
                     {
-                        await api.SendMessage(user.dataValues.id, "Администраторы удалили город в котором вы находились, вы перенесены в столицу фракции " + country.GetName())
+                        await api.SendMessage(user.dataValues.id, "Администраторы удалили город в котором вы находились, вы перенесены в столицу фракции " + country.GetName(context.player.platform === "IOS"))
                     }
                 }
                 await City.destroy({where: {id: city.id}})
@@ -5465,7 +5582,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCity", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RemoveCity", e)
             }
         })
     }
@@ -5480,7 +5597,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.countries[i])
                     {
-                        report += Data.countries[i].GetName() + "   -   " + Data.countries[i].active + " сообщений\n"
+                        report += Data.countries[i].GetName(context.player.platform === "IOS") + "   -   " + Data.countries[i].active + " сообщений\n"
                     }
                 }
                 report += "\n\n📈 Актив фракций за неделю:\n\n"
@@ -5488,7 +5605,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.countries[i])
                     {
-                        report += Data.countries[i].GetName() + "   -   " + (Data.countriesWeekActive[Data.countries[i].id] + Data.countries[i].active) + " сообщений\n"
+                        report += Data.countries[i].GetName(context.player.platform === "IOS") + "   -   " + (Data.countriesWeekActive[Data.countries[i].id] + Data.countries[i].active) + " сообщений\n"
                     }
                 }
                 await context.send(report, {keyboard: keyboard.build(current_keyboard)})
@@ -5496,7 +5613,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryActive", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CountryActive", e)
             }
         })
     }
@@ -5520,7 +5637,7 @@ class BuildersAndControlsScripts
                 {
                     if(country)
                     {
-                        request += country.GetName() + "  -  " + country.warnings + " варнов\n"
+                        request += country.GetName(context.player.platform === "IOS") + "  -  " + country.warnings + " варнов\n"
                     }
                 }
                 const action = await InputManager.KeyboardBuilder(context, request + "\nВыберите действие", kb, current_keyboard)
@@ -5531,7 +5648,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryWarnings", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CountryWarnings", e)
             }
         })
     }
@@ -5547,18 +5664,18 @@ class BuildersAndControlsScripts
                 country = Data.countries[country]
                 if(country.warnings <= 0)
                 {
-                    await context.send(`⚠ У фракции ${country.GetName()} нет предупреждений`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ У фракции ${country.GetName(context.player.platform === "IOS")} нет предупреждений`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 country.warnings --
                 await Country.update({warnings: country.warnings}, {where: {id: country.id}})
-                await api.SendMessage(country.leaderID, `✅ С вашей фракции ${country.GetName()} снят один варн`)
+                await api.SendMessage(country.leaderID, `✅ С вашей фракции ${country.GetName(context.player.platform === "IOS")} снят один варн`)
                 await context.send(`✅ Предупреждение снято`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountryWarn", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RemoveCountryWarn", e)
             }
         })
     }
@@ -5574,13 +5691,13 @@ class BuildersAndControlsScripts
                 country = Data.countries[country]
                 country.warnings ++
                 await Country.update({warnings: country.warnings}, {where: {id: country.id}})
-                await api.SendMessage(country.leaderID, `⚠ Внимание! Ваша фракция ${country.GetName()} получила варн`)
-                await context.send(`✅ Фракции ${country.GetName()} выдано предупреждение`, {keyboard: keyboard.build(current_keyboard)})
+                await api.SendMessage(country.leaderID, `⚠ Внимание! Ваша фракция ${country.GetName(context.player.platform === "IOS")} получила варн`)
+                await context.send(`✅ Фракции ${country.GetName(context.player.platform === "IOS")} выдано предупреждение`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddCountryWarn", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/AddCountryWarn", e)
             }
         })
     }
@@ -5602,7 +5719,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/CountryTags", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/CountryTags", e)
             }
         })
     }
@@ -5621,11 +5738,11 @@ class BuildersAndControlsScripts
                 {
                     tags = country.tags.split("|")
                 }
-                let request = `Теги фракции ${country.GetName()}:\n\n`
+                let request = `Теги фракции ${country.GetName(context.player.platform === "IOS")}:\n\n`
                 let tagsKB = []
                 if(tags.length === 0)
                 {
-                    await context.send(`⚠ У фракции ${country.GetName()} нет тегов`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ У фракции ${country.GetName(context.player.platform === "IOS")} нет тегов`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 for(const tag of tags)
@@ -5650,7 +5767,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountryTag", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RemoveCountryTag", e)
             }
         })
     }
@@ -5671,7 +5788,7 @@ class BuildersAndControlsScripts
                 }
                 const showTags = (array) => {
                     if(array.length === 0) return "Тегов нет"
-                    let request = `Теги фракции ${country.GetName()}:\n\n`
+                    let request = `Теги фракции ${country.GetName(context.player.platform === "IOS")}:\n\n`
                     for(const tag of array)
                     {
                         request += "- " + tag + "\n"
@@ -5698,7 +5815,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/AddCountryTag", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/AddCountryTag", e)
             }
         })
     }
@@ -5770,7 +5887,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/RemoveCountry", e)
             }
         })
     }
@@ -5817,7 +5934,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryResource", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryResource", e)
             }
         })
     }
@@ -5857,7 +5974,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryResource", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryResource", e)
             }
         })
     }
@@ -5873,23 +5990,21 @@ class BuildersAndControlsScripts
                     where: {id: theRich[0].map(key => {return key.id})},
                     attributes: ["id", "nick"]
                 })
+                let riches = {}
+                for(const player of players)
+                {
+                    riches[player.dataValues.id] = {nick: player.dataValues.nick}
+                }
                 for(let i = 0; i < theRich[0].length; i++)
                 {
-                    for(const player of players)
-                    {
-                        if(theRich[0][i].id === player.dataValues.id)
-                        {
-                            request += `🟠 ${i+1}: *id${player.dataValues.id}(${player.dataValues.nick}) - ${theRich[0][i].money} 🪙\n\n`
-                            break
-                        }
-                    }
+                    request += `🟠 ${i+1}: *id${theRich[0][i].id}(${riches[theRich[0][i].id].nick}) - ${theRich[0][i].money} 🪙\n\n`
                 }
                 await context.send(request)
                 return resolve()
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetMostRich", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetMostRich", e)
             }
         })
     }
@@ -5916,7 +6031,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCityPlayersList", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCityPlayersList", e)
             }
         })
     }
@@ -5968,7 +6083,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
             }
         })
     }
@@ -5978,7 +6093,7 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                let request = `💳 Граждане фракции ${context.country.GetName()}\n\n`
+                let request = `💳 Граждане фракции ${context.country.GetName(context.player.platform === "IOS")}\n\n`
                 const playersStatus = await PlayerStatus.findAll({where: {citizenship: context.country.id}, attributes: ["id"]})
                 const players = await Player.findAll({where: {id: playersStatus.map(key => {return key.dataValues.id})}, attributes: ["id", "nick"]})
                 const users = []
@@ -6005,7 +6120,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
             }
         })
     }
@@ -6042,7 +6157,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetCountryPlayersList", e)
             }
         })
     }
@@ -6078,7 +6193,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
     }
@@ -6101,7 +6216,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
     }
@@ -6136,7 +6251,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
     }
@@ -6160,7 +6275,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
     }
@@ -6177,7 +6292,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
     }
@@ -6196,7 +6311,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
             }
         })
     }

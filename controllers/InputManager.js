@@ -1,6 +1,6 @@
 const keyboard = require("../variables/Keyboards")
 const {Player} = require("../database/Models")
-const ErrorHandler = require("../error/ErrorHandler")
+const api = require("../middleware/API")
 class InputManager
 {
     static async InputInteger(context, message, current_keyboard, min, max)
@@ -43,7 +43,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/InputInteger", e)
+                await api.SendLogs(context, "InputManager/InputInteger", e)
             }
         })
     }
@@ -85,7 +85,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/InputDefaultInteger", e)
+                await api.SendLogs(context, "InputManager/InputDefaultInteger", e)
             }
         })
     }
@@ -129,7 +129,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/InputString", e)
+                await api.SendLogs(context, "InputManager/InputString", e)
             }
         })
     }
@@ -167,7 +167,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/InputBoolean", e)
+                await api.SendLogs(context, "InputManager/InputBoolean", e)
             }
         })
     }
@@ -209,7 +209,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/InputPhoto", e)
+                await api.SendLogs(context, "InputManager/InputPhoto", e)
             }
         })
     }
@@ -252,7 +252,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/InputGroup", e)
+                await api.SendLogs(context, "InputManager/InputGroup", e)
             }
         })
     }
@@ -285,7 +285,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/ChooseButton", e)
+                await api.SendLogs(context, "InputManager/ChooseButton", e)
             }
         })
     }
@@ -360,7 +360,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/RadioKeyboardBuilder", e)
+                await api.SendLogs(context, "InputManager/RadioKeyboardBuilder", e)
             }
         })
     }
@@ -451,7 +451,7 @@ class InputManager
             }
             catch (e)
             {
-                await ErrorHandler.SendLogs(context, "InputManager/KeyboardBuilder", e)
+                await api.SendLogs(context, "InputManager/KeyboardBuilder", e)
             }
         })
     }
