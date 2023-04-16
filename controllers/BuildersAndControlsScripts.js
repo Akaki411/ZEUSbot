@@ -444,7 +444,7 @@ class BuildersAndControlsScripts
                     await context.send(`✅ У пользователя *id${user.dataValues.id}(${user.dataValues.nick}) нет бана. Видимо произошла ошибка, сейчас все исправлено.`)
                     return resolve()
                 }
-                await context.send(`ℹ Бан от ${NameLibrary.ParseDateTime(ban.dataValues.createdAt)}:\nНик: *id${user.dataValues.id}(${user.dataValues.nick})\nПричина: ${ban.dataValues.reason}\nПодробная причина: ${ban.dataValues.explanation}\n\nℹ Если вы обжалуете бан, то вместе с баном удалятся и все предупреждения`, {keyboard: keyboard.build([[keyboard.appealCallbackButton({command: "appeal_ban", item: ban.dataValues.id}), keyboard.hideCallbackButton()]]).inline()})
+                await context.send(`ℹ Бан от ${NameLibrary.ParseDateTime(ban.dataValues.createdAt)}:\nНик: *id${user.dataValues.id}(${user.dataValues.nick})\nПричина: ${ban.dataValues.reason}\nПодробная причина: ${ban.dataValues.explanation}\n\nℹ Если вы обжалуете бан, то вместе с баном удалятся и все предупреждения`, {keyboard: keyboard.build([[keyboard.hideCallbackButton()], ban.dataValues.prohibit ? [] : [keyboard.appealCallbackButton({command: "appeal_ban", item: ban.dataValues.id})]]).inline()})
                 return resolve()
             }
             catch (e)
@@ -1369,6 +1369,7 @@ class BuildersAndControlsScripts
                         type: "city_timeout",
                         subtype: "resources_ready",
                         time: future,
+                        cityID: context.cityID,
                         timeout: setTimeout(async () =>
                         {
                             await context.send(`✅ Постройки города ${Data.cities[context.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
@@ -3183,7 +3184,7 @@ class BuildersAndControlsScripts
                             let stayTime = new Date()
                             stayTime.setMinutes(stayTime.getMinutes() + 30)
                             context.player.stayInCityTime = stayTime
-                            context.player.state = scenes.StartScreen
+                            context.player.state = scenes.finish
                             delete Data.timeouts["user_timeout_walk_" + context.player.id]
                         }, road.time * 60000)
                     }

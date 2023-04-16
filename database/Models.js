@@ -184,8 +184,8 @@ const Ban = sequelize.define("ban", {
     userID: {type: DataTypes.INTEGER, allowNull: false},
     reason: {type: DataTypes.STRING, allowNull: false},
     explanation: {type: DataTypes.STRING, allowNull: true},
+    prohibit: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
 })
-
 const Chats = sequelize.define("chats", {
     countryID: {type: DataTypes.INTEGER, primaryKey: true, allowNull: false},
     link: {type: DataTypes.STRING, allowNull: false},

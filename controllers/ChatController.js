@@ -48,6 +48,7 @@ class ChatController
             context.command?.match(Commands.changeDescription) && await this.ChangeDescription(context)
             context.command?.match(Commands.top) && await this.SendTopsMessage(context)
             context.command?.match(Commands.extract) && await this.Extract(context)
+            context.command?.match(/^принять ислам$/) && await this.GetIslam(context)
 
             //Модератор+
             context.command?.match(Commands.resources) && await this.GetResources(context)
@@ -97,6 +98,23 @@ class ChatController
         catch (e)
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async GetIslam(context)
+    {
+        try
+        {
+            if(context.player.nationality.match(/славянин/i))
+            {
+                context.player.nationality = "☝ Имарат Донбасс"
+                await PlayerInfo.update({nationality: "☝ Имарат Донбасс"}, {where: {id: context.player.id}})
+                await context.reply(`☝ Ты принял${context.player.gender ? "" : "а"} ислам во имя Имарата Донбасса, мы гордимся тобой ${context.player.gender ? "брат" : "сестра"}.`)
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/Extract", e)
         }
     }
 
