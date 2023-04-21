@@ -124,26 +124,7 @@ class NameLibrary
             case "owner":
                 return 6
         }
-    }
-
-    GetEffectName(effect)
-    {
-        switch (effect)
-        {
-            case "block_moving":
-                return "🔗 Кандалы"
-            case "block_transfer":
-                return "⛔ Блокировка счета"
-            case "block_extracting":
-                return "😳 Усталость"
-            case "bot_ignore":
-                return "🤐 Проклятие игнора"
-            case "luck":
-                return "🍀 Удача"
-            case "industriousness":
-                return "💪 Трудолюбие"
-        }
-        return "Неизвестный эффект, обратитесь в тех поддержку."
+        return 0
     }
 
     GetResourceName(res)

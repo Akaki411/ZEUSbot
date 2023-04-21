@@ -470,7 +470,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `2️⃣ Выберите какой ресурс вы хотите накрутить игроку *id${user.dataValues.id}(${user.dataValues.nick}):`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `2️⃣ Выберите какой ресурс вы хотите накрутить игроку *id${user.dataValues.id}(${user.dataValues.nick}):`, resources)
                 if (!resource) return resolve()
                 if(resource.match(/cancel/))
                 {
@@ -513,7 +513,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, "2️⃣ Выберите какой ресурс вы хотите накрутить", resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, "2️⃣ Выберите какой ресурс вы хотите накрутить", resources)
                 if (resource === "cancel")
                 {
                     await context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -556,7 +556,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${country.GetName(context.player.platform === "IOS")}?`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${country.GetName(context.player.platform === "IOS")}?`, resources)
                 if (resource === "cancel")
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -833,7 +833,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `3️⃣ ${Data.cities[context.cityID].GetResources()}\n\nВыберите какой ресурс вы хотите перевести игроку *id${user.id}(${user.nick})`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `3️⃣ ${Data.cities[context.cityID].GetResources()}\n\nВыберите какой ресурс вы хотите перевести игроку *id${user.id}(${user.nick})`, resources)
                 if (resource === "cancel")
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -903,7 +903,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `2️⃣ ${Data.cities[context.cityID].GetResources()}\n\nВыберите какой ресурс вы хотите перевести в бюджет города ${city.name}`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `2️⃣ ${Data.cities[context.cityID].GetResources()}\n\nВыберите какой ресурс вы хотите перевести в бюджет города ${city.name}`, resources)
                 if (resource === "cancel")
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -957,7 +957,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `1️⃣ ${Data.cities[context.cityID].GetResources()}\n\nВыберите какой ресурс вы хотите перевести в бюджет фракции ${Data.GetCountryName(Data.GetCountryForCity(context.cityID).id)}`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `1️⃣ ${Data.cities[context.cityID].GetResources()}\n\nВыберите какой ресурс вы хотите перевести в бюджет фракции ${Data.GetCountryName(Data.GetCountryForCity(context.cityID).id)}`, resources)
                 if (resource === "cancel")
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -1682,7 +1682,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `2️⃣ ${context.country.GetResources()}\n\nВыберите какой ресурс вы хотите перевести`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `2️⃣ ${context.country.GetResources()}\n\nВыберите какой ресурс вы хотите перевести`, resources)
                 if (resource === "cancel")
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -1738,7 +1738,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `2️⃣ ${context.country.GetResources()}\n\nПереводить ресурсы можно только в бюджет города фракции.\n\nВыберите какой ресурс вы хотите перевести в бюджет города ${Data.GetCityName(cityID)}?`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `2️⃣ ${context.country.GetResources()}\n\nПереводить ресурсы можно только в бюджет города фракции.\n\nВыберите какой ресурс вы хотите перевести в бюджет города ${Data.GetCityName(cityID)}?`, resources)
                 if (resource === "cancel")
                 {
                     context.send("🚫 Перевод отменен", {keyboard: keyboard.build(current_keyboard)})
@@ -2808,7 +2808,7 @@ class BuildersAndControlsScripts
                 }
                 context.player.citizenship = null
                 context.player.registration = null
-                await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} отказался от гражданства фракции ${country.GetName(context.player.platform === "IOS")}`)
+                await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} отказался от гражданства фракции ${country.GetName()}`)
                 await context.send("ℹ Теперь вы апатрид.", {keyboard: keyboard.build(await scenes.keyboard(context))})
             }
             catch (e)
@@ -2908,7 +2908,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `${context.player.GetResources()}\n\n2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${Data.countries[context.player.countryID].GetName(context.player.platform === "IOS")}:`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `${context.player.GetResources()}\n\n2️⃣ Выберите какой ресурс вы хотите перевести в бюджет фракции ${Data.countries[context.player.countryID].GetName(context.player.platform === "IOS")}:`, resources)
                 if (!resource) return resolve()
                 if(resource.match(/cancel/))
                 {
@@ -2964,7 +2964,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `${context.player.GetResources()}\n\n2️⃣ Выберите какой ресурс вы хотите перевести городу ${Data.cities[context.player.location].name}:`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `${context.player.GetResources()}\n\n2️⃣ Выберите какой ресурс вы хотите перевести городу ${Data.cities[context.player.location].name}:`, resources)
                 if (!resource) return resolve()
                 if(resource.match(/cancel/))
                 {
@@ -3028,7 +3028,7 @@ class BuildersAndControlsScripts
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
                     [keyboard.cancelButton]]
-                const resource = await InputManager.ChooseButton(context, `3️⃣ Выберите какой ресурс вы хотите перевести игроку *id${user.dataValues.id}(${user.dataValues.nick}):`, resources, current_keyboard)
+                const resource = await InputManager.ChooseButton(context, `3️⃣ Выберите какой ресурс вы хотите перевести игроку *id${user.dataValues.id}(${user.dataValues.nick}):`, resources)
                 if (!resource) return resolve()
                 if(resource.match(/cancel/))
                 {
@@ -3777,7 +3777,7 @@ class BuildersAndControlsScripts
                     4: {from: 0.55, to: 0.6, max: 1000}
                 }
                 let request = `Сейчас вы можете отчеканить из своего серебра монеты. \n\nМонетный двор имеет оборудование ${context.player.inBuild.level} уровня, это значит что КПД от чеканки будет от ${Math.round(lvls[context.player.inBuild.level].from * 100)} до ${Math.round(lvls[context.player.inBuild.level].to * 100)} процентов.\nМаксимально можно до ${lvls[context.player.inBuild.level].max} серебра единоразово.`
-                const silver = await InputManager.InputInteger(context, request + `\nℹ В бюджете ${source.silver} серебра.\n\nВведите количество серебра, которое вы хотите запустить на чеканку. Имейте ввиду, если загрузить слишком мало (< 2), то из-за шанса брака вы можете не получить монет.\nДоступный для ввода диапазон: от 1 до ${Math.min(lvls[context.player.inBuild.level].max, source.silver)}`, 1, Math.min(lvls[context.player.inBuild.level].max, source.silver))
+                const silver = await InputManager.InputInteger(context, request + `\nℹ В бюджете ${source.silver} серебра.\n\nВведите количество серебра, которое вы хотите запустить на чеканку. Имейте ввиду, если загрузить слишком мало (< 2), то из-за шанса брака вы можете не получить монет.\nДоступный для ввода диапазон: от 1 до ${Math.min(lvls[context.player.inBuild.level].max, source.silver)}`, current_keyboard, 1, Math.min(lvls[context.player.inBuild.level].max, source.silver))
                 if(!silver) return resolve()
                 const accept = await InputManager.InputBoolean(context, `❓ Обменять ${silver} серебра на монеты?`)
                 if(!accept) return resolve()
@@ -4644,19 +4644,20 @@ class BuildersAndControlsScripts
                     return resolve()
                 }
                 const effectButtons = []
-                for(let i = 0; i < Effects["length"]; i++)
+                let request = "ℹ Описание эффектов:\n\n"
+                for(const effect of Object.keys(Effects))
                 {
-                    effectButtons.push([NameLibrary.GetEffectName(Effects[i].type), "ID" + i])
+                    effectButtons.push([Effects[effect].name, effect])
+                    request += `🔶 ${Effects[effect].name} ${Effects[effect].description}\n`
                 }
-                let effect = await InputManager.KeyboardBuilder(context, "2️⃣ Выберите эффект", effectButtons, current_keyboard)
+                let effect = await InputManager.KeyboardBuilder(context, request + "\n2️⃣ Выберите эффект", effectButtons, current_keyboard)
                 if(!effect) return resolve()
-                effect = Data.ParseButtonID(effect)
                 effect = Effects[effect]
                 let time = await InputManager.InputDefaultInteger(context, "3️⃣ Введите время действия эффекта (не более недели (10080 мин))", current_keyboard, 1, 10080, effect.time)
                 if(!time) return resolve()
                 user.AddEffect(effect, time)
-                await context.send(`✅ Игрок ${user.GetName()} получил эффект ${NameLibrary.GetEffectName(effect.type)}`, {keyboard: keyboard.build(current_keyboard)})
-                await api.SendMessage(user.id, "ℹ На вас был наложен эффект " + NameLibrary.GetEffectName(effect.type) + " на " + time + " минут")
+                await context.send(`✅ Игрок ${user.GetName()} получил эффект ${effect.name}`, {keyboard: keyboard.build(current_keyboard)})
+                await api.SendMessage(user.id, "ℹ На вас был наложен эффект " + effect.name + " на " + time + " минут")
                 return resolve()
             }
             catch (e)
@@ -6024,9 +6025,17 @@ class BuildersAndControlsScripts
                     return resolve()
                 }
                 const players = await Player.findAll({where: {id: playersStatus.map(key => {return key.dataValues.id})}, attributes: ["id", "nick", "status"]})
+                let users = await api.api.users.get({
+                    user_ids: players.map(key => {return key.dataValues.id}).join(",")
+                })
+                let userIds = {}
+                for(const user of users)
+                {
+                    userIds[user.id] = user
+                }
                 for(const player of players)
                 {
-                    request += `🔸 *id${player.dataValues.id}(${player.dataValues.nick}) - ${NameLibrary.GetStatusName(player.dataValues.status)}\n`
+                    request += `🔸 *id${player.dataValues.id}(${player.dataValues.nick + " <" + userIds[player.dataValues.id].first_name + " " + userIds[player.dataValues.id].last_name + ">"}) - ${NameLibrary.GetStatusName(player.dataValues.status)}\n`
                 }
                 await context.send(request)
                 return resolve()
@@ -6064,6 +6073,14 @@ class BuildersAndControlsScripts
                         }
                     }
                 }
+                let names = await api.api.users.get({
+                    user_ids: players.map(key => {return key.dataValues.id}).join(",")
+                })
+                let userIds = {}
+                for(const user of names)
+                {
+                    userIds[user.id] = user
+                }
                 let count = 0
                 for(const city of Data.cities)
                 {
@@ -6075,7 +6092,7 @@ class BuildersAndControlsScripts
                         {
                             if(player.location === city.id)
                             {
-                                request += `🔸 *id${player.id}(${player.nick}) - ${player.citizenship !== context.country.id ? "Мигрант" : NameLibrary.GetStatusName(player.status)}\n`
+                                request += `🔸 *id${player.id}(${player.nick + " <" + userIds[player.id].first_name + " " + userIds[player.id].last_name + ">"}) - ${player.citizenship !== context.country.id ? "Мигрант" : NameLibrary.GetStatusName(player.status)}\n`
                             }
                         }
                     }
@@ -6113,9 +6130,17 @@ class BuildersAndControlsScripts
                         }
                     }
                 }
+                let names = await api.api.users.get({
+                    user_ids: players.map(key => {return key.dataValues.id}).join(",")
+                })
+                let userIds = {}
+                for(const user of names)
+                {
+                    userIds[user.id] = user
+                }
                 for(const player of users)
                 {
-                    request += `🔸 *id${player.id}(${player.nick})\n`
+                    request += `🔸 *id${player.id}(${player.nick + " <" + userIds[player.id].first_name + " " + userIds[player.id].last_name + ">"})\n`
                 }
                 await context.send(request)
                 return resolve()
@@ -6134,6 +6159,11 @@ class BuildersAndControlsScripts
             {
                 let request = `💳 В городе ${Data.cities[context.cityID].name} прописаны:\n\n`
                 const playersStatus = await PlayerStatus.findAll({where: {registration: context.cityID}, attributes: ["id"]})
+                if(playersStatus.length === 0)
+                {
+                    await context.send("⚠ В вашем городе никто не прописан.")
+                    return resolve()
+                }
                 const players = await Player.findAll({where: {id: playersStatus.map(key => {return key.dataValues.id})}, attributes: ["id", "nick"]})
                 const users = []
                 for(const status of playersStatus)
@@ -6150,9 +6180,17 @@ class BuildersAndControlsScripts
                         }
                     }
                 }
+                let names = await api.api.users.get({
+                    user_ids: players.map(key => {return key.dataValues.id}).join(",")
+                })
+                let userIds = {}
+                for(const user of names)
+                {
+                    userIds[user.id] = user
+                }
                 for(const player of users)
                 {
-                    request += `🔸 *id${player.id}(${player.nick})\n`
+                    request += `🔸 *id${player.id}(${player.nick + " <" + userIds[player.id].first_name + " " + userIds[player.id].last_name + ">"})\n`
                 }
                 await context.send(request)
                 return resolve()

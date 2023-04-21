@@ -1,5 +1,6 @@
 const Data = require("../models/CacheData")
 const Commands = require("../variables/Commands")
+const api = require("./API")
 
 module.exports = async (context, next) =>
 {
@@ -51,6 +52,19 @@ module.exports = async (context, next) =>
                         {
                             Data.musicLovers[context.player.id] = 1
                         }
+                    }
+                    if(context.attachments[i]?.type === "audio_message" && Data.voiceMute[context.player.id])
+                    {
+                        try
+                        {
+                            await api.api.messages.delete({
+                                conversation_message_ids: context.conversationMessageId,
+                                delete_for_all: 1,
+                                peer_id: context.peerId
+                            })
+                            break
+                        }
+                        catch (e) {console.log(e.message)}
                     }
                 }
             }

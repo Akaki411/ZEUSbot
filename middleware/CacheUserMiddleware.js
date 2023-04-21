@@ -7,6 +7,28 @@ const SceneManager = require("../controllers/SceneController")
 const Builders = require("../controllers/BuildersAndControlsScripts")
 const api = require("./API")
 
+const RoleEstimator = (role) =>
+{
+    switch (role)
+    {
+        case "player":
+            return 0
+        case "moder":
+            return 1
+        case "GM":
+            return 2
+        case "admin":
+            return 3
+        case "support":
+            return 4
+        case "project_head":
+            return 5
+        case "owner":
+            return 6
+    }
+    return 0
+}
+
 module.exports = async (context, next) =>
 {
     try
@@ -15,9 +37,37 @@ module.exports = async (context, next) =>
         const peerId = context.peerType === "chat" ? context.senderId : context.peerId
         if(context.peerType === "chat")
         {
-            if(Data.countryChats[context.peerId] && peerId > 0)
+            if(Data.countryChats[context.peerId] && peerId > 0 && !Data.activeIgnore[peerId])
             {
-                Data.countryChats[context.peerId].active++
+                Data.countries[Data.countryChats[context.peerId]].active++
+            }
+            if(Data.mute[peerId] && (context.command !== "ресет" && RoleEstimator(Data.users[peerId]?.role) < 4))
+            {
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                }
+                catch (e) {}
+                return
+            }
+            if(Data.censorship[peerId])
+            {
+                if(context.command?.match(commands.censorship))
+                {
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    }
+                    catch (e) {}
+                }
             }
         }
         if(Data.users[peerId] && !Data.users[peerId]?.isBanned)

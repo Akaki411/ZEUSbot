@@ -15,22 +15,13 @@ class InputManager
                 max = max || 2147483646
 
                 let answer = await context.question(message, {
-                    keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 900_000
+                    keyboard: keyboard.build([[keyboard.cancelButton]])
                 })
-                while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.isTimeout && !answer.payload)
+                while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.payload)
                 {
                     answer = await context.question("⚠ Введите корректное значение.", {
-                        keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build([[keyboard.cancelButton]])
                     })
-                }
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 if(answer.payload)
                 {
@@ -60,22 +51,13 @@ class InputManager
                 max = max || 2147483646
 
                 let answer = await context.question(message + "\n\nℹ Значение по умолчанию = " + def, {
-                    keyboard: keyboard.build([[keyboard.defaultsButton]]),
-                    answerTimeLimit: 900_000
+                    keyboard: keyboard.build([[keyboard.defaultsButton]])
                 })
-                while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.isTimeout && !answer.payload)
+                while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.payload)
                 {
                     answer = await context.question("⚠ Введите корректное значение." + "\n\nℹ Значение по умолчанию = " + def, {
-                        keyboard: keyboard.build([[keyboard.defaultsButton]]),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build([[keyboard.defaultsButton]])
                     })
-                }
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 if(answer.payload)
                 {
@@ -100,23 +82,13 @@ class InputManager
                 max = max || Number.MAX_SAFE_INTEGER
 
                 let answer = await context.question(message, {
-                    keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 900_000
+                    keyboard: keyboard.build([[keyboard.cancelButton]])
                 })
-                while ((answer.text?.length <= min || answer.text?.length >= max) && !answer.isTimeout && !answer.payload && !isNaN(answer.text))
+                while ((answer.text?.length <= min || answer.text?.length >= max) && !answer.payload && !isNaN(answer.text))
                 {
                     answer = await context.question("⚠ Введите корректное значение.", {
-                        keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build([[keyboard.cancelButton]])
                     })
-                }
-
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 if(answer.payload)
                 {
@@ -146,22 +118,13 @@ class InputManager
                 const yesChoice = yesButton.options.payload["choice"]
 
                 let answer = await context.question(message, {
-                    keyboard: keyboard.build([[yesButton, noButton]]),
-                    answerTimeLimit: 900_000
+                    keyboard: keyboard.build([[yesButton, noButton]])
                 })
-                while (!answer.payload && !answer.isTimeout)
+                while (!answer.payload)
                 {
                     answer = await context.question("⚠ Выберите из предложенного снизу.", {
-                        keyboard: keyboard.build([[yesButton, noButton]]),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build([[yesButton, noButton]])
                     })
-                }
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 return resolve(answer.payload.choice === yesChoice)
             }
@@ -179,24 +142,15 @@ class InputManager
             try
             {
                 let answer = await context.question(message, {
-                    keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 1200_000
+                    keyboard: keyboard.build([[keyboard.cancelButton]])
                 })
                 let url = answer.attachments[0]?.type === "photo" ? answer.attachments[0]?.toString() : null
-                while (!answer.payload && !answer.isTimeout && !url)
+                while (!answer.payload && !url)
                 {
                     answer = await context.question("⚠ Отправьте фото", {
-                        keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 1200_000
+                        keyboard: keyboard.build([[keyboard.cancelButton]])
                     })
                     url = answer.attachments[0]?.type === "photo" ? answer.attachments[0]?.toString() : null
-                }
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 if(answer.payload?.choice === "cancel")
                 {
@@ -221,25 +175,16 @@ class InputManager
             try
             {
                 let answer = await context.question(message + "\n\nℹ Перешлите в диалог пост из группы, которую хотите выбрать", {
-                    keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 900_000
+                    keyboard: keyboard.build([[keyboard.cancelButton]])
                 })
 
                 let id = answer.attachments[0]?.type === "wall" ? answer.attachments[0]?.ownerId : null
-                while (!answer.payload && !answer.isTimeout && !id)
+                while (!answer.payload && !id)
                 {
                     answer = await context.question("⚠ Перешлите пост", {
-                        keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build([[keyboard.cancelButton]])
                     })
                     id = answer.attachments[0]?.largeSizeUrl
-                }
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 if(answer.payload?.choice === "cancel")
                 {
@@ -257,29 +202,20 @@ class InputManager
         })
     }
 
-    static async ChooseButton(context, message, kb, current_keyboard)
+    static async ChooseButton(context, message, kb)
     {
         return new Promise(async (resolve) =>
         {
             try
             {
                 let answer = await context.question(message, {
-                    keyboard: keyboard.build(kb),
-                    answerTimeLimit: 900_000
+                    keyboard: keyboard.build(kb)
                 })
-                while (!answer.payload && !answer.isTimeout)
+                while (!answer.payload)
                 {
                     answer = await context.question("⚠ Выберите из предложенного снизу.", {
-                        keyboard: keyboard.build(kb),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build(kb)
                     })
-                }
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 return resolve(answer.payload.choice)
             }
@@ -330,20 +266,12 @@ class InputManager
                 do
                 {
                     answer = await context.question(request, {
-                        keyboard: keyboard.build(arrayToKeyboard(radioKeyboard)),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build(arrayToKeyboard(radioKeyboard))
                     })
                     request = "Ок"
                     if(answer.payload) radioKeyboard = convertKeyboard(radioKeyboard, answer.payload.choice)
                 }
-                while(!answer.isTimeout && !answer?.payload?.choice.match(/cancel|next/))
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
-                }
+                while(!answer?.payload?.choice.match(/cancel|next/))
                 if(answer?.payload?.choice === "cancel")
                 {
                     await context.send('🚫 Ввод отменен', {
@@ -427,19 +355,10 @@ class InputManager
                     }
                     kb = renderPage(page)
                     answer = await context.question(message, {
-                        keyboard: keyboard.build(kb),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build(kb)
                     })
                 }
-                while ((!answer.payload || answer.payload.choice.match(/left|right/)) && !answer.isTimeout)
-
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
-                }
+                while ((!answer.payload || answer.payload.choice.match(/left|right/)))
                 if(answer.payload.choice === "back")
                 {
                     await context.send('🚫 Ввод отменен', {
@@ -463,16 +382,8 @@ class InputManager
             {
                 let user
                 let answer = await context.question(message + "\n\nℹ Введите ник, ID игрока, упомяните его (через @ или *) или перешлите сюда его сообщение. (Именно перешлите, ответ на сообщение не сработает)", {
-                    keyboard: keyboard.build([[keyboard.cancelButton]]),
-                    answerTimeLimit: 900_000
+                    keyboard: keyboard.build([[keyboard.cancelButton]])
                 })
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
-                }
                 if(answer.payload)
                 {
                     await context.send('🚫 Ввод отменен.', {
@@ -480,22 +391,22 @@ class InputManager
                     })
                     return resolve(null)
                 }
-                if(answer.forwards?.length > 0 && !answer.payload && !answer.isTimeout)
+                if(answer.forwards?.length > 0 && !answer.payload)
                 {
                     user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
                 }
-                else if(answer.text?.match(/id\d+/) && !answer.payload && !answer.isTimeout)
+                else if(answer.text?.match(/id\d+/) && !answer.payload)
                 {
                     let id = answer.text.match(/id\d+/)[0]
                     id = parseInt(id.replace("id", ""))
                     user = await Player.findOne({where: {id: id}})
                 }
-                else if(answer.text?.match(/\d{5,}/) && !answer.payload && !answer.isTimeout)
+                else if(answer.text?.match(/\d{5,}/) && !answer.payload)
                 {
                     let id = answer.text.match(/\d{5,}/)[0]
                     user = await Player.findOne({where: {id: id}})
                 }
-                else if(answer.text && !answer.payload && !answer.isTimeout)
+                else if(answer.text && !answer.payload)
                 {
                     user = await Player.findOne({where: {nick: answer.text}})
                 }
@@ -503,28 +414,27 @@ class InputManager
                 {
                     return resolve(null)
                 }
-                while (!answer.isTimeout && !answer.payload && !user)
+                while (!answer.payload && !user)
                 {
                     answer = await context.question("⚠ Игрок не найден", {
-                        keyboard: keyboard.build([[keyboard.cancelButton]]),
-                        answerTimeLimit: 900_000
+                        keyboard: keyboard.build([[keyboard.cancelButton]])
                     })
-                    if(answer.forwards?.length > 0 && !answer.payload && !answer.isTimeout)
+                    if(answer.forwards?.length > 0 && !answer.payload)
                     {
                         user = await Player.findOne({where: {id: answer.forwards[0].senderId}})
                     }
-                    else if(answer.text?.match(/id\d+/) && !answer.payload && !answer.isTimeout)
+                    else if(answer.text?.match(/id\d+/) && !answer.payload)
                     {
                         let id = answer.text.match(/id\d+/)[0]
                         id = parseInt(id.replace("id", ""))
                         user = await Player.findOne({where: {id: id}})
                     }
-                    else if(answer.text?.match(/\d{5,}/) && !answer.payload && !answer.isTimeout)
+                    else if(answer.text?.match(/\d{5,}/) && !answer.payload)
                     {
                         let id = answer.text.match(/\d{5,}/)[0]
                         user = await Player.findOne({where: {id: id}})
                     }
-                    else if(answer.text && !answer.payload && !answer.isTimeout)
+                    else if(answer.text && !answer.payload)
                     {
                         user = await Player.findOne({where: {nick: answer.text}})
                     }
@@ -532,13 +442,6 @@ class InputManager
                     {
                         return resolve(null)
                     }
-                }
-                if(answer.isTimeout)
-                {
-                    await context.send('🚫 Ввод отменен: время на ввод вышло.', {
-                        keyboard: keyboard.build(current_keyboard)
-                    })
-                    return resolve(null)
                 }
                 if(answer.payload)
                 {

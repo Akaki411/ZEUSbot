@@ -4,6 +4,7 @@ class Effect
 {
     constructor(effect, time, id)
     {
+        this.name = effect.name
         this.type = effect.type
         this.id = id
         this.isValid = true
@@ -18,7 +19,7 @@ class Effect
 
     GetInfo()
     {
-        return `${NameLibrary.GetEffectName(this.type)} - осталось ${NameLibrary.ParseFutureTime(this.time)}`
+        return `${this.name} - осталось ${NameLibrary.ParseFutureTime(this.time)}`
     }
 }
 

@@ -3,6 +3,7 @@ const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
+const active = require("../files/active.json");
 
 class CacheData
 {
@@ -28,8 +29,18 @@ class CacheData
         this.countryChats = {}
         this.countriesWeekActive = {}
         this.countriesWeekPassiveScore = {}
-        this.stall = []
         this.repeat = {}
+
+        this.countryResourcesStats = {}
+
+        this.samples = {}
+        this.requests = {}
+        this.censorship = {}
+        this.mute = {}
+        this.voiceMute = {}
+        this.activeIgnore = {}
+        this.ignore = {}
+
         this.timeouts = {}
         this.onLoad = () => {}
 
@@ -81,8 +92,6 @@ class CacheData
         }
         return firstLocation === secondLocation
     }
-
-
 
     GetCountryButtons()
     {
@@ -260,6 +269,8 @@ class CacheData
     async LoadCountries()
     {
         this.countries = []
+        this.countryChats = {}
+        this.countryResourcesStats = {}
         return new Promise(async (resolve) => {
             const countries = await Country.findAll()
             let temp
@@ -274,7 +285,7 @@ class CacheData
                         temp = key.dataValues.chatID.split("|")
                         for(const chat of temp)
                         {
-                            this.countryChats[chat] = this.countries[key.dataValues.id]
+                            this.countryChats[chat] = key.dataValues.id
                         }
                     }
                 }
@@ -294,6 +305,32 @@ class CacheData
                             country.active = active[country.id] ? active[country.id] : 0
                             this.countriesWeekActive[country.id] = active["week_" + country.id] ? active["week_" + country.id] : 0
                             this.countriesWeekPassiveScore[country.id] = active.passiveScore ? active.passiveScore[country.id] ? active.passiveScore[country.id] : 0 : 0
+                            if(active.resourcesStats)
+                            {
+                                if(active.resourcesStats[country.id])
+                                {
+                                    this.countryResourcesStats[country.id] = {
+                                        in: {
+                                            money: active.resourcesStats[country.id]["in"]["money"] ? active.resourcesStats[country.id]["in"]["money"] : 0,
+                                            stone: active.resourcesStats[country.id]["in"]["stone"] ? active.resourcesStats[country.id]["in"]["stone"] : 0,
+                                            wood: active.resourcesStats[country.id]["in"]["wood"] ? active.resourcesStats[country.id]["in"]["wood"] : 0,
+                                            wheat: active.resourcesStats[country.id]["in"]["wheat"] ? active.resourcesStats[country.id]["in"]["wheat"] : 0,
+                                            iron: active.resourcesStats[country.id]["in"]["iron"] ? active.resourcesStats[country.id]["in"]["iron"] : 0,
+                                            silver: active.resourcesStats[country.id]["in"]["silver"] ? active.resourcesStats[country.id]["in"]["silver"] : 0,
+                                            diamond: active.resourcesStats[country.id]["in"]["diamond"] ? active.resourcesStats[country.id]["in"]["diamond"] : 0
+                                        },
+                                        out: {
+                                            money: active.resourcesStats[country.id]["out"]["money"] ? active.resourcesStats[country.id]["out"]["money"] : 0,
+                                            stone: active.resourcesStats[country.id]["out"]["stone"] ? active.resourcesStats[country.id]["out"]["stone"] : 0,
+                                            wood: active.resourcesStats[country.id]["out"]["wood"] ? active.resourcesStats[country.id]["out"]["wood"] : 0,
+                                            wheat: active.resourcesStats[country.id]["out"]["wheat"] ? active.resourcesStats[country.id]["out"]["wheat"] : 0,
+                                            iron: active.resourcesStats[country.id]["out"]["iron"] ? active.resourcesStats[country.id]["out"]["iron"] : 0,
+                                            silver: active.resourcesStats[country.id]["out"]["silver"] ? active.resourcesStats[country.id]["out"]["silver"] : 0,
+                                            diamond: active.resourcesStats[country.id]["out"]["diamond"] ? active.resourcesStats[country.id]["out"]["diamond"] : 0
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -343,7 +380,8 @@ class CacheData
     {
         return new Promise((resolve) => {
             let active = {
-                passiveScore: {}
+                passiveScore: {},
+                resourcesStats: {}
             }
             for(const country of this.countries)
             {
@@ -364,6 +402,32 @@ class CacheData
                 if(country)
                 {
                     active.passiveScore[country.id] = this.countriesWeekPassiveScore[country.id] ? this.countriesWeekPassiveScore[country.id] : 0
+                }
+            }
+            for(const country of this.countries)
+            {
+                if(country)
+                {
+                    active.resourcesStats[country.id] = this.countryResourcesStats[country.id] ? this.countryResourcesStats[country.id] : {
+                        in: {
+                            money: 0,
+                            stone: 0,
+                            wood: 0,
+                            wheat: 0,
+                            iron: 0,
+                            silver: 0,
+                            diamond: 0
+                        },
+                        out: {
+                            money: 0,
+                            stone: 0,
+                            wood: 0,
+                            wheat: 0,
+                            iron: 0,
+                            silver: 0,
+                            diamond: 0
+                        }
+                    }
                 }
             }
             const serialize = JSON.stringify(active, null, "\t")
@@ -516,50 +580,45 @@ class CacheData
 
     async AddCityResources(id, res)
     {
+        if(!id || !res) throw new Error("ID or Resources is not exist");
         let resources = await CityResources.findOne({where: {id: id}})
-        this.cities[id].money += res.money ? res.money : 0
-        this.cities[id].stone += res.stone ? res.stone : 0
-        this.cities[id].wood += res.wood ? res.wood : 0
-        this.cities[id].wheat += res.wheat ? res.wheat : 0
-        this.cities[id].iron += res.iron ? res.iron : 0
-        this.cities[id].copper += res.copper ? res.copper : 0
-        this.cities[id].silver += res.silver ? res.silver : 0
-        this.cities[id].diamond += res.diamond ? res.diamond : 0
-        resources.set({
-            money: this.cities[id].money,
-            stone: this.cities[id].stone,
-            wood: this.cities[id].wood,
-            wheat: this.cities[id].wheat,
-            iron: this.cities[id].iron,
-            copper: this.cities[id].copper,
-            silver: this.cities[id].silver,
-            diamond: this.cities[id].diamond
-        })
-        await resources.save()
+        let obj = {}
+        for(const key of Object.keys(res))
+        {
+            if(this.cities[id])
+            {
+                this.cities[id][key] = resources.dataValues[key] + res[key]
+            }
+            obj[key] = resources.dataValues[key] + res[key]
+        }
+        await CityResources.update(obj, {where: {id: id}})
     }
 
     async AddCountryResources(id, res)
     {
+        if(!id || !res) throw new Error("ID or Resources is not exist");
         let resources = await CountryResources.findOne({where: {id: id}})
-        this.countries[id].money += res.money ? res.money : 0
-        this.countries[id].stone += res.stone ? res.stone : 0
-        this.countries[id].wood += res.wood ? res.wood : 0
-        this.countries[id].wheat += res.wheat ? res.wheat : 0
-        this.countries[id].iron += res.iron ? res.iron : 0
-        this.countries[id].copper += res.copper ? res.copper : 0
-        this.countries[id].silver += res.silver ? res.silver : 0
-        this.countries[id].diamond += res.diamond ? res.diamond : 0
-        resources.set({
-            money: this.countries[id].money,
-            stone: this.countries[id].stone,
-            wood: this.countries[id].wood,
-            wheat: this.countries[id].wheat,
-            iron: this.countries[id].iron,
-            copper: this.countries[id].copper,
-            silver: this.countries[id].silver,
-            diamond: this.countries[id].diamond
-        })
-        await resources.save()
+        let obj = {}
+        for(const key of Object.keys(res))
+        {
+            if(this.countries[id])
+            {
+                this.countries[id][key] = resources.dataValues[key] + res[key]
+            }
+            if(this.countryResourcesStats[id])
+            {
+                if(res[key] >= 0)
+                {
+                    this.countryResourcesStats[id]["in"][key] += res[key]
+                }
+                else
+                {
+                    this.countryResourcesStats[id]["out"][key] -= res[key]
+                }
+            }
+            obj[key] = resources.dataValues[key] + res[key]
+        }
+        await CountryResources.update(obj, {where: {id: id}})
     }
 
     async AddPlayerResources(id, res)

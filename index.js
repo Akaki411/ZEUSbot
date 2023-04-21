@@ -1,6 +1,6 @@
 require('dotenv').config()
 const {VK} = require('vk-io')
-const {QuestionManager} = require('vk-io-question')
+const {QuestionManager} = require('vk-io-question-fix')
 
 const database = require('./database/DataBase')
 const Data = require('./models/CacheData')
@@ -63,10 +63,13 @@ const start = async () => {
                 Walking: SceneController.WaitingWalkMenu
             })
         })
-        bot.updates.on('message_new', async(msg) =>
+        bot.updates.on('message_new', async(context) =>
         {
-            msg.peerType === "user" && await msg.player.state(msg)
-            msg.peerType === "chat" && await ChatController.CommandHandler(msg)
+            if(!Data.ignore[context.player.id])
+            {
+                context.peerType === "user" && await context.player.state(context)
+                context.peerType === "chat" && await ChatController.CommandHandler(context)
+            }
         })
         bot.updates.on('message_event', (context) =>
         {

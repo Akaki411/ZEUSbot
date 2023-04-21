@@ -1708,20 +1708,23 @@ class SceneController
 
     GetExtractingMenuKeyboard = (context) =>
     {
-        const country = Data.GetCountryForCity(context.player.location)
+        const location = Data.countries[context.player.countryID]
         const kb = [
             [context.player.isRelaxing ? keyboard.wakeupButton : keyboard.relaxButton],
             [],
             [],
             [keyboard.backButton]
         ]
-        country.resources.match(/wheat/) && kb[1].push(keyboard.extractWheatButton)
-        country.resources.match(/stone/) && kb[1].push(keyboard.extractStoneButton)
-        country.resources.match(/wood/) && kb[1].push(keyboard.extractWoodButton)
-        country.resources.match(/iron/) && kb[2].push(keyboard.extractIronButton)
-        country.resources.match(/copper/) && kb[2].push(keyboard.extractCopperButton)
-        country.resources.match(/silver/) && kb[2].push(keyboard.extractSilverButton)
-
+        if(context.player.citizenship)
+        {
+            const citizenship = Data.countries[context.player.citizenship]
+            if(location.resources.match(/wheat/) && citizenship.resources.match(/wheat/)) kb[1].push(keyboard.extractWheatButton)
+            if(location.resources.match(/stone/) && citizenship.resources.match(/stone/)) kb[1].push(keyboard.extractStoneButton)
+            if(location.resources.match(/wood/) && citizenship.resources.match(/wood/)) kb[1].push(keyboard.extractWoodButton)
+            if(location.resources.match(/iron/) && citizenship.resources.match(/iron/)) kb[2].push(keyboard.extractIronButton)
+            if(location.resources.match(/copper/) && citizenship.resources.match(/copper/)) kb[2].push(keyboard.extractCopperButton)
+            if(location.resources.match(/silver/) && citizenship.resources.match(/silver/)) kb[2].push(keyboard.extractSilverButton)
+        }
         return kb
     }
 
@@ -1951,7 +1954,7 @@ class SceneController
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
-                    await context.send("▶ Параметры", {keyboard: keyboard.build(this.GetMenuKeyboard())})
+                    await context.send("▶ Параметры", {keyboard: keyboard.build(this.GetParamsMenuKeyboard(context))})
                     context.player.state = this.Params
                 }
                 if (context.messagePayload.choice.match(/change_nick/))
@@ -2020,7 +2023,7 @@ class SceneController
                     {
                         for (let i = 0; i < j; i++)
                         {
-                            if (array[i][0] < array[i + 1])
+                            if (array[i][0] < array[i + 1][0])
                             {
                                 let temp = array[i];
                                 array[i] = array[i + 1];
@@ -2366,7 +2369,6 @@ class SceneController
                 }
                 if(context.messagePayload.choice.match(/map/))
                 {
-                    console.log(Data.variables)
                     await context.send("Карта", {attachment: Data.variables.globalMap})
                 }
                 if(context.messagePayload.choice.match(/where_me/))
@@ -2508,7 +2510,7 @@ class SceneController
                             diamonds = 1
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
-                        await Data.AddPlayerResources(context.player.id, {wheat: extraction, diamonds: diamonds})
+                        await Data.AddPlayerResources(context.player.id, {wheat: extraction, diamond: diamonds})
                         context.send(`🌾 Вы добыли ${extraction} зерна`, {attachment: Data.variables["wheatPicture"]})
                     }
                     else
@@ -2534,7 +2536,7 @@ class SceneController
                             diamonds = 1
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
-                        await Data.AddPlayerResources(context.player.id, {stone: extraction, diamonds: diamonds})
+                        await Data.AddPlayerResources(context.player.id, {stone: extraction, diamond: diamonds})
                         context.send(`🪨 Вы добыли ${extraction} камня`, {attachment: Data.variables["stonePicture"]})
                     }
                     else
@@ -2560,7 +2562,7 @@ class SceneController
                             diamonds = 1
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
-                        await Data.AddPlayerResources(context.player.id, {wood: extraction, diamonds: diamonds})
+                        await Data.AddPlayerResources(context.player.id, {wood: extraction, diamond: diamonds})
                         context.send(`🪵 Вы добыли ${extraction} дерева`, {attachment: Data.variables["woodPicture"]})
                     }
                     else
@@ -2586,7 +2588,7 @@ class SceneController
                             diamonds = 1
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
-                        await Data.AddPlayerResources(context.player.id, {iron: extraction, diamonds: diamonds})
+                        await Data.AddPlayerResources(context.player.id, {iron: extraction, diamond: diamonds})
                         context.send(`🌑 Вы добыли ${extraction} железа`, {attachment: Data.variables["ironPicture"]})
                     }
                     else
@@ -2612,7 +2614,7 @@ class SceneController
                             diamonds = 1
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
-                        await Data.AddPlayerResources(context.player.id, {copper: extraction, diamonds: diamonds})
+                        await Data.AddPlayerResources(context.player.id, {copper: extraction, diamond: diamonds})
                         context.send(`🪙 Вы добыли ${extraction} бронзы`, {attachment: Data.variables["copperPicture"]})
                     }
                     else
@@ -2638,7 +2640,7 @@ class SceneController
                             diamonds = 1
                             context.send(`💎 Вот это удача! Во время добычи вы нашли один алмаз! \nКто-то его потерял или он лежал тут изначально - не важно, теперь он ваш!`, {attachment: Data.variables["diamondPicture"]})
                         }
-                        await Data.AddPlayerResources(context.player.id, {silver: extraction, diamonds: diamonds})
+                        await Data.AddPlayerResources(context.player.id, {silver: extraction, diamond: diamonds})
                         context.send(`🥈 Вы добыли ${extraction} серебра`, {attachment: Data.variables["silverPicture"]})
                     }
                     else

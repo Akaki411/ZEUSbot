@@ -200,6 +200,39 @@ class VK_API
                 }
                 this.day = 0
             }
+
+            let request = "📈Статистика расходов фракций за день (<ресурс>: <заработано> - <потрачено> = <разница>)\n\n"
+            let resources = ["money", "stone", "wood", "wheat", "iron", "silver", "diamond"]
+            for(const country of Object.keys(Data.countryResourcesStats))
+            {
+                request += `${Data.countries[country].GetName()}:\n`
+                for(const res of resources)
+                {
+                    request += `${NameLibrary.GetResourceName(res)}: ${Data.countryResourcesStats[country]["in"][res]} - ${Data.countryResourcesStats[country]["out"][res]} = ${Data.countryResourcesStats[country]["in"][res] - Data.countryResourcesStats[country]["out"][res]}\n`
+                }
+                request += "\n"
+                Data.countryResourcesStats[country] = {
+                    in: {
+                        money: 0,
+                        stone: 0,
+                        wood: 0,
+                        wheat: 0,
+                        iron: 0,
+                        silver: 0,
+                        diamond: 0
+                    },
+                    out: {
+                        money: 0,
+                        stone: 0,
+                        wood: 0,
+                        wheat: 0,
+                        iron: 0,
+                        silver: 0,
+                        diamond: 0
+                    }
+                }
+            }
+            await this.GMMailing(request)
             await Data.SaveActive()
         }
         catch (e)
@@ -235,6 +268,25 @@ class VK_API
                     let player, playerInfo, playerRes, playerStats, time, future
                     for(const key of active)
                     {
+                        if(key.type === "user_activity")
+                        {
+                            if(key.subtype === "activity")
+                            {
+                                Data.activity[key.userId] = key.score
+                            }
+                            if(key.subtype === "activity")
+                            {
+                                Data.activity[key.userId] = key.score
+                            }
+                            if(key.subtype === "activity")
+                            {
+                                Data.activity[key.userId] = key.score
+                            }
+                            if(key.subtype === "activity")
+                            {
+                                Data.activity[key.userId] = key.score
+                            }
+                        }
                         if(key.type === "user_timeout")
                         {
                             if(!Data.users[key.userId])
@@ -407,6 +459,42 @@ class VK_API
         return new Promise(async (resolve) =>
         {
             let data = []
+            for(const user of Object.keys(Data.activity))
+            {
+                data.push({
+                    type: "user_activity",
+                    subtype: "activity",
+                    userId: user,
+                    score: Data.activity[user]
+                })
+            }
+            for(const user of Object.keys(Data.musicLovers))
+            {
+                data.push({
+                    type: "user_activity",
+                    subtype: "audios",
+                    userId: user,
+                    score: Data.musicLovers[user]
+                })
+            }
+            for(const user of Object.keys(Data.stickermans))
+            {
+                data.push({
+                    type: "user_activity",
+                    subtype: "stickers",
+                    userId: user,
+                    score: Data.stickermans[user]
+                })
+            }
+            for(const user of Object.keys(Data.uncultured))
+            {
+                data.push({
+                    type: "user_activity",
+                    subtype: "swords",
+                    userId: user,
+                    score: Data.uncultured[user]
+                })
+            }
             for(const key of Object.keys(Data.timeouts))
             {
                 if(Data.timeouts[key].type === "user_timeout")
@@ -585,11 +673,10 @@ class VK_API
     {
         try
         {
-            let GMs = Object.keys(Data.gameMasters)
-            for(let i = 0; i < GMs.length; i++)
+            for(const GM of Object.keys(Data.gameMasters))
             {
                 await this.api.messages.send({
-                    user_id: GMs[i],
+                    user_id: GM,
                     random_id: Math.round(Math.random() * 100000),
                     message: message,
                     keyboard: kb ? keyboard.build(kb).inline().oneTime() : keyboard.inlineNone
