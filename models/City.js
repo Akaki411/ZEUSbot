@@ -27,6 +27,18 @@ class CityObject
         this.getResourcesTimeout = null
     }
 
+    CantTransact()
+    {
+        return this.isSiege || this.isUnderSanctions
+    }
+
+    WhyCantTransact()
+    {
+        if(this.isSiege) return "Город в осаде"
+        if(this.isUnderSanctions) return "Город под санкциями"
+        return "Неизвестно"
+    }
+
     CanPay(pay)
     {
         let can = true

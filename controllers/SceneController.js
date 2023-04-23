@@ -5,6 +5,7 @@ const {Chats, PlayerStatus, Country, City} = require("../database/Models")
 const Builders = require("./BuildersAndControlsScripts")
 const api = require("../middleware/API")
 const sequelize = require("../database/DataBase");
+const InputManager = require("./InputManager")
 
 class SceneController
 {

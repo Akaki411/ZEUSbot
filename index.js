@@ -1,6 +1,6 @@
 require('dotenv').config()
 const {VK} = require('vk-io')
-const {QuestionManager} = require('vk-io-question-fix')
+const {QuestionManager} = require('vk-io-question')
 
 const database = require('./database/DataBase')
 const Data = require('./models/CacheData')

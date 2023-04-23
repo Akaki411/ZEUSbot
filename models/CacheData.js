@@ -3,7 +3,6 @@ const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
-const active = require("../files/active.json");
 
 class CacheData
 {

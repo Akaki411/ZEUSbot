@@ -654,27 +654,32 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
+                if(Data.timeouts["user_timeout_sleep_" + context.player.id])
+                {
+                    await context.send(`💤 Сон во сне? Звучит как завязка фильма "Начало"`)
+                    return
+                }
+                if(context.player.fatigue === 100)
+                {
+                    await context.send(`💪 Вы полны сил`)
+                    return
+                }
                 const need = (100 - context.player.fatigue) * 3.6
                 const time = new Date()
                 time.setMinutes(time.getMinutes() + need)
-                if (Data.timeouts["user_timeout_sleep_" + context.player.id])
-                {
-                    clearTimeout(delete Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
-                    delete Data.timeouts["user_timeout_sleep_" + context.player.id]
-                }
                 Data.timeouts["user_timeout_sleep_" + context.player.id] = {
                     type: "user_timeout",
                     subtype: "sleep",
                     userId: context.player.id,
                     time: time,
-                    timeout: setTimeout(() => {
+                    timeout: setTimeout(async () => {
                         context.send("☕ Ваши силы восстановлены")
                         context.player.fatigue = 100
                         context.player.isRelaxing = false
                         delete Data.timeouts["user_timeout_sleep_" + context.player.id]
                     }, need * 60000)
                 }
-                Data.users[context.player.id].isRelaxing = true
+                context.player.isRelaxing = true
                 await context.send(`💤 Вы перешли в режим отдыха, до полного восстановления сил ${NameLibrary.ParseFutureTime(time)}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
@@ -690,22 +695,23 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                if(Data.timeouts["user_timeout_sleep_" + context.player.id])
+                if(!Data.timeouts["user_timeout_sleep_" + context.player.id])
                 {
-                    clearTimeout(Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
-                    const now = new Date()
-                    const time = Math.max(0, Math.round((Data.timeouts["user_timeout_sleep_" + context.player.id].time - now) / 60000))
                     context.player.isRelaxing = false
-                    context.player.fatigue = Math.round(100 - (time * (100 / 360)))
-                    await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(current_keyboard)})
-                    delete Data.timeouts["user_timeout_sleep_" + context.player.id]
-                    return resolve()
+                    await context.send(`☕ Будете слишком бодрым - сердце посадите.`)
+                    return
                 }
+                const now = new Date()
+                const time = Math.max(0, Math.round((Data.timeouts["user_timeout_sleep_" + context.player.id].time - now) / 60000))
+                clearTimeout(Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
+                delete Data.timeouts["user_timeout_sleep_" + context.player.id]
+                context.player.isRelaxing = false
+                context.player.fatigue = Math.round(100 - (time * (100 / 360)))
                 await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/Relax", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/Wakeup", e)
             }
         })
     }

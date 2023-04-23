@@ -583,19 +583,23 @@ class VK_API
         if(!userID) return
         try
         {
+            let max = 0
             for(const chat of Object.keys(Data.countryChats))
+            {
+                if(parseInt(chat) > max)
+                {
+                    max = parseInt(chat)
+                }
+            }
+            for(let i = 1; i <= (max - 2000000000); i++)
             {
                 try
                 {
                     await this.api.messages.removeChatUser({
-                        chat_id: parseInt(chat) - 2000000000,
+                        chat_id: i,
                         user_id: userID
                     })
-                }
-                catch (e)
-                {
-                    console.log(e.message)
-                }
+                } catch (e) {}
             }
         }
         catch (e)
