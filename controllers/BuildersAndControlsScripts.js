@@ -708,6 +708,7 @@ class BuildersAndControlsScripts
                 context.player.isRelaxing = false
                 context.player.fatigue = Math.round(100 - (time * (100 / 360)))
                 await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
             }
             catch (e)
             {
@@ -4594,8 +4595,6 @@ class BuildersAndControlsScripts
                 let build = await InputManager.KeyboardBuilder(context, "2️⃣ Выберите здание", buttons, current_keyboard)
                 if(!build) return resolve()
                 build = Data.ParseButtonID(build)
-                console.log(city, build)
-                console.log(Data.buildings)
                 build = Data.buildings[city][build]
                 await context.send("ℹ Информация о здании:" + "\n\n" + build.GetAllInfo(), {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
@@ -5602,20 +5601,55 @@ class BuildersAndControlsScripts
             try
             {
                 let report = "📈 Актив фракций за день:\n\n"
-                for(let i = 0; i < Data.countries.length; i++)
+                let active = []
+                for(const country of Data.countries)
                 {
-                    if(Data.countries[i])
+                    if(country)
                     {
-                        report += Data.countries[i].GetName(context.player.platform === "IOS") + "   -   " + Data.countries[i].active + " сообщений\n"
+                        active.push(country)
                     }
                 }
-                report += "\n\n📈 Актив фракций за неделю:\n\n"
-                for(let i = 0; i < Data.countries.length; i++)
+                for (let j = active.length - 1; j > 0; j--)
                 {
-                    if(Data.countries[i])
+                    for (let i = 0; i < j; i++)
                     {
-                        report += Data.countries[i].GetName(context.player.platform === "IOS") + "   -   " + (Data.countriesWeekActive[Data.countries[i].id] + Data.countries[i].active) + " сообщений\n"
+                        if (active[i].active < active[i + 1].active)
+                        {
+                            let temp = active[i];
+                            active[i] = active[i + 1];
+                            active[i + 1] = temp;
+                        }
                     }
+                }
+                for(const country of active)
+                {
+                    report += country.GetName(context.player.platform === "IOS") + "   -   " + country.active + " сообщений\n"
+                }
+                report += "\n\n📈 Актив фракций за неделю:\n\n"
+
+                active = []
+                for(const country of Data.countries)
+                {
+                    if(country)
+                    {
+                        active.push([country, Data.countriesWeekActive[country.id] + country.active])
+                    }
+                }
+                for (let j = active.length - 1; j > 0; j--)
+                {
+                    for (let i = 0; i < j; i++)
+                    {
+                        if (active[i][1] < active[i + 1][1])
+                        {
+                            let temp = active[i];
+                            active[i] = active[i + 1];
+                            active[i + 1] = temp;
+                        }
+                    }
+                }
+                for(const country of active)
+                {
+                    report += country[0].GetName(context.player.platform === "IOS") + "   -   " + country[1] + " сообщений\n"
                 }
                 await context.send(report, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()

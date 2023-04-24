@@ -144,13 +144,13 @@ class InputManager
                 let answer = await context.question(message, {
                     keyboard: keyboard.build([[keyboard.cancelButton]])
                 })
-                let photo = answer.attachments[0]?.type === "photo" ? answer.attachments[0].sizes.filter(key => {return key.type === "x"})[0] : null
+                let photo = answer.attachments[0]?.type === "photo" ? answer.attachments[0].largeSizeUrl : null
                 while (!answer.payload && !photo)
                 {
                     answer = await context.question("⚠ Отправьте фото" , {
                         keyboard: keyboard.build([[keyboard.cancelButton]])
                     })
-                    photo = answer.attachments[0]?.type === "photo" ? answer.attachments[0].sizes.filter(key => {return key.type === "x"})[0] : null
+                    photo = answer.attachments[0]?.type === "photo" ? answer.attachments[0].largeSizeUrl : null
                 }
                 if(answer.payload?.choice === "cancel")
                 {
@@ -159,7 +159,7 @@ class InputManager
                     })
                     return resolve(null)
                 }
-                let url = await api.upload.messagePhoto({source: {value: photo.url}})
+                let url = await api.upload.messagePhoto({source: {value: photo}})
                 return resolve(url.toString())
             }
             catch (e)

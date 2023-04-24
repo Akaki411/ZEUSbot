@@ -39,7 +39,7 @@ class OutputManager
                                     {
                                         return JSON.stringify({
                                             title: key.name,
-                                            description: key.description,
+                                            description: key.description.slice(0,75),
                                             photo_id: key.photoURL.replace("photo", ""),
                                             action: {
                                                 type: "open_link",

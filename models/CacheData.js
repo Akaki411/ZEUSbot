@@ -3,6 +3,7 @@ const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
+const {countriesActive} = require("../variables/Commands");
 
 class CacheData
 {
@@ -21,6 +22,7 @@ class CacheData
         this.buildings = {}          // и т.д., я устал писать, слишком много пробелов
         this.officials = {}
         this.variables = null
+
         this.activity = {}
         this.uncultured = {}
         this.stickermans = {}
@@ -270,6 +272,7 @@ class CacheData
         this.countries = []
         this.countryChats = {}
         this.countryResourcesStats = {}
+        this.countriesWeekActive = {}
         return new Promise(async (resolve) => {
             const countries = await Country.findAll()
             let temp
