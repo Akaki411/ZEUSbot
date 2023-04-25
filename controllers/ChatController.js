@@ -2213,7 +2213,7 @@ class ChatController
                         if (country.entranceFee !== 0)
                         {
                             await Data.AddPlayerResources(context.player.id, {money: -country.entranceFee})
-                            await Data.AddCountryResources(country, {money: country.entranceFee})
+                            await Data.AddCountryResources(country.id, {money: country.entranceFee})
                         }
                         await PlayerStatus.update(
                             {location: country.capitalID, countryID: country.id},
