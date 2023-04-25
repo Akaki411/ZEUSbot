@@ -47,16 +47,16 @@ class ChatController
             context.command?.match(Commands.changeDescription) && await this.ChangeDescription(context)
             context.command?.match(Commands.top) && await this.SendTopsMessage(context)
             context.command?.match(Commands.extract) && await this.Extract(context)
-            context.command?.match(/^принять ислам$|^я лев ислама и русского халифата$/) && await this.GetIslam(context)
+            context.command?.match(/^принять ислам|^я лев ислама и русского халифата/) && await this.GetIslam(context)
             context.command?.match(Commands.refuseCitizenship) && await this.RefuseCitizenship(context)
             context.command?.match(Commands.unregistered) && await this.GetUnregList(context)
             context.command?.match(Commands.botMem) && await this.BotMem(context)
             context.command?.match(Commands.botForgot) && await this.BotForgot(context)
             context.command?.match(Commands.getFromBudget) && await this.GetResFromBudget(context)
             context.command?.match(Commands.budget) && await this.GetBudget(context)
+            context.command?.match(Commands.resources) && await this.GetResources(context)
 
             //Модератор+
-            context.command?.match(Commands.resources) && await this.GetResources(context)
             context.command?.match(/^id$|^ид$/) && await this.GetID(context)
             context.command?.match(Commands.warning) && await this.SendWarningForm(context)
             context.command?.match(Commands.dub) && await this.StartRepeat(context)
@@ -91,6 +91,7 @@ class ChatController
             context.command?.match(/^ресет|^reset/) && await this.Reset(context)
             context.command?.match(/^восстановить правителей/) && await this.ResetLeaders(context)
             context.command?.match(/^user/) && await this.GetUserObject(context)
+            context.command?.match(/^чат инфо/) && await this.GetChatInfo(context)
             context.command?.match(Commands.getChatLink) && await this.GetChatLink(context)
 
             if(Data.samples[context.player.id])
@@ -98,7 +99,7 @@ class ChatController
                 let sample = Data.samples[context.player.id][Math.round(Math.random() * (Data.samples[context.player.id].length - 1))]
                 await context.send(sample.sample, {attachment: sample.attachment})
             }
-            if(Data.repeat[context.player.id]) await context.send(context.text, {attachment: context.attachments?.length > 0 ? context.attachments.map((key) => {return key.toString()}).join(",") : null})
+            if(Data.repeat[context.player.id]) await context.send(context.text, {attachment: context.attachments?.length > 0 ? context.attachments.filter(key => {return key.type !== "sticker"}).map((key) => {return key.toString()}).join(",") : null})
             if(context.attachments[0]?.type === "audio") await this.MusicAnalysis(context)
         }
         catch (e)
@@ -120,6 +121,41 @@ class ChatController
         catch (e)
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async GetChatInfo(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            let temp = null
+            for(let i = 0; i < Data.countries.length; i++)
+            {
+                if(Data.countries[i])
+                {
+                    if(Data.countries[i].chatID)
+                    {
+                        temp = Data.countries[i].chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            if(parseInt(chat) === context.peerId)
+                            {
+                                await context.send(`✅ Этот чат используется фракцией ${Data.countries[i].GetName(context.player.platform === "IOS")}`)
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+            await context.send(`⚠ Этот чат никому не принадлежит`)
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/GetChatInfo", e)
         }
     }
 
@@ -152,7 +188,7 @@ class ChatController
         }
         catch (e)
         {
-            console.log(e)
+            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
         }
     }
 
@@ -182,7 +218,7 @@ class ChatController
         }
         catch (e)
         {
-            console.log(e)
+            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
         }
     }
 
@@ -220,7 +256,7 @@ class ChatController
         }
         catch (e)
         {
-            console.log(e)
+            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
         }
     }
 
@@ -241,7 +277,7 @@ class ChatController
                 source = Data.cities[context.player.location]
                 city = true
             }
-            if(Data.countries[context.player.countryID].leaderID !== context.player.id && !(context?.official.countryID === context.player.countryID && context?.official.canUseResources) && NameLibrary.RoleEstimator(context.player.role) < 2 && !city)
+            if(Data.countries[context.player.countryID].leaderID !== context.player.id && !(context.official?.countryID === context.player.countryID && context.official?.canUseResources) && NameLibrary.RoleEstimator(context.player.role) < 2 && !city)
             {
                 return
             }
@@ -338,7 +374,7 @@ class ChatController
         }
         catch (e)
         {
-            console.log(e)
+            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
         }
     }
 
@@ -348,13 +384,17 @@ class ChatController
         {
             let name = context.attachments[0].title + " " + context.attachments[0].artist
             name = name.toLowerCase()
-            if(name.match(/oxxxy|окси|rap|реп/))
+            if(name.match(Commands.badMusic))
             {
                 await context.send(NameLibrary.GetRandomSample("bad_audio_reaction"))
             }
-            else if(name.match(/phonk|фонк|dvrst|kaito|mick|geoff|rock|рок|sabb|radio|аким|atomic|hotline|ramm|рам/))
+            else if(name.match(Commands.goodMusic))
             {
                 await context.send(NameLibrary.GetRandomSample("good_audio_reaction"))
+            }
+            else if(name.match(/ария/) && NameLibrary.GetChance(80))
+            {
+                await context.send("Опять кавер на Iron Maiden")
             }
             else
             {
@@ -2164,28 +2204,28 @@ class ChatController
                     type: "user_timeout",
                     subtype: "walk",
                     userId: context.player.id,
-                    cityID: Data.countries[country].capitalID,
+                    cityID: Data.countries[country.id].capitalID,
                     time: time,
                     timeout: setTimeout(async () => {
                         await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + Data.GetCityName(country.capitalID), SceneController.GetStartMenuKeyboard(context))
-                        context.player.location = Data.countries[country].capitalID
-                        context.player.countryID = Data.countries[country].id
-                        if (Data.countries[country].entranceFee !== 0)
+                        context.player.location = country.capitalID
+                        context.player.countryID = country.id
+                        if (country.entranceFee !== 0)
                         {
-                            await Data.AddPlayerResources(context.player.id, {money: -Data.countries[country].entranceFee})
-                            await Data.AddCountryResources(country, {money: Data.countries[country].entranceFee})
+                            await Data.AddPlayerResources(context.player.id, {money: -country.entranceFee})
+                            await Data.AddCountryResources(country, {money: country.entranceFee})
                         }
                         await PlayerStatus.update(
-                            {location: Data.countries[country].capitalID, countryID: Data.countries[country].id},
+                            {location: country.capitalID, countryID: country.id},
                             {where: {id: context.player.id}}
                         )
-                        if(Data.countries[country].notifications)
+                        if(country.notifications)
                         {
-                            await api.SendMessage(Data.countries[country].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${Data.countries[country].name}`)
+                            await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} зашел в вашу фракцию ${country.GetName(false)}`)
                         }
-                        if(Data.cities[Data.countries[country].capitalID].notifications)
+                        if(Data.cities[country.capitalID].notifications)
                         {
-                            await api.SendMessage(Data.cities[Data.countries[country].capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[Data.countries[country].capitalID].name}`)
+                            await api.SendMessage(Data.cities[country.capitalID].leaderID, `ℹ Игрок ${context.player.GetName()} зашел в город ${Data.cities[country.capitalID].name}`)
                         }
                         let stayTime = new Date()
                         stayTime.setMinutes(stayTime.getMinutes() + 30)

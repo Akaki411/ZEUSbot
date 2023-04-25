@@ -166,10 +166,6 @@ class CallbackEventController
             {
                 clearTimeout(Data.users[secondUserID].waitingCitizenship)
                 await PlayerStatus.update({citizenship: countryID},{where: {id: secondUserID}})
-                if(!context.player.status.match(/worker/))
-                {
-                    await Player.update({status: "stateless"},{where: {id: context.player.id}})
-                }
                 Data.users[secondUserID].citizenship = countryID
                 if(Data.users[secondUserID].status !== "worker")
                 {

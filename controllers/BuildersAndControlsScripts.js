@@ -15,6 +15,7 @@ const Effects = require("../variables/Effects")
 const User = require("../models/User")
 const fs = require('fs')
 const path = require("path")
+const {countries} = require("../variables/Commands");
 
 class BuildersAndControlsScripts
 {
@@ -1249,31 +1250,21 @@ class BuildersAndControlsScripts
                     await context.send("⛺ В городе нет городских построек", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                let building = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать в государственное владение", buildingButtons, current_keyboard)
-                if(!building) return resolve()
-                building = Data.ParseButtonID(building)
-                for(let i = 0; i < Data.cities.length; i++)
-                {
-                    if(Data.cities[i]?.countryID === Data.cities[context.cityID].id)
-                    {
-                        for(let j = 0; j < Data.buildings[Data.cities[i].id]?.length; j++)
-                        {
-                            if(Data.buildings[Data.cities[i].id][j].id === building)
-                            {
-                                building = Data.buildings[Data.cities[i].id][j]
-                                break
-                            }
-                        }
-                    }
-                }
-                const accept = await InputManager.InputBoolean(context, `Передать ${NameLibrary.GetBuildingType(building.type)} ${building.name} в государственное владение?`, current_keyboard)
+                let buildingID = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать в государственное владение", buildingButtons, current_keyboard)
+                if(!buildingID) return resolve()
+                buildingID = Data.ParseButtonID(buildingID)
+                let building = await Buildings.findOne({where: {id: buildingID}})
+                const accept = await InputManager.InputBoolean(context, `Передать ${NameLibrary.GetBuildingType(building.dataValues.type)} ${building.dataValues.name} в государственное владение?`, current_keyboard)
                 if(!accept)
                 {
                     await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                await Buildings.update({ownerType: "country"}, {where: {id: building.id ? building.id : building}})
-                building.ownerType = "country"
+                building.set({
+                    ownerType: "country"
+                })
+                await building.save()
+                Data.buildings[context.cityID].filter(key => {return key.id === buildingID})[0].ownerType = "country"
                 await context.send("✅ Постройка передана фракции.", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
@@ -2193,31 +2184,21 @@ class BuildersAndControlsScripts
                     await context.send("⛺ В фракции нет государственных построек", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                let building = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать городу", buildingButtons, current_keyboard)
-                if(!building) return resolve()
-                building = Data.ParseButtonID(building)
-                for(let i = 0; i < Data.cities.length; i++)
-                {
-                    if(Data.cities[i]?.countryID === context.country.id)
-                    {
-                        for(let j = 0; j < Data.buildings[Data.cities[i].id]?.length; j++)
-                        {
-                            if(Data.buildings[Data.cities[i].id][j].id === building)
-                            {
-                                building = Data.buildings[Data.cities[i].id][j]
-                                break
-                            }
-                        }
-                    }
-                }
-                const accept = await InputManager.InputBoolean(context, `Передать ${NameLibrary.GetBuildingType(building.type)} ${building.name} во владение города ${Data.cities[building.cityID].name}?`, current_keyboard)
+                let buildingID = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать городу", buildingButtons, current_keyboard)
+                if(!buildingID) return resolve()
+                buildingID = Data.ParseButtonID(buildingID)
+                let building = await Buildings.findOne({where: {id: buildingID}})
+                const accept = await InputManager.InputBoolean(context, `Передать ${NameLibrary.GetBuildingType(building.dataValues.type)} ${building.dataValues.name} во владение города ${Data.cities[building.dataValues.cityID].name}?`, current_keyboard)
                 if(!accept)
                 {
                     await context.send("🚫 Отменено.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                await Buildings.update({ownerType: "city"}, {where: {id: building.id}})
-                building.ownerType = "city"
+                building.set({
+                    ownerType: "city"
+                })
+                await building.save()
+                Data.buildings[building.dataValues.cityID].filter(key => {return key.id === buildingID})[0].ownerType = "city"
                 await context.send("✅ Постройка передана городу.", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
