@@ -85,7 +85,8 @@ const Country = sequelize.define("country", {
     chatID: {type: DataTypes.STRING, allowNull: true, defaultValue: ""},
     warnings: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     rating: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
-    tags: {type: DataTypes.STRING, allowNull: true}
+    tags: {type: DataTypes.STRING, allowNull: true},
+    tested: {type: DataTypes.BOOLEAN, defaultValue: false}
 })
 const CountryResources = sequelize.define("country-resources", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},

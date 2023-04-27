@@ -27,6 +27,7 @@ class CountryObject
         this.rating = country.dataValues.rating
         this.warnings = country.dataValues.warnings
         this.tags = country.dataValues.tags
+        this.tested = country.dataValues.tested
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood

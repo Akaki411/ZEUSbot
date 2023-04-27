@@ -600,7 +600,6 @@ class KeyboardButtons
         }
     })
 
-
     mostUnculturedButton = Keyboard.textButton({
         label: '🤬 Некультурные',
         color: Keyboard.SECONDARY_COLOR,
@@ -1167,6 +1166,14 @@ class KeyboardButtons
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'report'
+        }
+    })
+
+    testButton = Keyboard.textButton({
+        label: '📯 Тестовый период',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'test'
         }
     })
 

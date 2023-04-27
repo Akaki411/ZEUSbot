@@ -5,7 +5,6 @@ const {Chats, PlayerStatus, Country, City} = require("../database/Models")
 const Builders = require("./BuildersAndControlsScripts")
 const api = require("../middleware/API")
 const sequelize = require("../database/DataBase");
-const InputManager = require("./InputManager")
 
 class SceneController
 {
@@ -470,7 +469,7 @@ class SceneController
         return [
             [keyboard.createCountryButton, keyboard.removeCountryButton],
             [keyboard.appointLeaderCountryButton, keyboard.tagsButton, keyboard.addTheChatButton],
-            [keyboard.warningsButton, keyboard.activeButton],
+            [keyboard.warningsButton, keyboard.activeButton, keyboard.testButton],
             [keyboard.backButton]
         ]
     }
@@ -638,7 +637,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|active/))
+            if(context.messagePayload?.choice?.match(/back|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|active|test/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -674,6 +673,10 @@ class SceneController
                 if(context.messagePayload.choice.match(/active/))
                 {
                     await Builders.CountryActive(context, current_keyboard)
+                }
+                if(context.messagePayload.choice.match(/test/))
+                {
+                    await Builders.TestCountry(context, current_keyboard)
                 }
             }
             else

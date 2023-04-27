@@ -15,7 +15,6 @@ const Effects = require("../variables/Effects")
 const User = require("../models/User")
 const fs = require('fs')
 const path = require("path")
-const {countries} = require("../variables/Commands");
 
 class BuildersAndControlsScripts
 {
@@ -194,7 +193,8 @@ class BuildersAndControlsScripts
                     groupID: groupId,
                     resources: resources,
                     capital: capitalName,
-                    capitalID: city.dataValues.id
+                    capitalID: city.dataValues.id,
+                    tested: true
                 })
                 await CountryResources.create({id: country.dataValues.id})
                 await PlayerStatus.update({
@@ -6368,6 +6368,28 @@ class BuildersAndControlsScripts
                 context.player.age = age
                 await PlayerInfo.update({age: age}, {where: {id: context.player.id}})
                 await context.send(`✅ Возраст установлен`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+            }
+        })
+    }
+
+    async TestCountry(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                country.tested = !country.tested
+                await Country.update({tested: country.tested}, {where: {id: country.id}})
+                await api.SendMessage(country.leaderID, `ℹ Ваша фракция ${country.GetName()} была ${country.tested ? "переведена в тестовый период" : "выведена из тестового периода"}`)
+                await context.send(`✅ Фракция ${country.GetName()} была ${country.tested ? "переведена в тестовый период" : "выведена из тестового периода"}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)

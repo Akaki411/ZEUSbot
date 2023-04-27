@@ -37,8 +37,8 @@ module.exports = {
         wood: -2750
     },
     new_church: {
-        stone: -13000,
-        wood: -11000,
+        stone: -12000,
+        wood: -12000,
         diamond: -3
     },
     new_house: {

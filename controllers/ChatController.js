@@ -47,7 +47,7 @@ class ChatController
             context.command?.match(Commands.changeDescription) && await this.ChangeDescription(context)
             context.command?.match(Commands.top) && await this.SendTopsMessage(context)
             context.command?.match(Commands.extract) && await this.Extract(context)
-            context.command?.match(/^принять ислам|^я лев ислама и русского халифата/) && await this.GetIslam(context)
+            context.command?.match(Commands.getImarat) && await this.GetImarat(context)
             context.command?.match(Commands.refuseCitizenship) && await this.RefuseCitizenship(context)
             context.command?.match(Commands.unregistered) && await this.GetUnregList(context)
             context.command?.match(Commands.botMem) && await this.BotMem(context)
@@ -66,6 +66,7 @@ class ChatController
             context.command?.match(Commands.mute) && await this.Mute(context)
             context.command?.match(Commands.unmute) && await this.Unmute(context)
             context.command?.match(Commands.sword) && await this.Censorship(context)
+            context.command?.match(/^\?$/) && await this.IsRegistered(context)
 
             //ГМ-ы+
             context.command?.match(Commands.teleport) && await this.Teleport(context)
@@ -99,7 +100,7 @@ class ChatController
                 let sample = Data.samples[context.player.id][Math.round(Math.random() * (Data.samples[context.player.id].length - 1))]
                 await context.send(sample.sample, {attachment: sample.attachment})
             }
-            if(Data.repeat[context.player.id]) await context.send(context.text, {attachment: context.attachments?.length > 0 ? context.attachments.filter(key => {return key.type !== "sticker"}).map((key) => {return key.toString()}).join(",") : null})
+            try{if(Data.repeat[context.player.id]) await context.send(context.text, {attachment: context.attachments?.length > 0 ? context.attachments.map((key) => {return key.toString()}).join(",") : null})} catch (e) {}
             if(context.attachments[0]?.type === "audio") await this.MusicAnalysis(context)
         }
         catch (e)
@@ -121,6 +122,34 @@ class ChatController
         catch (e)
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async IsRegistered(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 1)
+            {
+                return
+            }
+            if(context.replyPlayers.length === 0)
+            {
+                return
+            }
+            let player = await Player.count({where: {id: context.replyPlayers[0]}})
+            if(player === 0)
+            {
+                await context.send("⚠ Игрок не зарегистрирован")
+            }
+            else
+            {
+                await context.send("✅ Игрок зарегистрирован")
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/GetChatInfo", e)
         }
     }
 
@@ -1021,15 +1050,28 @@ class ChatController
         }
     }
 
-    async GetIslam(context)
+    async GetImarat(context)
     {
         try
         {
-            if(context.player.nationality.match(/славянин/i))
+            if(context.player.nationality.match(/славян|донбас/i))
             {
-                context.player.nationality = "☝ Имарат Донбасс"
-                await PlayerInfo.update({nationality: "☝ Имарат Донбасс"}, {where: {id: context.player.id}})
-                await context.send(`☝ Ты принял${context.player.gender ? "" : "а"} ислам во имя Имарата Донбасса, мы гордимся тобой ${context.player.gender ? "брат" : "сестра"}.`)
+                if(context.command.match(/ислам/) && !context.player.nationality.match(/имарат/i))
+                {
+                    context.player.nationality = "☝ Имарат Донбасс"
+                    await PlayerInfo.update({nationality: "☝ Имарат Донбасс"}, {where: {id: context.player.id}})
+                    await context.send(`☝ Ты принял${context.player.gender ? "" : "а"} ислам во имя Имарата Донбасса, мы гордимся тобой ${context.player.gender ? "брат" : "сестра"}.`)
+                }
+                else if(context.command.match(/отца|христиан|право/) && !context.player.nationality.match(/священ/i))
+                {
+                    context.player.nationality = "☦ Священный Донбасс"
+                    await PlayerInfo.update({nationality: "☦ Священный Донбасс"}, {where: {id: context.player.id}})
+                    await context.send(`☦ Теперь ты христиан${context.player.gender ? "ин" : "ка"}, гордись этим, Имарат Донбасс рад принять тебя в свои ряды!`)
+                }
+            }
+            else
+            {
+                await context.send(`⚠ Ты не достоин!`)
             }
         }
         catch (e)
