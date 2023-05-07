@@ -44,6 +44,19 @@ const PlayerResources = sequelize.define("player-resources", {
     silver: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     diamond: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
 })
+const Transactions = sequelize.define("player-transactions", {
+    fromID: {type: DataTypes.INTEGER, allowNull: false, primaryKey: true},
+    toID: {type: DataTypes.INTEGER, allowNull: false},
+    type: {type: DataTypes.STRING, allowNull: false},
+    money: {type: DataTypes.INTEGER, allowNull: true},
+    stone: {type: DataTypes.INTEGER, allowNull: true},
+    wood: {type: DataTypes.INTEGER, allowNull: true},
+    wheat: {type: DataTypes.INTEGER, allowNull: true},
+    iron: {type: DataTypes.INTEGER, allowNull: true},
+    copper: {type: DataTypes.INTEGER, allowNull: true},
+    silver: {type: DataTypes.INTEGER, allowNull: true},
+    diamond: {type: DataTypes.INTEGER, allowNull: true}
+})
 const OfficialInfo = sequelize.define("official-info", {
     id: {type: DataTypes.INTEGER, unique: true, allowNull: false, primaryKey: true},
     countryID: {type: DataTypes.INTEGER, allowNull: false},
@@ -98,6 +111,11 @@ const CountryResources = sequelize.define("country-resources", {
     copper: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     silver: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     diamond: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
+})
+
+const CountryArmy = sequelize.define("country-army", {
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
+    
 })
 
 const CountryRoads = sequelize.define("country-roads", {
@@ -203,6 +221,7 @@ module.exports = {
     PlayerStatus,
     PlayerInfo,
     PlayerResources,
+    Transactions,
     OfficialInfo,
     Country,
     CountryResources,

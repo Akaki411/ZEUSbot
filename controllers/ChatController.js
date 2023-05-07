@@ -2,9 +2,10 @@ const NameLibrary = require("../variables/NameLibrary")
 const Commands = require("../variables/Commands")
 const keyboard = require("../variables/Keyboards")
 const api = require("../middleware/API")
-const SceneController = require("../controllers/SceneController")
 const Data = require("../models/CacheData")
-const {Player, PlayerStatus, PlayerInfo, Country, CountryRoads, CityRoads, PlayerResources, Warning, OfficialInfo} = require("../database/Models")
+const {Player, PlayerStatus, PlayerInfo, Country, CountryRoads, CityRoads, PlayerResources, Warning, OfficialInfo,
+    Transactions
+} = require("../database/Models")
 const Samples = require("../variables/Samples")
 const sequelize = require("../database/DataBase")
 const OutputManager = require("../controllers/OutputManager")
@@ -18,82 +19,347 @@ class ChatController
             // Обработка кнопок
             if(context.messagePayload)
             {
-                await this.ChatButtonHandler(context)
-                return
+                return await this.ChatButtonHandler(context)
             }
             // Игроки+
-            context.command?.match(/^бот$/) && await this.BotCall(context)
-            context.command?.match(Commands.botCall) && await context.send(NameLibrary.GetRandomSample("dungeon_master_request"))
-            context.command?.match(Commands.clearKeyboard) && await context.send("Убираю", {keyboard: keyboard.none})
-            context.command?.match(Commands.badJoke) && await context.send(NameLibrary.GetRandomSample("bad_jokes"))
-            context.command?.match(Commands.location) && await this.LocationRequest(context)
-            context.command?.match(Commands.aboutMe) && await context.send(context.player.GetInfo())
-            context.command?.match(Commands.checkLocation) && await this.CheckLocation(context)
-            context.command?.match(Commands.checkDocs) && await this.CheckDocs(context)
-            context.command?.match(Commands.send) && await this.SendResource(context)
-            context.command?.match(Commands.relax) && await this.Relax(context)
-            context.command?.match(Commands.wakeup) && await this.Wakeup(context)
-            context.command?.match(/^мир$/) && await context.send("🌍 Таков наш мир, но что смотреть ты хочешь?", {attachment: Data.variables.globalMap, keyboard: keyboard.build([[keyboard.greyButton({name: "🗺 Карта дорог", type: "show_road_map"})]]).inline()})
-            context.command?.match(Commands.map) && await this.RoadMap(context)
-            context.command?.match(Commands.work) && await this.Work(context)
-            context.command?.match(Commands.countries) && await this.ShowCountriesInfo(context)
-            context.command?.match(Commands.countriesActive) && await this.ShowCountriesActive(context)
-            context.command?.match(Commands.marry) && await this.OfferMarry(context)
-            context.command?.match(Commands.divorce) && await this.Divorce(context)
-            context.command?.match(Commands.stats) && await this.ShowPlayerActive(context)
-            context.command?.match(Commands.getCitizenship) && await this.GetCitizenship(context)
-            context.command?.match(Commands.toStall) && await this.ToStall(context)
-            context.command?.match(Commands.changeNick) && await this.ChangeNick(context)
-            context.command?.match(Commands.changeDescription) && await this.ChangeDescription(context)
-            context.command?.match(Commands.top) && await this.SendTopsMessage(context)
-            context.command?.match(Commands.extract) && await this.Extract(context)
-            context.command?.match(Commands.getImarat) && await this.GetImarat(context)
-            context.command?.match(Commands.refuseCitizenship) && await this.RefuseCitizenship(context)
-            context.command?.match(Commands.unregistered) && await this.GetUnregList(context)
-            context.command?.match(Commands.botMem) && await this.BotMem(context)
-            context.command?.match(Commands.botForgot) && await this.BotForgot(context)
-            context.command?.match(Commands.getFromBudget) && await this.GetResFromBudget(context)
-            context.command?.match(Commands.budget) && await this.GetBudget(context)
-            context.command?.match(Commands.resources) && await this.GetResources(context)
+            if(context.command?.match(/^бот$/))
+            {
+                await this.BotCall(context)
+                return true
+            }
+            if(context.command?.match(Commands.botCall))
+            {
+                await context.send(NameLibrary.GetRandomSample("dungeon_master_request"))
+                return true
+            }
+            if(context.command?.match(Commands.clearKeyboard) && context.peerType === "chat")
+            {
+                await context.send("Убираю", {keyboard: keyboard.none})
+                return true
+            }
+            if(context.command?.match(Commands.badJoke))
+            {
+                await context.send(NameLibrary.GetRandomSample("bad_jokes"))
+                return true
+            }
+            if(context.command?.match(Commands.location))
+            {
+                await this.LocationRequest(context)
+                return true
+            }
+            if(context.command?.match(Commands.aboutMe))
+            {
+                await context.send(context.player.GetInfo())
+                return true
+            }
+            if(context.command?.match(Commands.checkLocation))
+            {
+                await this.CheckLocation(context)
+                return true
+            }
+            if(context.command?.match(Commands.checkDocs))
+            {
+                await this.CheckDocs(context)
+                return true
+            }
+            if(context.command?.match(Commands.send))
+            {
+                await this.SendResource(context)
+                return true
+            }
+            if(context.command?.match(Commands.relax))
+            {
+                await this.Relax(context)
+                return true
+            }
+            if(context.command?.match(Commands.wakeup))
+            {
+                await this.Wakeup(context)
+                return true
+            }
+            if(context.command?.match(/^мир$/))
+            {
+                await context.send("🌍 Таков наш мир, но что смотреть ты хочешь?", {attachment: Data.variables.globalMap, keyboard: keyboard.build([[keyboard.greyButton({name: "🗺 Карта дорог", type: "show_road_map"})]]).inline()})
+                return true
+            }
+            if(context.command?.match(Commands.map))
+            {
+                await this.RoadMap(context)
+                return true
+            }
+            if(context.command?.match(Commands.work))
+            {
+                await this.Work(context)
+                return true
+            }
+            if(context.command?.match(Commands.countries))
+            {
+                await this.ShowCountriesInfo(context)
+                return true
+            }
+            if(context.command?.match(Commands.countriesActive))
+            {
+                await this.ShowCountriesActive(context)
+                return true
+            }
+            if(context.command?.match(Commands.marry))
+            {
+                await this.OfferMarry(context)
+                return true
+            }
+            if(context.command?.match(Commands.divorce))
+            {
+                await this.Divorce(context)
+                return true
+            }
+            if(context.command?.match(Commands.stats))
+            {
+                await this.ShowPlayerActive(context)
+                return true
+            }
+            if(context.command?.match(Commands.getCitizenship))
+            {
+                await this.GetCitizenship(context)
+                return true
+            }
+            if(context.command?.match(Commands.toStall) && context.peerType === "chat")
+            {
+                await this.ToStall(context)
+                return true
+            }
+            if(context.command?.match(Commands.changeNick) && context.peerType === "chat")
+            {
+                await this.ChangeNick(context)
+                return true
+            }
+            if(context.command?.match(Commands.changeDescription) && context.peerType === "chat")
+            {
+                await this.ChangeDescription(context)
+                return true
+            }
+            if(context.command?.match(Commands.top))
+            {
+                await this.SendTopsMessage(context)
+                return true
+            }
+            if(context.command?.match(Commands.extract))
+            {
+                await this.Extract(context)
+                return true
+            }
+            if(context.command?.match(Commands.getImarat))
+            {
+                await this.GetImarat(context)
+                return true
+            }
+            if(context.command?.match(Commands.refuseCitizenship))
+            {
+                await this.RefuseCitizenship(context)
+                return true
+            }
+            if(context.command?.match(Commands.unregistered) && context.peerType === "chat")
+            {
+                await this.GetUnregList(context)
+                return true
+            }
+            if(context.command?.match(Commands.botMem))
+            {
+                await this.BotMem(context)
+                return true
+            }
+            if(context.command?.match(Commands.botForgot))
+            {
+                await this.BotForgot(context)
+                return true
+            }
+            if(context.command?.match(Commands.getFromBudget))
+            {
+                await this.GetResFromBudget(context)
+                return true
+            }
+            if(context.command?.match(Commands.budget))
+            {
+                await this.GetBudget(context)
+                return true
+            }
+            if(context.command?.match(Commands.resources))
+            {
+                await this.GetResources(context)
+                return true
+            }
+            if(context.command?.match(Commands.registration))
+            {
+                await this.Registration(context)
+                return true
+            }
+
 
             //Модератор+
-            context.command?.match(/^id$|^ид$/) && await this.GetID(context)
-            context.command?.match(Commands.warning) && await this.SendWarningForm(context)
-            context.command?.match(Commands.dub) && await this.StartRepeat(context)
-            context.command?.match(Commands.stopDub) && await this.StopRepeat(context)
-            context.command?.match(Commands.warnings) && await this.SendWarnList(context)
-            context.command?.match(Commands.delete) && await this.DeleteMessage(context)
-            context.command?.match(Commands.mute) && await this.Mute(context)
-            context.command?.match(Commands.unmute) && await this.Unmute(context)
-            context.command?.match(Commands.sword) && await this.Censorship(context)
-            context.command?.match(/^\?$/) && await this.IsRegistered(context)
+            if(context.command?.match(/^id$|^ид$/))
+            {
+                await this.GetID(context)
+                return true
+            }
+            if(context.command?.match(Commands.warning))
+            {
+                await this.SendWarningForm(context)
+                return true
+            }
+            if(context.command?.match(Commands.dub))
+            {
+                await this.StartRepeat(context)
+                return true
+            }
+            if(context.command?.match(Commands.stopDub))
+            {
+                await this.StopRepeat(context)
+                return true
+            }
+            if(context.command?.match(Commands.warnings))
+            {
+                await this.SendWarnList(context)
+                return true
+            }
+            if(context.command?.match(Commands.delete) && context.peerType === "chat")
+            {
+                await this.DeleteMessage(context)
+                return true
+            }
+            if(context.command?.match(Commands.mute))
+            {
+                await this.Mute(context)
+                return true
+            }
+            if(context.command?.match(Commands.unmute))
+            {
+                await this.Unmute(context)
+                return true
+            }
+            if(context.command?.match(Commands.sword))
+            {
+                await this.Censorship(context)
+                return true
+            }
+            if(context.command?.match(/^\?$/) && context.peerType === "chat")
+            {
+                await this.IsRegistered(context)
+                return true
+            }
+            if(context.command?.match(Commands.getChatLink) && context.peerType === "chat")
+            {
+                await this.GetChatLink(context)
+                return true
+            }
+
 
             //ГМ-ы+
-            context.command?.match(Commands.teleport) && await this.Teleport(context)
-            context.command?.match(Commands.cheating) && await this.CheatResource(context)
-            context.command?.match(Commands.pickUp) && await this.PickUpResource(context)
-            context.command?.match(Commands.whereYou) && await this.LocatePlayer(context)
+            if(context.command?.match(Commands.teleport))
+            {
+                await this.Teleport(context)
+                return true
+            }
+            if(context.command?.match(Commands.cheating))
+            {
+                await this.CheatResource(context)
+                return true
+            }
+            if(context.command?.match(Commands.pickUp))
+            {
+                await this.PickUpResource(context)
+                return true
+            }
+            if(context.command?.match(Commands.whereYou))
+            {
+                await this.LocatePlayer(context)
+                return true
+            }
 
             //Админы+
-            context.command?.match(Commands.ban) && await this.SendBanForm(context)
-            context.command?.match(/^кик$/) && await this.KickUser(context)
-            context.command?.match(Commands.ignore) && await this.Ignore(context)
-            context.command?.match(Commands.trolling) && await this.AddTrollSample(context)
-            context.command?.match(Commands.stopTrolling) && await this.StopTrolling(context)
+            if(context.command?.match(Commands.ban))
+            {
+                await this.SendBanForm(context)
+                return true
+            }
+            if(context.command?.match(/^кик$/) && context.peerType === "chat")
+            {
+                await this.KickUser(context)
+                return true
+            }
+            if(context.command?.match(Commands.ignore))
+            {
+                await this.Ignore(context)
+                return true
+            }
+            if(context.command?.match(Commands.trolling))
+            {
+                await this.AddTrollSample(context)
+                return true
+            }
+            if(context.command?.match(Commands.stopTrolling))
+            {
+                await this.StopTrolling(context)
+                return true
+            }
+
 
             //Тех-поддержка+
-            context.command?.match(/^перезагрузить|^релоад|^релод|^reload/) && await this.Reload(context)
-            context.command?.match(/^добавить чат /) && await this.AddCountryChat(context)
-            context.command?.match(/^удалить чат/) && await this.RemoveCountryChat(context)
-            context.command?.match(/^чаты /) && await this.ShowCountryChats(context)
-            context.command?.match(/^закреп/) && await this.GiveAttachment(context)
-            context.command?.match(/^установить переменную |^изменить переменную /) && await this.SetVar(context)
-            context.command?.match(/^переменные/) && await this.ShowVars(context)
-            context.command?.match(/^ресет|^reset/) && await this.Reset(context)
-            context.command?.match(/^восстановить правителей/) && await this.ResetLeaders(context)
-            context.command?.match(/^user/) && await this.GetUserObject(context)
-            context.command?.match(/^чат инфо/) && await this.GetChatInfo(context)
-            context.command?.match(Commands.getChatLink) && await this.GetChatLink(context)
+            if(context.command?.match(/^перезагрузить|^релоад|^релод|^reload/))
+            {
+                await this.Reload(context)
+                return true
+            }
+            if(context.command?.match(/^добавить чат /) && context.peerType === "chat")
+            {
+                await this.AddCountryChat(context)
+                return true
+            }
+            if(context.command?.match(/^удалить чат/) && context.peerType === "chat")
+            {
+                await this.RemoveCountryChat(context)
+                return true
+            }
+            if(context.command?.match(/^чаты/))
+            {
+                await this.ShowCountryChats(context)
+                return true
+            }
+            if(context.command?.match(/^закреп/))
+            {
+                await this.GiveAttachment(context)
+                return true
+            }
+            if(context.command?.match(/^установить переменную |^изменить переменную /))
+            {
+                await this.SetVar(context)
+                return true
+            }
+            if(context.command?.match(/^переменные/))
+            {
+                await this.ShowVars(context)
+                return true
+            }
+            if(context.command?.match(/^ресет|^reset/))
+            {
+                await this.Reset(context)
+                return true
+            }
+            if(context.command?.match(/^восстановить правителей/))
+            {
+                await this.ResetLeaders(context)
+                return true
+            }
+            if(context.command?.match(/^user/))
+            {
+                await this.GetUserObject(context)
+                return true
+            }
+            if(context.command?.match(/^чат инфо/) && context.peerType === "chat")
+            {
+                await this.GetChatInfo(context)
+                return true
+            }
+
+            if(context.peerType !== "chat") return false
 
             if(Data.samples[context.player.id])
             {
@@ -113,16 +379,50 @@ class ChatController
     {
         try
         {
-            context.messagePayload.type === "extract" && await this.ExtractResource(context, context.messagePayload.action)
-            context.messagePayload.type === "show_road_map" && await this.RoadMap(context)
-            context.messagePayload.type === "to_other_city" && await this.ToOtherCity(context, Data.ParseButtonID(context.messagePayload.action))
-            context.messagePayload.type === "to_other_country" && await this.ToOtherCountry(context, Data.ParseButtonID(context.messagePayload.action))
-            context.messagePayload.type === "ratings" && await this.SendRating(context)
+            if(!context.messagePayload.type) return false
+            if(context.messagePayload?.type === "extract")
+            {
+                await this.ExtractResource(context, context.messagePayload.action)
+                return true
+            }
+            if(context.messagePayload?.type === "show_road_map")
+            {
+                await this.RoadMap(context)
+                return true
+            }
+            if(context.messagePayload.type === "to_other_city")
+            {
+                await this.ToOtherCity(context, Data.ParseButtonID(context.messagePayload.action))
+                return true
+            }
+            if(context.messagePayload.type === "to_other_country")
+            {
+                await this.ToOtherCountry(context, Data.ParseButtonID(context.messagePayload.action))
+                return true
+            }
+            if(context.messagePayload.type === "ratings")
+            {
+                await this.SendRating(context)
+                return true
+            }
+            return false
         }
         catch (e)
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
         }
+    }
+
+    async Registration(context)
+    {
+        let result = await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы изменить данные аккаунта`, [[keyboard.startButton({type: "registration"})], [keyboard.backButton]])
+        if(!result)
+        {
+            await context.send("⚠ Бот не может отправить вам форму, пройдите в ЛС бота и отправьте туда любое сообщение")
+            return
+        }
+        context.player.state = context.scenes.FillingOutTheForm
+        await context.send("ℹ Форма отправлена в ЛС")
     }
 
     async IsRegistered(context)
@@ -192,7 +492,7 @@ class ChatController
     {
         try
         {
-            if(NameLibrary.RoleEstimator(context.player.role) < 4)
+            if(NameLibrary.RoleEstimator(context.player.role) < 1)
             {
                 return
             }
@@ -972,7 +1272,7 @@ class ChatController
             }
             catch (e)
             {
-                await context.send("😢 У меня не получилось: " + e.message)
+                await context.send("😡😡😡 ПРОСТО ДАЙТЕ МНЕ ПУЛЬТ ОТ ЯДЕРКИ!")
             }
             try
             {
@@ -1017,7 +1317,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/GetUnregList", e)
+            await context.send("😡😡😡 ПРОСТО ДАЙТЕ МНЕ ПУЛЬТ ОТ ЯДЕРКИ!")
         }
     }
 
@@ -2036,23 +2336,23 @@ class ChatController
     {
         try
         {
-            if(context.replyPlayers?.length === 0)
-            {
-                await context.send("⚠ Выберите игрока")
-                return
-            }
-            if(context.player.marriedID !== context.replyPlayers[0])
+            if(!context.player.marriedID)
             {
                 await context.send("⚠ Вы не состоите в браке.")
                 return
             }
-            await api.api.messages.send({
-                user_id: context.player.marriedID,
-                random_id: Math.round(Math.random() * 100000),
-                message: `❤️‍🩹 Игрок *id${context.player.id}(${context.player.nick}) отправил вам предложение расторгнуть брак`,
-                keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "divorce", item: context.player.id}), keyboard.declineCallbackButton({command: "decline_divorce", item: context.player.id})]]).inline().oneTime()
-            })
-            await context.send(`✅ Предложение отправлено, ход за *id${context.replyPlayers[0]}(вами), перейдите в ЛС и дайте свой ответ`)
+            let player = await Player.findOne({where: {id: context.player.marriedID}})
+            await PlayerInfo.update({marriedID: null}, {where: {id: context.player.id}})
+            await PlayerInfo.update({marriedID: null}, {where: {id: context.player.marriedID}})
+            if(Data.users[context.player.marriedID])
+            {
+                Data.users[context.player.marriedID].marriedID = null
+                Data.users[context.player.marriedID].isMarried = false
+            }
+            context.player.marriedID = null
+            context.player.isMarried = false
+            await api.SendMessage(player.dataValues.id, `💔 Больше *${context.player.GetName()} не ваш${context.player.gender ? " муж" : "а жена"}`)
+            await context.send(`💔 *id${player.dataValues.id}(${player.dataValues.nick}) больше не ваш${player.dataValues.gender ? " муж" : "а жена"}`)
         }
         catch (e)
         {
@@ -2088,7 +2388,7 @@ class ChatController
                 await context.send(`⚠ Этот игрок уже состоит в браке`)
                 return
             }
-            if(NameLibrary.GetGender(user.dataValues.gender) === context.player.gender && !context.player.nation.match(/грек/i))
+            if(NameLibrary.GetGender(user.dataValues.gender) === context.player.gender && !context.player.nationality.match(/грек/i))
             {
                 await context.send("✝ Мы такое не одобряем.")
                 return
@@ -2154,7 +2454,7 @@ class ChatController
             {
                 time.setMinutes(time.getMinutes() + parseInt(road.dataValues.time))
                 context.player.lastActionTime = time
-                context.player.state = SceneController.WaitingWalkMenu
+                context.player.state = context.scenes.WaitingWalkMenu
                 await context.send("ℹ Вы отправились в город " + city.name)
                 Data.timeouts["user_timeout_walk_" + context.player.id] = {
                     type: "user_timeout",
@@ -2163,8 +2463,8 @@ class ChatController
                     cityID: city.id,
                     time: time,
                     timeout: setTimeout(async () => {
-                        await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + city.name + "\n" + city.description, SceneController.GetStartMenuKeyboard(context))
-                        context.player.state = SceneController.StartScreen
+                        await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + city.name + "\n" + city.description, context.scenes.GetStartMenuKeyboard(context))
+                        context.player.state = context.scenes.StartScreen
                         context.player.location = city.id
                         context.player.countryID = city.countryID
                         await PlayerStatus.update(
@@ -2239,7 +2539,7 @@ class ChatController
             else
             {
                 time.setMinutes(time.getMinutes() + road.dataValues.time)
-                context.player.state = SceneController.WaitingWalkMenu
+                context.player.state = context.scenes.WaitingWalkMenu
                 await context.send("ℹ Вы отправились в фракцию " + country.GetName(context.player.platform === "IOS"))
                 context.player.lastActionTime = time
                 Data.timeouts["user_timeout_walk_" + context.player.id] = {
@@ -2249,7 +2549,7 @@ class ChatController
                     cityID: Data.countries[country.id].capitalID,
                     time: time,
                     timeout: setTimeout(async () => {
-                        await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + Data.GetCityName(country.capitalID), SceneController.GetStartMenuKeyboard(context))
+                        await api.SendMessageWithKeyboard(context.player.id, "🏙 Вы пришли в город " + Data.GetCityName(country.capitalID), context.scenes.GetStartMenuKeyboard(context))
                         context.player.location = country.capitalID
                         context.player.countryID = country.id
                         if (country.entranceFee !== 0)
@@ -2272,7 +2572,7 @@ class ChatController
                         let stayTime = new Date()
                         stayTime.setMinutes(stayTime.getMinutes() + 30)
                         context.player.stayInCityTime = stayTime
-                        context.player.state = SceneController.StartScreen
+                        context.player.state = context.scenes.StartScreen
                         delete Data.timeouts["user_timeout_walk_" + context.player.id]
                     }, road.time * 60000)
                 }
@@ -3079,18 +3379,57 @@ class ChatController
                     await Data.AddCountryResources(context.player.countryID, objOUT)
                     await Data.AddPlayerResources(context.player.id, objIN)
                     await api.SendNotification(Data.countries[context.player.countryID].leaderID, `✅ В бюджет фракции ${Data.countries[context.player.countryID].GetName()} поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
+                    await Transactions.create({
+                        fromID: context.player.id,
+                        toID: user.dataValues.id,
+                        type: "ptctr",
+                        money: objOUT.money ? objOUT.money : null,
+                        stone: objOUT.stone ? objOUT.stone : null,
+                        wood: objOUT.wood ? objOUT.wood : null,
+                        wheat: objOUT.wheat ? objOUT.wheat : null,
+                        iron: objOUT.iron ? objOUT.iron : null,
+                        copper: objOUT.copper ? objOUT.copper : null,
+                        silver: objOUT.silver ? objOUT.silver : null,
+                        diamond: objOUT.diamond ? objOUT.diamond : null
+                    })
                 }
                 else if(city)
                 {
                     await Data.AddCityResources(context.player.location, objOUT)
                     await Data.AddPlayerResources(context.player.id, objIN)
                     await api.SendNotification(Data.cities[context.player.location].leaderID, `✅ В бюджет города ${Data.cities[context.player.location].name} поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
+                    await Transactions.create({
+                        fromID: context.player.id,
+                        toID: user.dataValues.id,
+                        type: "ptct",
+                        money: objOUT.money ? objOUT.money : null,
+                        stone: objOUT.stone ? objOUT.stone : null,
+                        wood: objOUT.wood ? objOUT.wood : null,
+                        wheat: objOUT.wheat ? objOUT.wheat : null,
+                        iron: objOUT.iron ? objOUT.iron : null,
+                        copper: objOUT.copper ? objOUT.copper : null,
+                        silver: objOUT.silver ? objOUT.silver : null,
+                        diamond: objOUT.diamond ? objOUT.diamond : null
+                    })
                 }
                 else
                 {
                     await Data.AddPlayerResources(user.dataValues.id, objOUT)
                     await Data.AddPlayerResources(context.player.id, objIN)
                     await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
+                    await Transactions.create({
+                        fromID: context.player.id,
+                        toID: user.dataValues.id,
+                        type: "ptp",
+                        money: objOUT.money ? objOUT.money : null,
+                        stone: objOUT.stone ? objOUT.stone : null,
+                        wood: objOUT.wood ? objOUT.wood : null,
+                        wheat: objOUT.wheat ? objOUT.wheat : null,
+                        iron: objOUT.iron ? objOUT.iron : null,
+                        copper: objOUT.copper ? objOUT.copper : null,
+                        silver: objOUT.silver ? objOUT.silver : null,
+                        diamond: objOUT.diamond ? objOUT.diamond : null
+                    })
                 }
             }
             if(request.length !== 0) await context.send(request)
@@ -3368,7 +3707,7 @@ class ChatController
                 return
             }
 
-            if(Data.countries[context.player.countryID].resources.match(resource) && Data.countries[context.player.citizenship].resources.match(resource))
+            if(Data.countries[context.player.countryID]?.resources?.match(resource) && Data.countries[context.player.citizenship]?.resources?.match(resource))
             {
                 const extract = {
                     wood: {min: 2.5, max: 5, img: Data.variables["woodPicture"]},
@@ -3455,10 +3794,10 @@ class ChatController
                 }
                 else
                 {
-                    temp = await Player.findOne({where: {id: i}})?.dataValues
+                    temp = await Player.findOne({where: {id: i}})
                     if(temp)
                     {
-                        if(NameLibrary.RoleEstimator(temp.role) >= NameLibrary.RoleEstimator(context.player.role))
+                        if(NameLibrary.RoleEstimator(temp.dataValues.role) >= NameLibrary.RoleEstimator(context.player.role))
                         {
                             adminsFlag = true
                         }
@@ -3484,7 +3823,7 @@ class ChatController
             await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы ввести данные репорта на игроков:\n${context.replyPlayers?.map(user => {
                 return `*id${user}(${user})\n`
             })}`, [[keyboard.startButton({type: "new_warning", users: users})], [keyboard.backButton]])
-            context.player.state = SceneController.FillingOutTheForm
+            context.player.state = context.scenes.FillingOutTheForm
             await context.send("ℹ Заполните форму в ЛС")
         }
         catch (e)
@@ -3517,7 +3856,7 @@ class ChatController
             await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы ввести данные репорта на игрок${context.replyPlayers.length > 1 ? "ов" : "а"}:\n${context.replyPlayers?.map(user => {
                 return `*id${user}(${user})\n`
             })}`, [[keyboard.startButton({type: "new_report", users: users})], [keyboard.backButton]])
-            context.player.state = SceneController.FillingOutTheForm
+            context.player.state = context.scenes.FillingOutTheForm
             await context.send("ℹ Снято 150 монет, заполните форму в ЛС")
         }
         catch (e)
@@ -3581,7 +3920,7 @@ class ChatController
             await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы ввести данные ГлоБана на игрока: ${context.replyPlayers?.map(user => {
                 return `*id${user}(${user})\n`
             })}`, [[keyboard.startButton({type: "new_ban", users: users})], keyboard.backButton])
-            context.player.state = SceneController.FillingOutTheForm
+            context.player.state = context.scenes.FillingOutTheForm
             await context.send("ℹ Заполните форму в ЛС")
         }
         catch (e)

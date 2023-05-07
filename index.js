@@ -10,7 +10,6 @@ const CacheUserMiddleware = require('./middleware/CacheUserMiddleware')
 const CacheUserCallbackMiddleware = require('./middleware/CacheUserCallbackMiddleware')
 const CountStatsMiddleware = require('./middleware/CountStatsMiddleware')
 const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
-const Builders = require("./controllers/BuildersAndControlsScripts")
 const SceneController = require("./controllers/SceneController")
 
 const bot = new VK({token: process.env.VK_BOT_TOKEN})
@@ -57,7 +56,6 @@ const start = async () => {
         })
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
-            Data.variables["import"] && await Builders.ImportUsers()
             await Data.onLoad({
                 StartScreen: SceneController.StartScreen,
                 Walking: SceneController.WaitingWalkMenu
@@ -67,6 +65,7 @@ const start = async () => {
         {
             if(!Data.ignore[context.player.id])
             {
+                context.scenes = SceneController
                 context.peerType === "user" && await context.player.state(context)
                 context.peerType === "chat" && await ChatController.CommandHandler(context)
             }

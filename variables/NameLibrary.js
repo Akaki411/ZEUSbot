@@ -127,6 +127,19 @@ class NameLibrary
         return 0
     }
 
+    GetTransactionType(type)
+    {
+        switch (type)
+        {
+            case "ptp":
+                return "Перевод игроку"
+            case "ptct":
+                return "Перевод городу"
+            case "ptctr":
+                return "Перевод фракции"
+        }
+    }
+
     GetResourceName(res)
     {
         switch(res)

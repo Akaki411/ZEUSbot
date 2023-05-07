@@ -3,7 +3,7 @@ const OutputManager = require("./OutputManager")
 const Data = require("../models/CacheData");
 const keyboard = require("../variables/Keyboards");
 const {City, Country, PlayerStatus, Player, Ban, LastWills, Buildings,
-    CountryResources, CityResources, PlayerInfo, CountryRoads, Keys, OfficialInfo, PlayerResources, Messages, Chats,
+    CountryResources, CityResources, PlayerInfo, CountryRoads, Keys, OfficialInfo, Messages, Chats,
     Warning, CityRoads
 } = require("../database/Models");
 const api = require("../middleware/API");
@@ -18,31 +18,29 @@ const path = require("path")
 
 class BuildersAndControlsScripts
 {
-    async Registration(context, current_keyboard, scenes)
+    async Registration(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
             try
             {
-                const peerInfo = await api.GetUserData(context.peerId)
-
-                let name = await InputManager.InputString(context, `✍🏾 Добро пожаловать в канцелярию.\n\n*id${context.peerId} (${peerInfo.first_name}), вы хотите зарегистрироваться в проекте *public218388422 («ZEUS - Вселенная игроков»).\n\n1️⃣ Введите никнейм, которым вы будете пользоваться в будущем. Учтите, что необходимо установить античное имя, реально существовавшее в истории. Со списком таких вы можете ознакомиться ниже.\n👉🏾 Греческие имена: https://ru.m.wikipedia.org/wiki/Список_имён_греческого_происхождения\n👉🏾 Римские имена: https://ru.m.wikipedia.org/wiki/Римские_имена\n👉🏾 Персидские имена: https://ru.m.wikipedia.org/wiki/Персидские_имена`, current_keyboard,2, 35)
-                if(!name) return resolve()
+                let name = await InputManager.InputString(context, `1️⃣ Введите никнейм, которым вы будете пользоваться в будущем. Учтите, что необходимо установить античное имя, реально существовавшее в истории. Со списком таких вы можете ознакомиться ниже.\n👉🏾 Греческие имена: https://ru.m.wikipedia.org/wiki/Список_имён_греческого_происхождения\n👉🏾 Римские имена: https://ru.m.wikipedia.org/wiki/Римские_имена\n👉🏾 Персидские имена: https://ru.m.wikipedia.org/wiki/Персидские_имена`, current_keyboard,2, 35)
+                if(!name) return resolve(false)
                 let temp = await Player.findOne({where: {nick: name}})
                 while(temp)
                 {
                     name = await InputManager.InputString(context, `⚠ Этот ник занят`, current_keyboard, 2, 20)
-                    if(!name) return resolve()
+                    if(!name) return resolve(false)
                     temp = await Player.findOne({where: {nick: name}})
                 }
 
                 const age = await InputManager.InputInteger(context, `2️⃣ Теперь укажите возраст вашего персонажа.\n⚠ Возраст может быть выбран от 16 до 100 лет.`, current_keyboard, 16, 100)
-                if(age === null) return resolve()
+                if(age === null) return resolve(false)
 
                 const gender = await InputManager.InputBoolean(context, `3️⃣ Укажите пол вашего персонажа.`, current_keyboard, keyboard.manButton, keyboard.womanButton)
-                if(gender === null) return resolve()
+                if(gender === null) return resolve(false)
 
                 const description = await InputManager.InputString(context, `4️⃣ Расскажите о своём персонаже! Откуда он родом, чем занимается. Возможно есть ли у него семья, дети. С какой целью он пришёл в то место, где находится сейчас.\n⚠ Длина до 1000 символов.`, current_keyboard, 0, 1000)
-                if(!description) return resolve()
+                if(!description) return resolve(false)
 
                 const nationKeyboard = []
                 Object.keys(Nations).forEach(key => {
@@ -52,47 +50,14 @@ class BuildersAndControlsScripts
                 if(!nation) return resolve()
                 await context.send(Nations[nation].description)
                 nation = Nations[nation].name
-
-                let location = await InputManager.KeyboardBuilder(context, "6️⃣ Почти готово, теперь выберите в какой фракции вы хотите появиться после регистрации.", Data.GetCountryButtons(), current_keyboard)
-                if(!location) return resolve()
-                location = Data.ParseButtonID(location)
-
-                await context.send(`ℹ Вы находитесь в столице фракции ${Data.countries[location].GetName(false)} - городе ${Data.cities[Data.countries[location].capitalID].name}\n\n${Data.countries[location].description}`, {attachment: Data.countries[location].welcomePhotoURL})
-                const user = await Player.create({
-                    id: context.peerId,
-                    nick: name,
-                    gender: gender,
-                    platform: "ANDROID"
-                })
-                const status = await PlayerStatus.create({
-                    id: context.peerId,
-                    location: Data.countries[location].capitalID,
-                    countryID: Data.countries[location].id
-                })
-                const info = await PlayerInfo.create({
-                    id: context.peerId,
-                    description: description,
-                    nationality: nation,
-                    age: age
-                })
-                const resources = await PlayerResources.create({id: context.peerId})
-                Data.users[context.peerId] = new scenes.User(user, status, info, resources)
-                Data.users[context.peerId].state = scenes.StartMenu
-                context.player = Data.users[context.peerId]
-
-                let kb = scenes.StartMenuKeyboard(context)
-
-                await context.send(`🏁 Регистрация завершена, *id${context.peerId}(${name}). Радуйтесь каждому дню, проведенному в этом мире. Пусть Боги оберегают ваш путь...\n\nℹ Если вы хотите ближе познакомиться с командами и проектом, то изучите нашу группу. Для ознакомления с государствами перейдите в раздел \"Локация\", для глубинного изучения можете посетить сообщества. Выбирайте с умом!`, {
-                    keyboard: keyboard.build(kb)
-                })
-                await OutputManager.SendCountryCarousel(context)
+                await Player.update({nick: name, gender: gender}, {where: {id: context.player.id}})
+                await PlayerInfo.update({description: description, nationality: nation, age: age}, {where: {id: context.player.id}})
+                await context.send("✅ Данные обновлены", {keyboard: keyboard.build(current_keyboard)})
+                context.player.state = context.scenes.StartScreen
+                return resolve(true)
             }
             catch (e)
             {
-                context.player = {
-                    id: context.peerId,
-                    nick: "Незарегистрированный пользователь"
-                }
                 await api.SendLogs(context, "BuildersAndControlsScripts/Registration", e)
             }
         })
@@ -1077,7 +1042,6 @@ class BuildersAndControlsScripts
                 const buildingButtons = [
                     ["⚔ Казарма", "barracks"],
                     ["🛟 Порт", "port"],
-                    ["🪙 Монетный двор", "mint"],
                     ["✝ Храм", "church"],
                     ["🏦 Банк", "bank"],
                     ["🗿 Памятник", "monument"]
@@ -2165,7 +2129,7 @@ class BuildersAndControlsScripts
                         {
                             for(let j = 0; j < Data.buildings[Data.cities[i].id].length; j++)
                             {
-                                if(Data.buildings[Data.cities[i].id][j].ownerType === "country")
+                                if(Data.buildings[Data.cities[i].id][j].ownerType === "country" && !Data.buildings[Data.cities[i].id][j].type.match(/mint/))
                                 {
                                     buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[Data.cities[i].id][j].type) + Data.buildings[Data.cities[i].id][j].name, "ID" + Data.buildings[Data.cities[i].id][j].id])
                                     request += `${NameLibrary.GetBuildingType(Data.buildings[Data.cities[i].id][j].type)} \"${Data.buildings[Data.cities[i].id][j].name}\" ${Data.buildings[Data.cities[i].id][j].level} ур\n`
@@ -2181,7 +2145,7 @@ class BuildersAndControlsScripts
                 }
                 if(buildingButtons.length === 0)
                 {
-                    await context.send("⛺ В фракции нет государственных построек", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("⛺ В фракции нет государственных построек, которые можно передать городу", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 let buildingID = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку, которую вы хотите передать городу", buildingButtons, current_keyboard)
@@ -2425,13 +2389,14 @@ class BuildersAndControlsScripts
                 if(!official) return resolve()
                 official = Data.ParseButtonID(official)
                 official = Data.officials[context.country.id][official]
-                const request = "ℹ Возможности:\n\n🔸Делегат - может принимать гражданство\n🔸Города - может возводить города\n🔸Ресурсы - может распоряжаться бюджетом\n🔸Чиновники - может назначать других чиновников, но не может выдавать им права\n🔸Градоначальники - может менять глав городов"
+                const request = "ℹ Возможности:\n\n🔸Делегат - может принимать гражданство\n🔸Города - может возводить города\n🔸Ресурсы - может распоряжаться бюджетом\n🔸Чиновники - может назначать других чиновников, но не может выдавать им права\n🔸Градоначальники - может менять глав городов\n🔸Армия - может распоряжаться армией"
                 const rulesData = [
                     ["🔸Делегат", "canBeDelegate", official.canBeDelegate],
                     ["🔸Города", "canBuildCity", official.canBuildCity],
                     ["🔸Ресурсы", "canUseResources", official.canUseResources],
                     ["🔸Чиновники", "canAppointOfficial", official.canAppointOfficial],
-                    ["🔸Градоначальники", "canAppointMayors", official.canAppointMayors]
+                    ["🔸Градоначальники", "canAppointMayors", official.canAppointMayors],
+                    ["🔸Армия", "canUseArmy", official.canUseArmy]
                 ]
                 const rules = await InputManager.RadioKeyboardBuilder(context, request, rulesData, current_keyboard)
                 if(!rules) return resolve()
@@ -2442,7 +2407,7 @@ class BuildersAndControlsScripts
                     official[rules[i][0]] = rules[i][1]
                 }
                 await OfficialInfo.update(newRules, {where: {id: official.id}})
-                await api.SendMessage(official.id, `ℹ Ваши права как чиновника изменены, теперь вы:\n\n🔸Можете принимать гражданство - ${newRules.canBeDelegate?"Да":"Нет"}\n🔸Можете возводить города - ${newRules.canBuildCity?"Да":"Нет"}\n🔸Может распоряжаться бюджетом - ${newRules.canUseResources?"Да":"Нет"}\n🔸Может назначать других чиновников - ${newRules.canAppointOfficial?"Да":"Нет"}\n🔸Может менять глав городов - ${newRules.canAppointMayors?"Да":"Нет"}`)
+                await api.SendMessage(official.id, `ℹ Ваши права как чиновника изменены, теперь вы:\n\n🔸Можете принимать гражданство - ${newRules.canBeDelegate?"Да":"Нет"}\n🔸Можете возводить города - ${newRules.canBuildCity?"Да":"Нет"}\n🔸Может распоряжаться бюджетом - ${newRules.canUseResources?"Да":"Нет"}\n🔸Может назначать других чиновников - ${newRules.canAppointOfficial?"Да":"Нет"}\n🔸Может менять глав городов - ${newRules.canAppointMayors?"Да":"Нет"}\n🔸Может распоряжаться армией - ${newRules.canUseArmy?"Да":"Нет"}`)
                 await context.send("✅ Права чиновника изменены", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
@@ -2631,7 +2596,7 @@ class BuildersAndControlsScripts
                     await context.send(`⚠ ${await NameLibrary.GetPlayerNick(user.dataValues.id)} уже состоит в браке!`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                if(NameLibrary.GetGender(user.dataValues.gender) === context.player.gender && !context.player.nation.match(/грек/i))
+                if(NameLibrary.GetGender(user.dataValues.gender) === context.player.gender && !context.player.nationality.match(/грек/i))
                 {
                     await context.send("✝ Мы такое не одобряем.", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
@@ -2678,13 +2643,18 @@ class BuildersAndControlsScripts
                     await context.send("🚫 Отменено")
                     return resolve()
                 }
-                await api.api.messages.send({
-                    user_id: context.player.marriedID,
-                    random_id: Math.round(Math.random() * 100000),
-                    message: `❤️‍🩹 Игрок *id${context.player.id}(${context.player.nick}) отправил вам предложение расторгнуть брак`,
-                    keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "divorce", item: context.player.id}), keyboard.declineCallbackButton({command: "decline_divorce", item: context.player.id})]]).inline().oneTime()
-                })
-                await context.send("✅ Предложение отправлено", {keyboard: keyboard.build(current_keyboard)})
+                let player = await Player.findOne({where: {id: context.player.marriedID}})
+                await PlayerInfo.update({marriedID: null}, {where: {id: context.player.id}})
+                await PlayerInfo.update({marriedID: null}, {where: {id: context.player.marriedID}})
+                if(Data.users[context.player.marriedID])
+                {
+                    Data.users[context.player.marriedID].marriedID = null
+                    Data.users[context.player.marriedID].isMarried = false
+                }
+                context.player.marriedID = null
+                context.player.isMarried = false
+                await api.SendMessage(player.dataValues.id, `💔 Больше *${context.player.GetName()} не ваш${context.player.gender ? " муж" : "а жена"}`)
+                await context.send(`💔 *id${player.dataValues.id}(${player.dataValues.nick}) больше не ваш${player.dataValues.gender ? " муж" : "а жена"}`, {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
@@ -2743,15 +2713,14 @@ class BuildersAndControlsScripts
                         }
                     }
                 }
-
                 if(!context.player.status.match(/worker/))
                 {
-                    Data.users[context.player.id].status = "candidate"
+                    context.player.status = "candidate"
                 }
                 context.player.waitingCitizenship = setTimeout(() => {
                     if(!context.player.status.match(/worker/))
                     {
-                        Data.users[context.player.id].status = "stateless"
+                        context.player.status = "stateless"
                     }
                 }, 86400000)
                 await context.send("✅ Заявка отправлена.\nПравитель или чиновники в течении 24 часов рассмотрят вашу кандидатуру и примут решение.", {keyboard: keyboard.build(current_keyboard)})
@@ -4891,6 +4860,7 @@ class BuildersAndControlsScripts
                 let warnCount = 0
                 const type = await InputManager.InputBoolean(context, "1️⃣ Выберите тип предупреждения\n\n🔸 Устное предупреждение - сообщение от бота в ЛС игрока\n\n🔸 Предупреждение - полноценный варн, добавляет балл предупреждения игроку (3 балла - бан)", current_keyboard, keyboard.warningButton, keyboard.reportButton)
                 if(type === null) return resolve()
+                let unsended = []
                 if(type)
                 {
                     const reason = await InputManager.InputString(context, "2️⃣ Введите краткую причину (для самого игрока)", current_keyboard)
@@ -4911,12 +4881,18 @@ class BuildersAndControlsScripts
                         })
                         warnCount = await Warning.count({where: {userID: i}})
                         await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: i}})
-                        await api.api.messages.send({
-                            user_id: i,
-                            random_id: Math.round(Math.random() * 100000),
-                            message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
-                            attachment: proof
-                        })
+                        try
+                        {
+                            await api.api.messages.send({
+                                user_id: i,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
+                                attachment: proof
+                            })
+                        } catch (e)
+                        {
+                            unsended.push(i)
+                        }
                         if(warnCount >= 3)
                         {
                             await api.SendMessageWithKeyboard(i, `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`, [])
@@ -4932,48 +4908,68 @@ class BuildersAndControlsScripts
                         }
                         if(Data.owner)
                         {
-                            await api.api.messages.send({
-                                user_id: Data.owner.id,
-                                random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
-                                attachment: proof
-                            })
+                            try
+                            {
+                                await api.api.messages.send({
+                                    user_id: Data.owner.id,
+                                    random_id: Math.round(Math.random() * 100000),
+                                    message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                    attachment: proof
+                                })
+                            }
+                            catch (e) {}
                         }
                         if(Data.projectHead)
                         {
-                            await api.api.messages.send({
-                                user_id: Data.projectHead.id,
-                                random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
-                                attachment: proof
-                            })
+                            try
+                            {
+                                await api.api.messages.send({
+                                    user_id: Data.projectHead.id,
+                                    random_id: Math.round(Math.random() * 100000),
+                                    message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                    attachment: proof
+                                })
+                            }
+                            catch (e) {}
                         }
                         for(const id of Object.keys(Data.supports))
                         {
-                            await api.api.messages.send({
-                                user_id: id,
-                                random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
-                                attachment: proof
-                            })
+                            try
+                            {
+                                await api.api.messages.send({
+                                    user_id: id,
+                                    random_id: Math.round(Math.random() * 100000),
+                                    message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                    attachment: proof
+                                })
+                            }
+                            catch (e) {}
                         }
                         for(const id of Object.keys(Data.administrators))
                         {
-                            await api.api.messages.send({
-                                user_id: id,
-                                random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
-                                attachment: proof
-                            })
+                            try
+                            {
+                                await api.api.messages.send({
+                                    user_id: id,
+                                    random_id: Math.round(Math.random() * 100000),
+                                    message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                    attachment: proof
+                                })
+                            }
+                            catch (e) {}
                         }
                         for(const id of Object.keys(Data.moderators))
                         {
-                            await api.api.messages.send({
-                                user_id: id,
-                                random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
-                                attachment: proof
-                            })
+                            try
+                            {
+                                await api.api.messages.send({
+                                    user_id: id,
+                                    random_id: Math.round(Math.random() * 100000),
+                                    message: `⚠ Игрок ${context.player.GetName()} отправил репорт на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nПричина: ${explanation}`,
+                                    attachment: proof
+                                })
+                            }
+                            catch (e) {}
                         }
                     }
                 }
@@ -4984,15 +4980,34 @@ class BuildersAndControlsScripts
                     const proof = await InputManager.InputPhoto(context, "3️⃣ Отправьте фото-доказательство (отмена = без фото)", current_keyboard)
                     for(const i of users)
                     {
-                        await api.api.messages.send({
-                            user_id: i,
-                            random_id: Math.round(Math.random() * 100000),
-                            message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и и не провоцируйте администрацию.`,
-                            attachment: proof
-                        })
+                        try
+                        {
+                            await api.api.messages.send({
+                                user_id: i,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и и не провоцируйте администрацию.`,
+                                attachment: proof
+                            })
+                        }
+                        catch (e)
+                        {
+                            unsended.push(i)
+                        }
                     }
                 }
-                await context.send("✅ Предупреждение выдано", {keyboard: keyboard.build(current_keyboard)})
+                let request = ""
+                for(const i of users)
+                {
+                    if(unsended.includes(i))
+                    {
+                        request += `${i} - ⚠ Не получилось уведомить игрока о предупреждении, возможно игрок не писал в ЛС боту\n`
+                    }
+                    else
+                    {
+                        request += `${i} - ✅ Предупреждение выдано\n`
+                    }
+                }
+                await context.send(request, {keyboard: keyboard.build(current_keyboard)})
                 context.player.state = scenes.startMenu
                 return resolve(true)
             }
@@ -5014,12 +5029,27 @@ class BuildersAndControlsScripts
                 const proof = await InputManager.InputPhoto(context, "2️⃣ Отправьте фото-доказательство (не обязательно, чтобы пропустить нажмите \"Отмена\")", current_keyboard)
                 for(const id of Object.keys(Data.administrators))
                 {
-                    await api.api.messages.send({
-                        user_id: id,
-                        random_id: Math.round(Math.random() * 100000),
-                        message: `⚠ Игрок ${context.player.GetName()} отправил жалобу на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nТекст жалобы:\n${reason}`,
-                        attachment: proof
-                    })
+                    try
+                    {
+                        await api.api.messages.send({
+                            user_id: id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Игрок ${context.player.GetName()} отправил жалобу на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nТекст жалобы:\n${reason}`,
+                            attachment: proof
+                        })
+                    } catch (e) {}
+                }
+                for(const id of Object.keys(Data.moderators))
+                {
+                    try
+                    {
+                        await api.api.messages.send({
+                            user_id: id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `⚠ Игрок ${context.player.GetName()} отправил жалобу на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nТекст жалобы:\n${reason}`,
+                            attachment: proof
+                        })
+                    } catch (e) {}
                 }
                 await context.send("✅ Жалоба отправлена", {keyboard: keyboard.build(current_keyboard)})
                 context.player.lastReportTime = new Date()
@@ -5058,11 +5088,11 @@ class BuildersAndControlsScripts
                 })
                 await api.BanUser(user)
                 await Warning.update({banned: true}, {where: {userID: user}})
-                await context.send("✅ Бан выдан", {keyboard: keyboard.build(current_keyboard)})
                 const banned = await Player.findOne({where: {id: user}, attributes: ["id", "nick"]})
                 if(Data.projectHead) await api.SendMessage(Data.projectHead.id, `⚠ Игрок ${context.player.GetName()} выдал бан игроку *id${banned.dataValues.id}(${banned.dataValues.nick})`)
                 context.player.lastReportTime = new Date()
                 context.player.state = scenes.startMenu
+                await context.send("✅ Бан выдан", {keyboard: keyboard.build(current_keyboard)})
                 return resolve(true)
             }
             catch (e)
@@ -5240,177 +5270,6 @@ class BuildersAndControlsScripts
             {
                 await api.SendLogs(context, "BuildersAndControlsScripts/Ban", e)
             }
-        })
-    }
-
-    async ImportUsers()
-    {
-        return new Promise(async (resolve) => {
-            const getCountryID = (country, isCitizen) =>
-            {
-                if(country?.toLowerCase()?.match(/рим/)) return [1, 1]
-                if(country?.toLowerCase()?.match(/саксы/)) return [10, 10]
-                if(country?.toLowerCase()?.match(/ицены/)) return [3, 3]
-                if(country?.toLowerCase()?.match(/кимвры/)) return [2, 2]
-                if(country?.toLowerCase()?.match(/македония/)) return [7, 7]
-                if(country?.toLowerCase()?.match(/афины/)) return [6, 6]
-                if(country?.toLowerCase()?.match(/тила/)) return [8, 8]
-                if(country?.toLowerCase()?.match(/понт/)) return [5, 5]
-                if(country?.toLowerCase()?.match(/cклавины/)) return [11, 11]
-                if(country?.toLowerCase()?.match(/елевкид/)) return [4, 4]
-                if(country?.toLowerCase()?.match(/египет/)) return [9, 9]
-                if(isCitizen) return [null, null]
-                return [1, 1]
-            }
-            const getNation = (nation) =>
-            {
-                if(nation.match(/римлянин/gi)) return "Римлянин 🔱"
-                if(nation.match(/кельт/gi)) return "Кельт 🍀"
-                if(nation.match(/грек/gi)) return "Грек 🏛️"
-                if(nation.match(/армянин/gi)) return "Армянин 💃"
-                if(nation.match(/перс/gi)) return "Перс 🐘"
-                if(nation.match(/германец/gi)) return "Германец ⚔"
-                if(nation.match(/египтянин/gi)) return "Египтянин ☀"
-                return nation
-            }
-            const getRoleState = (id, citizen) => {
-                switch (id)
-                {
-                    case 212554134:
-                        return ["owner", "worker"]
-                    case 565472458:
-                        return ["support", "worker"]
-                }
-                return ["player", citizen ? "citizen" : "stateless"]
-            }
-            const data = fs.readFileSync('./files/users.csv', 'utf8')
-            const rows = data.split("\n")
-            let user = null
-            let marryID = []
-            let userInfo = {
-                id: null,
-                nick: null,
-                description: null,
-                location: null,
-                nation: null,
-                age: null,
-                role: null,
-                status: null,
-                married: null,
-                gender: null,
-                citizenship: null,
-                money: null,
-                wheat: null,
-                stone: null,
-                wood: null,
-                iron: null,
-                silver: null,
-                copper: null,
-                isBanned: null,
-                msgs: null,
-                audios: null,
-                stickers: null,
-                swords: null
-            }
-            for(let i = 1; i < rows.length; i++)
-            {
-                user = rows[i].split(";")
-                if(!user[28]?.match(/noname/))
-                {
-                    userInfo.id = parseInt(user[0])
-                    userInfo.nick = user[11]
-                    userInfo.description = user[13]
-                    userInfo.nation = user[43] ? getNation(user[43]) : "🐴 Цыган"
-                    userInfo.location = user[28] ? getCountryID(user[28], false)[1] : 1
-                    userInfo.countryID = getCountryID(user[28], false)[0]
-                    userInfo.age = parseInt(user[5])
-                    userInfo.gender = user[7] === "male"
-                    userInfo.citizenship = getCountryID(user[28], true)[0]
-                    userInfo.role = getRoleState(userInfo.id, userInfo.citizenship)[0]
-                    userInfo.status = getRoleState(userInfo.id, userInfo.citizenship)[1]
-                    userInfo.isBanned = user[26] === "да"
-                    userInfo.money = parseInt(user[10])
-                    userInfo.wheat = parseInt(user[15])
-                    userInfo.stone = parseInt(user[14])
-                    userInfo.wood = parseInt(user[16])
-                    userInfo.iron = parseInt(user[8])
-                    userInfo.silver = parseInt(user[54])
-                    userInfo.copper = parseInt(user[19])
-                    userInfo.msgs = parseInt(user[57])
-                    userInfo.audios = parseInt(user[42])
-                    userInfo.stickers = parseInt(user[59])
-                    userInfo.swords = parseInt(user[41])
-                    marryID = user[6]?.match(/id\d+/)
-                    if(marryID) userInfo.married = parseInt(marryID[0]?.replace("id", ""))
-                    else userInfo.married = null
-                    try
-                    {
-                        await Player.findOrCreate({
-                            where: {id: userInfo.id},
-                            defaults : {
-                                id: userInfo.id,
-                                nick: userInfo.nick,
-                                gender: userInfo.gender,
-                                isBanned: userInfo.isBanned,
-                                role: userInfo.role,
-                                status: userInfo.status
-                            }
-                        })
-                        await PlayerStatus.findOrCreate({
-                            where: {id: userInfo.id},
-                            defaults : {
-                                id: userInfo.id,
-                                location: userInfo.location,
-                                countryID: userInfo.countryID,
-                                citizenship: userInfo.citizenship
-                            }
-                        })
-                        await PlayerInfo.findOrCreate({
-                            where: {id: userInfo.id},
-                            defaults : {
-                                id: userInfo.id,
-                                description: userInfo.description,
-                                nationality: userInfo.nation,
-                                age: userInfo.age,
-                                msgs: userInfo.msgs,
-                                audios: userInfo.audios,
-                                stickers: userInfo.stickers,
-                                swords: userInfo.swords
-                            }
-                        })
-                        await PlayerResources.findOrCreate({
-                            where: {id: userInfo.id},
-                            defaults : {
-                                id: userInfo.id,
-                                money: userInfo.money,
-                                wheat: userInfo.wheat,
-                                stone: userInfo.stone,
-                                wood: userInfo.wood,
-                                iron: userInfo.iron,
-                                silver: userInfo.silver,
-                                copper: userInfo.copper
-                            }
-                        })
-                        if(userInfo.isBanned)
-                        {
-                            await Ban.findOrCreate({
-                                where: {userID: userInfo.id},
-                                defaults : {
-                                    userID: userInfo.id,
-                                    reason: "Старый бан, причины не помню",
-                                    explanation: "Бан импортированный со старой версии бота, причина не известна"
-                                }
-                            })
-                        }
-                    }
-                    catch (e)
-                    {
-                        console.log(e)
-                    }
-                }
-            }
-
-            return resolve()
         })
     }
 
@@ -6133,8 +5992,13 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                let request = `💳 Граждане фракции ${context.country.GetName(context.player.platform === "IOS")}\n\n`
+                let request = `💳 Граждане фракции ${context.country.GetName(context.player.platform === "IOS")}:\n\n`
                 const playersStatus = await PlayerStatus.findAll({where: {citizenship: context.country.id}, attributes: ["id"]})
+                if(playersStatus.length === 0)
+                {
+                    await context.send(`У фракции ${context.country.GetName(context.player.platform === "IOS")} нет граждан`)
+                    return resolve()
+                }
                 const players = await Player.findAll({where: {id: playersStatus.map(key => {return key.dataValues.id})}, attributes: ["id", "nick"]})
                 const users = []
                 for(const status of playersStatus)
@@ -6336,7 +6200,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNation", e)
             }
         })
     }
@@ -6353,7 +6217,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeGender", e)
             }
         })
     }
@@ -6372,7 +6236,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeAge", e)
             }
         })
     }
@@ -6382,7 +6246,7 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                let country = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
                 if(!country) return resolve()
                 country = Data.ParseButtonID(country)
                 country = Data.countries[country]
@@ -6394,7 +6258,116 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/TestCountry", e)
+            }
+        })
+    }
+
+    async MintingMoney(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let maxCount = 0
+                let middleChance = 0
+                let minChance = 0
+                let maxChance = 0
+                let mintCount = 0
+                let workingCount = 0
+                let flag = true
+                let lastMintTime = new Date()
+                const time = new Date()
+                const lvls = {
+                    1: {from: 0.4, to: 0.6, max: 125},
+                    2: {from: 0.45, to: 0.6, max: 250},
+                    3: {from: 0.5, to: 0.6, max: 500},
+                    4: {from: 0.55, to: 0.6, max: 1000}
+                }
+                if(context.country.silver === 0)
+                {
+                    await context.send("⚠ Не хватает серебра для чеканки", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                for(let k = 0; k < Data.cities.length; k++)
+                {
+                    if(Data.cities[k]?.countryID === context.country.id)
+                    {
+                        for(let i = 0; i < Data.buildings[Data.cities[k].id]?.length; i++)
+                        {
+                            if(Data.buildings[Data.cities[k].id][i].type.match(/mint/))
+                            {
+                                flag = false
+                                if(Data.buildings[Data.cities[k].id][i].lastActivityTime - time < 0)
+                                {
+                                    maxCount += lvls[Data.buildings[Data.cities[k].id][i].level].max
+                                    mintCount += 1
+                                    middleChance += (lvls[Data.buildings[Data.cities[k].id][i].level].from + lvls[Data.buildings[Data.cities[k].id][i].level].to) / 2
+                                }
+                                else
+                                {
+                                    workingCount += 1
+                                    if(Data.buildings[Data.cities[k].id][i].lastActivityTime - time > lastMintTime - time)
+                                    {
+                                        lastMintTime = Data.buildings[Data.cities[k].id][i].lastActivityTime
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if(flag)
+                {
+                    await context.send("⚠ В фракции нет монетных дворов", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                if(mintCount === 0)
+                {
+                    await context.send("⚠ Все монетные дворы заняты чеканкой, приходите через " + NameLibrary.ParseFutureTime(lastMintTime), {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                middleChance = Math.round((middleChance / mintCount) * 100)
+                let count = await InputManager.InputDefaultInteger(context, `1️⃣ Вы можете отчеканить монеты из серебра, находящегося в бюджете фракции.\nℹ Сейчас в бюджете ${context.country.silver} серебра.\n\nℹ Вы можете загрузить до ${maxCount} серебра в ${mintCount} / ${mintCount + workingCount} свободные монетные дворы, при этом средний КПД будет около ${middleChance}%\n\nУкажите количество серебра для чеканки`, current_keyboard, 1, Math.min(maxCount, context.country.silver), Math.min(maxCount, context.country.silver))
+                if(!count) return resolve()
+                await Data.AddCountryResources(context.country.id, {silver: -count})
+                let access = await InputManager.InputBoolean(context, `Отправить ${count} серебра на чеканку?`, current_keyboard)
+                if(!access)
+                {
+                    await Data.AddCountryResources(context.country.id, {silver: count})
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let seconds = Math.round((count / mintCount) * (21600 / maxCount))
+                time.setSeconds(time.getSeconds() + seconds)
+                mintCount = 0
+                for(let k = 0; k < Data.cities.length; k++)
+                {
+                    if(Data.cities[k]?.countryID === context.country.id)
+                    {
+                        for(let i = 0; i < Data.buildings[Data.cities[k].id]?.length; i++)
+                        {
+                            if(Data.buildings[Data.cities[k].id][i].type.match(/mint/))
+                            {
+                                if(Data.buildings[Data.cities[k].id][i].lastActivityTime - time < 0)
+                                {
+                                    mintCount += 1
+                                    minChance += lvls[Data.buildings[Data.cities[k].id][i].level].from
+                                    maxChance += lvls[Data.buildings[Data.cities[k].id][i].level].to
+                                    Data.buildings[Data.cities[k].id][i].lastActivityTime = time
+                                }
+                            }
+                        }
+                    }
+                }
+                minChance /= mintCount
+                maxChance /= mintCount
+                let extraction = NameLibrary.GetRandomNumb(Math.round(count * minChance), Math.round(count * maxChance))
+                await Data.AddCountryResources(context.country.id, {money: extraction})
+                await context.send(`✅ Из ${count} серебра отчеканено ${extraction} монет, КПД составил ${Math.round((extraction / count) * 100)}%`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/MintingMoney", e)
             }
         })
     }

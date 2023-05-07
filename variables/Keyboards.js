@@ -85,14 +85,6 @@ class KeyboardButtons
         }
     })
 
-    registrationButton = Keyboard.textButton({
-        label: '🔰Зарегистрироваться',
-        color: Keyboard.POSITIVE_COLOR,
-        payload: {
-            choice: 'registration'
-        }
-    })
-
     manButton = Keyboard.textButton({
         label: '♂ Мужчина',
         color: Keyboard.PRIMARY_COLOR,
@@ -146,6 +138,14 @@ class KeyboardButtons
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'leader_menu'
+        }
+    })
+
+    officialMenuButton = Keyboard.textButton({
+        label: '💼 Меню чиновника',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'official_menu'
         }
     })
 
@@ -1174,6 +1174,30 @@ class KeyboardButtons
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'test'
+        }
+    })
+
+    armyButton = Keyboard.textButton({
+        label: '⚔ Армия',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'army'
+        }
+    })
+
+    citizensButton = Keyboard.textButton({
+        label: '👥 Граждане',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'citizens'
+        }
+    })
+
+    mintingMoneyButton = Keyboard.textButton({
+        label: '🔨 Чеканить монеты',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'minting_money'
         }
     })
 

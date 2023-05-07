@@ -272,7 +272,7 @@ class VK_API
                 {
                     for (const key of Object.keys(Data.supports))
                     {
-                        await this.SendMessage(Data.supports[key].id, "⚠ Бот был перезагружен, но после загрузки не был найден файл с кэшем, возможно перезапуск был связан с критической ошибкой.")
+                        !Data.variables["isTest"] && await this.SendMessage(Data.supports[key].id, "⚠ Бот был перезагружен, но после загрузки не был найден файл с кэшем, возможно перезапуск был связан с критической ошибкой.")
                     }
                     return resolve()
                 }
@@ -653,7 +653,7 @@ class VK_API
 
     async SendMessage(id, message)
     {
-        if(!id) return
+        if(!id) return false
         try
         {
             await this.api.messages.send({
@@ -661,16 +661,17 @@ class VK_API
                 random_id: Math.round(Math.random() * 100000),
                 message: message
             })
+            return true
         }
         catch (e)
         {
-            console.log(e)
+            return false
         }
     }
 
     async SendMessageWithKeyboard(id, message, kb)
     {
-        if(!id) return
+        if(!id) return false
         try
         {
             await this.api.messages.send({
@@ -679,10 +680,11 @@ class VK_API
                 message: message,
                 keyboard: keyboard.build(kb)
             })
+            return true
         }
         catch (e)
         {
-            console.log(e)
+            return false
         }
     }
 
@@ -701,10 +703,7 @@ class VK_API
                 })
             }
         }
-        catch (e)
-        {
-            console.log(e)
-        }
+        catch (e) {}
     }
 
     async SendAccessKey(reason)
@@ -730,16 +729,14 @@ class VK_API
                 })
             }
         }
-        catch (e)
-        {
-            console.log(e)
-        }
+        catch (e) {}
     }
 
     SendLogs = async (context, place, error) =>
     {
         try
         {
+            if(error.message.match(/№901/)) return
             await this.SendMessage(context.player.id, "⚠ Ошибка")
             console.log(error)
             const filename = `error_${NameLibrary.GetDate() + "_" + NameLibrary.GetTime()}.log`
@@ -768,10 +765,7 @@ class VK_API
                 }
             })
         }
-        catch (e)
-        {
-            console.log(e)
-        }
+        catch (e) {}
     }
 }
 

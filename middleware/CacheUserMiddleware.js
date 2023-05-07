@@ -4,8 +4,8 @@ const User = require("../models/User");
 const keyboard = require("../variables/Keyboards");
 const commands = require("../variables/Commands");
 const SceneManager = require("../controllers/SceneController")
-const Builders = require("../controllers/BuildersAndControlsScripts")
 const api = require("./API")
+const Nations = require("../variables/Nations")
 
 const RoleEstimator = (role) =>
 {
@@ -123,27 +123,45 @@ module.exports = async (context, next) =>
                         })
                     }
                 }
-
             }
-            else if(context.peerType !== "chat")
+            else
             {
-                const current_keyboard = [[keyboard.registrationButton]]
-                if(context.command?.match(commands.registration))
+                const user = await api.GetUserData(peerId)
+                const nations = Object.keys(Nations).map(key => {return Nations[key]})
+                let country = Data.countries[Math.round(Math.random() * (Data.countries.length - 1))]
+                while(!country) country = Data.countries[Math.round(Math.random() * (Data.countries.length - 1))]
+                let nation = nations[Math.round(Math.random() * (nations.length - 1))]
+                const player = await Player.create({
+                    id: peerId,
+                    nick: user.first_name + " " + user.last_name,
+                    gender: user.sex === 2,
+                    platform: "ANDROID"
+                })
+                const status = await PlayerStatus.create({
+                    id: peerId,
+                    location: country.capitalID,
+                    countryID: country.id
+                })
+                const info = await PlayerInfo.create({
+                    id: peerId,
+                    description: nation.description,
+                    nationality: nation.name,
+                    age: Math.round(16 + Math.round(Math.random() * (100 - 16)))
+                })
+                const resources = await PlayerResources.create({id: peerId})
+                Data.users[peerId] = new User(player, status, info, resources)
+                Data.users[peerId].state = SceneManager.StartScreen
+                context.player = Data.users[peerId]
+                let lw = await LastWills.findOne({where: {userID: context.player.id}})
+                context.player.lastWill = lw?.dataValues
+                if(Data.officials[context.player.countryID])
                 {
-                    Data.variables["isTest"] && await context.send("⚠⚠⚠ Внимание! ⚠⚠⚠\n\nЭтот бот используется для тестирования при разработке обновлений основного бота, если вы зашли сюда по ошибке, то вот ссылка на основного бота: https://vk.com/im?sel=-218388422")
-                    await Builders.Registration(context, current_keyboard, {
-                        StartMenu: SceneManager.StartScreen,
-                        StartMenuKeyboard: SceneManager.GetStartMenuKeyboard,
-                        User: User
-                    })
+                    if (Data.officials[context.player.countryID][peerId])
+                    {
+                        context.official = Data.officials[context.player.countryID][peerId]
+                    }
                 }
-                else if(context.peerType === "user")
-                {
-                    context.send(`Добро пожаловать в Проект ZEUS, более тысячи участников уже два года играют с нами.\nВойны, интриги, симулятор античного жителя, всё это доступно для тебя... осталось только зарегистрироваться!\nПосле регистрации вам будет доступно меню игрока... \nС изменением вашего статуса будут меняться и ваши возможности.\nНажимая на кнопку "Зарегистрироваться" вы принимаете правила проекта.`,
-                        {
-                            keyboard: keyboard.build(current_keyboard)
-                        })
-                }
+                return next()
             }
         }
     }

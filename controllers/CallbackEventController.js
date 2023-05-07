@@ -12,8 +12,6 @@ class CallbackEventController
         context.eventPayload?.command === "hide_message" && await this.HideMessage(context)
         context.eventPayload?.command === "merry" && await this.Merry(context)
         context.eventPayload?.command  === "decline_merry" && await this.DeclineMerry(context)
-        context.eventPayload?.command === "divorce" && await this.Divorce(context)
-        context.eventPayload?.command === "decline_divorce" && await this.DeclineDivorce(context)
         context.eventPayload?.command === "give_citizenship" && await this.GiveCitizenship(context)
         context.eventPayload?.command === "decline_citizenship" && await this.DeclineCitizenship(context)
         context.eventPayload?.command === "give_registration" && await this.GiveRegistration(context)
@@ -27,11 +25,10 @@ class CallbackEventController
 
     async HideMessage(context)
     {
-        await api.api.messages.edit({
-            peer_id: context.peerId,
-            message: "✖ Скрыто",
-            conversation_message_id: context.conversationMessageId,
-            keyboard: keyboard.inlineNone
+        await api.api.messages.delete({
+            conversation_message_ids: context.conversationMessageId,
+            delete_for_all: 1,
+            peer_id: context.peerId
         })
     }
 
@@ -93,66 +90,6 @@ class CallbackEventController
         catch (e)
         {
             await api.SendLogs(context, "CallbackEventController/DeclineMerry", e)
-        }
-    }
-
-    async Divorce(context)
-    {
-        const firstUserID = context.peerId
-        const firstUser = Data.users[firstUserID]
-        const secondUserID = context.eventPayload.item
-        const secondUser = Data.users[secondUserID]
-        try
-        {
-            await PlayerInfo.update(
-                {
-                    marriedID: null
-                },
-                {where: {id: firstUserID}})
-            Data.users[firstUserID].marriedID = null
-            Data.users[firstUserID].isMarried = false
-            await PlayerInfo.update(
-                {
-                    marriedID: null
-                },
-                {where: {id: secondUserID}})
-            Data.users[secondUserID].marriedID = null
-            Data.users[secondUserID].isMarried = false
-            await api.api.messages.edit({
-                peer_id: context.peerId,
-                message: "✅ Принято",
-                conversation_message_id: context.conversationMessageId,
-                keyboard: keyboard.inlineNone
-            })
-            await api.SendMessage(firstUserID, `💔 Больше *id${secondUser.id}(${secondUser.nick}) не ваш${secondUser.gender ? " муж" : "а жена"}`)
-            await api.SendMessage(secondUserID, `💔 Больше *id${firstUser.id}(${firstUser.nick}) не ваш${firstUser.gender ? " муж" : "а жена"}`)
-        }
-        catch (e)
-        {
-            await api.SendLogs(context, "CallbackEventController/Divorce", e)
-        }
-    }
-
-    async DeclineDivorce(context)
-    {
-        const firstUserID = context.peerId
-        const firstUser = Data.users[firstUserID]
-        const secondUserID = context.eventPayload.item
-        const secondUser = Data.users[secondUserID]
-        try
-        {
-            await api.api.messages.edit({
-                peer_id: context.peerId,
-                message: "❌ Отклонено",
-                conversation_message_id: context.conversationMessageId,
-                keyboard: keyboard.inlineNone
-            })
-            await api.SendMessage(firstUserID, `❤ Вы отвергли предложение расторжения брака от игрока *id${secondUser.id}(${secondUser.nick})`)
-            await api.SendMessage(secondUserID, `❤ *id${firstUser.id}(${firstUser.nick}) ${firstUser.gender ? "отверг" : "отвергла"} ваше предложение расторгнуть брак.`)
-        }
-        catch (e)
-        {
-            await api.SendLogs(context, "CallbackEventController/DeclineDivorce", e)
         }
     }
 

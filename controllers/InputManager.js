@@ -51,13 +51,20 @@ class InputManager
                 max = max || 2147483646
 
                 let answer = await context.question(message + "\n\nℹ Значение по умолчанию = " + def, {
-                    keyboard: keyboard.build([[keyboard.defaultsButton]])
+                    keyboard: keyboard.build([[keyboard.defaultsButton], [keyboard.cancelButton]])
                 })
                 while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.payload)
                 {
                     answer = await context.question("⚠ Введите корректное значение." + "\n\nℹ Значение по умолчанию = " + def, {
                         keyboard: keyboard.build([[keyboard.defaultsButton]])
                     })
+                }
+                if(answer.payload?.choice === "cancel")
+                {
+                    await context.send('🚫 Ввод отменен.', {
+                        keyboard: keyboard.build(current_keyboard)
+                    })
+                    return resolve(null)
                 }
                 if(answer.payload)
                 {
