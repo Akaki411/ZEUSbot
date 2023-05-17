@@ -1,10 +1,13 @@
 const {API, Upload} = require('vk-io')
 const keyboard = require('../variables/Keyboards')
 const Data = require("../models/CacheData")
-const {PlayerStatus, Warning, Player, Country, PlayerInfo, PlayerResources} = require("../database/Models");
+const {PlayerStatus, Warning, Player, Country, PlayerInfo, PlayerResources, CountryArmy, Ban, CountryUsingResources,
+    CountryActive, Keys
+} = require("../database/Models");
 const NameLibrary = require("../variables/NameLibrary")
 const fs = require("fs");
 const User = require("../models/User")
+const Prices = require("../variables/Prices")
 
 class VK_API
 {
@@ -47,7 +50,14 @@ class VK_API
         {
             const warns = await Warning.findAll({where: {banned: false}, attributes: ["id", "userID", "time", "createdAt"]})
             const time = new Date()
+            let temp = null
             let warnTime = null
+            const yesterday = new Date()
+            yesterday.setDate(yesterday.getDate() - 1)
+            yesterday.setHours(12)
+            yesterday.setMinutes(0)
+            yesterday.setSeconds(0)
+            yesterday.setMilliseconds(0)
             for(const warn of warns)
             {
                 warnTime = new Date(warn.dataValues.createdAt)
@@ -56,7 +66,9 @@ class VK_API
                 {
                     await Warning.destroy({where: {id: warn.dataValues.id}})
                     await this.SendMessage(warn.dataValues.userID, `✅ Срок действия предупреждения от ${NameLibrary.ParseDateTime(warn.dataValues.createdAt)} истек, предупреждение обжаловано`)
-                    await Player.update({warningScore: await Warning.count({where: {userID: warn.dataValues.userID}})}, {where: {id: warn.dataValues.userID}})
+                    temp = await Warning.count({where: {id: warn.dataValues.id}})
+                    await Player.update({warningScore: temp, isBanned: false}, {where: {id: warn.dataValues.userID}})
+                    await Ban.destroy({where: warn.dataValues.userID})
                 }
             }
 
@@ -64,6 +76,7 @@ class VK_API
             let max = 0
             let activeNegative = null
             let min = Number.MAX_SAFE_INTEGER
+            const activity = []
             for(let i = 0; i < Data.countries.length; i++)
             {
                 if(Data.countries[i])
@@ -105,6 +118,11 @@ class VK_API
                             Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
                         }
                     }
+                    activity.push({
+                        id: i,
+                        n: Data.countries[i].GetName(),
+                        a: Data.countries[i].active
+                    })
                     Data.countries[i].active = 0
                 }
             }
@@ -118,8 +136,12 @@ class VK_API
             await Data.AddCountryResources(Data.countries[active].id, {money: 100})
             await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 балл, в бюджет передан сладкий подарок в размере 100 монет`)
             await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 200 ? " и количество сообщений за день не достигло 200, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 200 сообщений, поэтому баллы активности с вас не снимаются."}`)
+            await CountryActive.create({
+                json: JSON.stringify(activity),
+                date: yesterday
+            })
 
-            let temp = null
+            temp = null
             max = 0
             active = null
             for(const key of Object.keys(Data.activity))
@@ -204,27 +226,18 @@ class VK_API
             this.day ++
             if(this.day > 7)
             {
-                for(let i = 0; i < Data.countries.length; i++)
-                {
-                    if(Data.countries[i])
-                    {
-                        Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
-                        Data.countriesWeekActive[Data.countries[i].id] = 0
-                    }
-                }
+                await this.EveryWeakLoop()
                 this.day = 0
             }
 
-            let request = "📈Статистика расходов фракций за день (<ресурс>: <заработано> - <потрачено> = <разница>)\n\n"
-            let resources = ["money", "stone", "wood", "wheat", "iron", "silver", "diamond"]
+            const UsingRes = []
             for(const country of Object.keys(Data.countryResourcesStats))
             {
-                request += `${Data.countries[country].GetName()}:\n`
-                for(const res of resources)
-                {
-                    request += `${NameLibrary.GetResourceName(res)}: ${Data.countryResourcesStats[country]["in"][res]} - ${Data.countryResourcesStats[country]["out"][res]} = ${Data.countryResourcesStats[country]["in"][res] - Data.countryResourcesStats[country]["out"][res]}\n`
-                }
-                request += "\n"
+                temp = {}
+                temp.id = country
+                temp.name = Data.countries[country].GetName()
+                temp.using = Data.countryResourcesStats[country]
+                UsingRes.push(temp)
                 Data.countryResourcesStats[country] = {
                     in: {
                         money: 0,
@@ -246,12 +259,105 @@ class VK_API
                     }
                 }
             }
-            await this.GMMailing(request)
+            await CountryUsingResources.create({
+                json: JSON.stringify(UsingRes),
+                date: yesterday
+            })
             await Data.SaveActive()
         }
         catch (e)
         {
             console.log(e)
+        }
+    }
+
+    async EveryWeakLoop()
+    {
+        for(let i = 0; i < Data.countries.length; i++)
+        {
+            if(Data.countries[i])
+            {
+                Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
+                Data.countriesWeekActive[Data.countries[i].id] = 0
+            }
+        }
+        let army = []
+        let prices = []
+        let priceIds = []
+        let fullPrice = {}
+        let request = ""
+        let reduced = []
+        for(const country of Data.countries)
+        {
+            if(country)
+            {
+                request = `🔔 Обращаем ваше внимание, ваше светлость, что оплата за содержание армии страны была взята. Это обошлось нам в:\n\n`
+                prices = []
+                priceIds = []
+                fullPrice = {}
+                reduced = []
+                army = await CountryArmy.findAll({where: {countryID: country.id}})
+                if(army.length === 0) continue
+                for(let i = 0; i < army.length; i++)
+                {
+                    if(army[i].dataValues.count === 0) continue
+                    prices.push(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[i].dataValues.barracksLVL], army[i].dataValues.count))
+                    priceIds.push(i)
+                }
+                fullPrice = NameLibrary.PriceSum(prices)
+                for(let i = 0; !country.CanPay(fullPrice); i++)
+                {
+                    if(!country.CanPay(NameLibrary.PriceSum(prices.slice(i + 1))))
+                    {
+                        await CountryArmy.update({count: 0}, {where: {id: army[priceIds[i]].dataValues.id}})
+                        reduced.push(army[priceIds[i]].dataValues)
+                        fullPrice = NameLibrary.PriceSum(prices.slice(i + 1))
+                        continue
+                    }
+                    console.log(army[priceIds[i]].dataValues.count)
+                    for(let j = 0; j < army[priceIds[i]].dataValues.count; j++)
+                    {
+                        console.log(army[priceIds[i]].dataValues.count)
+                        if(!country.CanPay(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[priceIds[i]].dataValues.barracksLVL], j + 1)))
+                        {
+                            await CountryArmy.update({count: army[priceIds[i]].dataValues.count - j}, {where: {id: army[priceIds[i]].dataValues.id}})
+                            prices.push(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[priceIds[i]].dataValues.barracksLVL], j))
+                            fullPrice = NameLibrary.PriceSum(prices.slice(i + 1))
+                            reduced.push({name: army[priceIds[i]].dataValues.name, count: army[priceIds[i]].dataValues.count - j})
+                        }
+                        else
+                        {
+                            break
+                        }
+                    }
+                }
+                request += NameLibrary.GetPrice(fullPrice) + "\n\n"
+                if(reduced.length > 0)
+                {
+                    request += `💸 Также сожалеем сообщить, что финансы не позволяют поддерживать текущее количество войск. Под сокращение попали:\n\n`
+                    for(const red of reduced)
+                    {
+                        request += `${red.name} - ${red.count} мест\n`
+                    }
+                }
+                else
+                {
+                    request += `🫡 Воины готовы к выполнению своих обязанностей!`
+                }
+                await Data.AddCountryResources(country.id, fullPrice)
+                country.leaderID && await this.SendMessage(country.leaderID, request)
+                let officials = Data.officials[country.id]
+                if(officials)
+                {
+                    for(const official of Object.keys(officials))
+                    {
+                        if(officials[official].canUseArmy || officials[official].canUseResources)
+                        {
+                            await this.SendMessage(country.leaderID, request)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -286,19 +392,19 @@ class VK_API
                         {
                             if(key.subtype === "activity")
                             {
-                                Data.activity[key.userId] = key.score
+                                Data.activity = key.data
                             }
-                            if(key.subtype === "activity")
+                            if(key.subtype === "audios")
                             {
-                                Data.activity[key.userId] = key.score
+                                Data.musicLovers = key.data
                             }
-                            if(key.subtype === "activity")
+                            if(key.subtype === "stickers")
                             {
-                                Data.activity[key.userId] = key.score
+                                Data.stickermans = key.data
                             }
-                            if(key.subtype === "activity")
+                            if(key.subtype === "swords")
                             {
-                                Data.activity[key.userId] = key.score
+                                Data.uncultured = key.data
                             }
                         }
                         if(key.type === "user_timeout")
@@ -328,6 +434,7 @@ class VK_API
                                     subtype: "sleep",
                                     userId: key.userId,
                                     time: time.date,
+                                    houseLevel: key.houseLevel,
                                     timeout: setTimeout(async () => {
                                         await this.SendMessage(key.userId, "☕ Ваши силы восстановлены")
                                         Data.users[key.userId].fatigue = 100
@@ -367,6 +474,88 @@ class VK_API
                                         Data.users[key.userId].stayInCityTime = stayTime
                                         Data.users[key.userId].state = scenes.StartScreen
                                         delete Data.timeouts["user_timeout_walk_" + key.userId]
+                                    }, time.timeout)
+                                }
+                            }
+                            if(key.subtype === "get_citizenship")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0)
+                                {
+                                    await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[key.countryID].GetName()}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                                    continue
+                                }
+                                Data.timeouts["get_citizenship_" + key.userId] = {
+                                    type: "user_timeout",
+                                    subtype: "get_citizenship",
+                                    userId: key.userId,
+                                    time: time,
+                                    countryID: key.countryID,
+                                    timeout: setTimeout(async () => {
+                                        await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[key.countryID].GetName()}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                                        delete Data.timeouts["get_citizenship_" + key.userId]
+                                    }, time.timeout)
+                                }
+                            }
+                            if(key.subtype === "get_registration")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0)
+                                {
+                                    await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение регистрации в городе ${Data.cities[key.cityID].name}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                                }
+                                Data.timeouts["get_registration_" + key.userId] = {
+                                    type: "user_timeout",
+                                    subtype: "get_registration",
+                                    userId: key.userId,
+                                    time: time,
+                                    cityID: key.cityID,
+                                    timeout: setTimeout(async () => {
+                                        await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение регистрации в городе ${Data.cities[key.cityID].name}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                                        delete Data.timeouts["get_registration_" + key.userId]
+                                    }, 86400000)
+                                }
+                            }
+                            if(key.subtype === "resources_ready")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0)
+                                {
+                                    await this.SendMessage(key.userId, `✅ Ваши постройки в городе ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                    continue
+                                }
+                                future = new Date()
+                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                                let isProperty = false
+                                let keys = await Keys.findAll({where: {ownerID: key.userId}})
+                                if(keys.length === 0) continue
+                                for(let i = 0; i < Data.buildings[key.cityID]?.length; i++)
+                                {
+                                    if(Data.buildings[key.cityID][i].ownerType === "country" && Data.buildings[key.cityID][i].type.match(/wheat|stone|wood|iron|silver/))
+                                    {
+                                        isProperty = false
+                                        for(const key of keys)
+                                        {
+                                            if(key.dataValues.houseID === Data.buildings[key.cityID][i].id)
+                                            {
+                                                isProperty = true
+                                                break
+                                            }
+                                        }
+                                        if(!isProperty) continue
+                                        Data.buildings[key.cityID][i].lastActivityTime = future
+                                    }
+                                }
+                                Data.timeouts["user_timeout_resources_ready_" + key.userId] = {
+                                    type: "user_timeout",
+                                    subtype: "resources_ready",
+                                    userId: key.userId,
+                                    countryID: key.countryID,
+                                    time: key.date,
+                                    timeout: setTimeout(async () =>
+                                    {
+                                        await this.SendMessage(key.userId, `✅ Ваши постройки в городе ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                        delete Data.timeouts["user_timeout_resources_ready_" + key.countryID]
                                     }, time.timeout)
                                 }
                             }
@@ -453,6 +642,23 @@ class VK_API
                                     }, time.timeout)
                                 }
                             }
+                            if(key.subtype === "city_tax")
+                            {
+                                time = getTime(key.time)
+                                if(time.timeout < 0) continue
+                                future = new Date()
+                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                                Data.timeouts["country_get_tax_" + key.countryID] = {
+                                    type: "country_timeout",
+                                    subtype: "city_tax",
+                                    countryID: key.countryID,
+                                    time: key.date,
+                                    timeout: setTimeout(async () =>
+                                    {
+                                        delete Data.timeouts["country_get_tax_" + key.countryID]
+                                    }, time.timeout)
+                                }
+                            }
                         }
                     }
                     fs.unlink("./files/cache.json", (err) => {
@@ -473,42 +679,26 @@ class VK_API
         return new Promise(async (resolve) =>
         {
             let data = []
-            for(const user of Object.keys(Data.activity))
-            {
-                data.push({
-                    type: "user_activity",
-                    subtype: "activity",
-                    userId: user,
-                    score: Data.activity[user]
-                })
-            }
-            for(const user of Object.keys(Data.musicLovers))
-            {
-                data.push({
-                    type: "user_activity",
-                    subtype: "audios",
-                    userId: user,
-                    score: Data.musicLovers[user]
-                })
-            }
-            for(const user of Object.keys(Data.stickermans))
-            {
-                data.push({
-                    type: "user_activity",
-                    subtype: "stickers",
-                    userId: user,
-                    score: Data.stickermans[user]
-                })
-            }
-            for(const user of Object.keys(Data.uncultured))
-            {
-                data.push({
-                    type: "user_activity",
-                    subtype: "swords",
-                    userId: user,
-                    score: Data.uncultured[user]
-                })
-            }
+            data.push({
+                type: "user_activity",
+                subtype: "activity",
+                data: Data.activity
+            })
+            data.push({
+                type: "user_activity",
+                subtype: "audios",
+                data: Data.musicLovers
+            })
+            data.push({
+                type: "user_activity",
+                subtype: "stickers",
+                data: Data.stickermans
+            })
+            data.push({
+                type: "user_activity",
+                subtype: "swords",
+                data: Data.uncultured
+            })
             for(const key of Object.keys(Data.timeouts))
             {
                 if(Data.timeouts[key].type === "user_timeout")
@@ -519,17 +709,45 @@ class VK_API
                             type: "user_timeout",
                             subtype: "sleep",
                             userId: Data.timeouts[key].userId,
-                            time: Data.timeouts[key].time
+                            time: Data.timeouts[key].time,
+                            houseLevel: Data.timeouts[key].houseLevel
                         })
                     }
-                }
-                if(Data.timeouts[key].type === "user_timeout")
-                {
                     if(Data.timeouts[key].subtype === "walk")
                     {
                         data.push({
                             type: "user_timeout",
                             subtype: "walk",
+                            cityID: Data.timeouts[key].cityID,
+                            userId: Data.timeouts[key].userId,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                    if(Data.timeouts[key].subtype === "get_citizenship")
+                    {
+                        data.push({
+                            type: "user_timeout",
+                            subtype: "get_citizenship",
+                            countryID: Data.timeouts[key].countryID,
+                            userId: Data.timeouts[key].userId,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                    if(Data.timeouts[key].subtype === "get_registration")
+                    {
+                        data.push({
+                            type: "user_timeout",
+                            subtype: "get_registration",
+                            cityID: Data.timeouts[key].cityID,
+                            userId: Data.timeouts[key].userId,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                    if(Data.timeouts[key].subtype === "resources_ready")
+                    {
+                        data.push({
+                            type: "user_timeout",
+                            subtype: "get_registration",
                             cityID: Data.timeouts[key].cityID,
                             userId: Data.timeouts[key].userId,
                             time: Data.timeouts[key].time
@@ -557,6 +775,15 @@ class VK_API
                             type: "country_timeout",
                             subtype: "resources_ready",
                             userId: Data.timeouts[key].userId,
+                            countryID: key.countryID,
+                            time: Data.timeouts[key].time
+                        })
+                    }
+                    if(Data.timeouts[key].subtype === "resources_ready")
+                    {
+                        data.push({
+                            type: "country_timeout",
+                            subtype: "city_tax",
                             countryID: key.countryID,
                             time: Data.timeouts[key].time
                         })

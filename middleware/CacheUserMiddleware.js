@@ -6,6 +6,7 @@ const commands = require("../variables/Commands");
 const SceneManager = require("../controllers/SceneController")
 const api = require("./API")
 const Nations = require("../variables/Nations")
+const StopList = require("../files/StopList.json")
 
 const RoleEstimator = (role) =>
 {
@@ -126,9 +127,26 @@ module.exports = async (context, next) =>
             }
             else
             {
+                if(peerId < 0) return
                 const user = await api.GetUserData(peerId)
+                if(!user || StopList.includes(peerId)) return
                 const nations = Object.keys(Nations).map(key => {return Nations[key]})
-                let country = Data.countries[Math.round(Math.random() * (Data.countries.length - 1))]
+                let country = null
+                for(const c of Data.countries)
+                {
+                    if(c?.chatID)
+                    {
+                        for(const chat of c.chatID.split("|"))
+                        {
+                            if(parseInt(chat) === context.peerId)
+                            {
+                                country = c
+                                break
+                            }
+                        }
+                    }
+                }
+                country = country ? country : Data.countries[Math.round(Math.random() * (Data.countries.length - 1))]
                 while(!country) country = Data.countries[Math.round(Math.random() * (Data.countries.length - 1))]
                 let nation = nations[Math.round(Math.random() * (nations.length - 1))]
                 const player = await Player.create({

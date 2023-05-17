@@ -56,7 +56,7 @@ class InputManager
                 while ((isNaN(answer.text) || (parseInt(answer.text, 10) < min || parseInt(answer.text, 10) > max)) && !answer.payload)
                 {
                     answer = await context.question("⚠ Введите корректное значение." + "\n\nℹ Значение по умолчанию = " + def, {
-                        keyboard: keyboard.build([[keyboard.defaultsButton]])
+                        keyboard: keyboard.build([[keyboard.defaultsButton], [keyboard.cancelButton]])
                     })
                 }
                 if(answer.payload?.choice === "cancel")
@@ -71,6 +71,43 @@ class InputManager
                     return resolve(parseInt(def))
                 }
                 return resolve(parseInt(answer.text))
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "InputManager/InputDefaultInteger", e)
+            }
+        })
+    }
+
+    static async InputDate(context, message, current_keyboard)
+    {
+        return new Promise(async (resolve) =>
+        {
+            try
+            {
+                let answer = await context.question(message + "\n\nℹ Рекомендуемый формат даты: MM.DD.YY HH:MM (Время по МСК)\n\nℹ По умолчанию = сейчас", {
+                    keyboard: keyboard.build([[keyboard.defaultsButton], [keyboard.cancelButton]])
+                })
+                let date = new Date(answer.text)
+                while (date.toString().match(/invalid/i) && !answer.payload)
+                {
+                    answer = await context.question("⚠ Некорректное значение", {
+                        keyboard: keyboard.build([[keyboard.defaultsButton], [keyboard.cancelButton]])
+                    })
+                    date = new Date(answer.text)
+                }
+                if(answer.payload?.choice === "cancel")
+                {
+                    await context.send('🚫 Ввод отменен.', {
+                        keyboard: keyboard.build(current_keyboard)
+                    })
+                    return resolve(null)
+                }
+                if(answer.payload)
+                {
+                    date = new Date()
+                }
+                return resolve(date)
             }
             catch (e)
             {
@@ -172,6 +209,56 @@ class InputManager
             catch (e)
             {
                 await api.SendLogs(context, "InputManager/InputPhoto", e)
+            }
+        })
+    }
+
+    static async InputLotPhoto(context, message, current_keyboard, max)
+    {
+        return new Promise(async (resolve) =>
+        {
+            try
+            {
+                max = max || 10
+                let count = 0
+                const photos = []
+                let answer = null
+                let photo = ""
+                let url = ""
+                do
+                {
+                    answer = await context.question(message, {
+                        keyboard: keyboard.build([count === 0 ? [keyboard.cancelButton] : [keyboard.cancelButton, keyboard.nextButton]])
+                    })
+                    photo = answer.attachments[0]?.type === "photo" ? answer.attachments[0].largeSizeUrl : null
+                    while (!answer.payload && !photo)
+                    {
+                        answer = await context.question("⚠ Отправьте фото" , {
+                            keyboard: keyboard.build([count === 0 ? [keyboard.cancelButton] : [keyboard.cancelButton, keyboard.nextButton]])
+                        })
+                        photo = answer.attachments[0]?.type === "photo" ? answer.attachments[0].largeSizeUrl : null
+                    }
+                    if(!answer.payload)
+                    {
+                        url = await api.upload.messagePhoto({source: {value: photo}})
+                        photos.push(url)
+                        count ++
+                        message = `✅ Загружено ${count} фото`
+                    }
+                }
+                while(count < max && !answer.payload)
+                if(answer.payload?.choice === "cancel")
+                {
+                    await context.send('🚫 Ввод отменен', {
+                        keyboard: keyboard.build(current_keyboard)
+                    })
+                    return resolve(null)
+                }
+                return resolve(photos.map(key => {return key.toString()}).join(","))
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "InputManager/InputLotPhoto", e)
             }
         })
     }

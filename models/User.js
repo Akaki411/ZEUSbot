@@ -13,11 +13,15 @@ class User
         this.role = user.dataValues.role
         this.status = user.dataValues.status
         this.platform = user.dataValues.platform
+        this.avatar = user.dataValues.avatar
         this.location = status.dataValues.location
         this.countryID = status.dataValues.countryID
         this.citizenship = status.dataValues.citizenship
         this.notifications = status.dataValues.notifications
         this.registration = status.dataValues.registration
+        this.dodgeTaxScore = status.dataValues.dodgeTaxScore
+        this.botForgotTime = new Date(status.dataValues.botForgotTime)
+        this.botCallTime = new Date(status.dataValues.botCallTime)
         this.description = info.dataValues.description
         this.marriedID = info.dataValues.marriedID
         this.nationality = info.dataValues.nationality
@@ -41,12 +45,13 @@ class User
         this.inBuild = null
         this.isFreezed = false
         this.isRelaxing = false
-        this.relaxingEndTime = null
-        this.relaxingEndTimeout = null
         this.lastActionTime = new Date()
-        this.timeout = null
         this.stayInCityTime = new Date()
         this.state = () => {delete this}
+        if(info.dataValues.botMemory)
+        {
+            Data.requests[this.id] = JSON.parse(info.dataValues.botMemory)
+        }
     }
 
     CanPay(pay)
@@ -111,19 +116,19 @@ class User
 
     GetName()
     {
-        return `*id${this.id}(${this.nick})`
+        return this.id > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`
     }
 
     GetResources()
     {
-        return `*id${this.id}(Ваш) инвентарь:\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
+        return (this.id > 0 ? `*id${this.id}(Ваш)` : `*public${Math.abs(this.id)}(Ваш)`) + ` инвентарь:\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
     }
 
     GetInfo()
     {
         try
         {
-            return `👤 *id${this.id}(${this.nick}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Муж)` : `*id${this.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n💭 Описание: ${this.description}`
+            return `👤 ${this.id > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Муж)` : `*id${this.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n💭 Описание: ${this.description}`
         }
         catch (e)
         {

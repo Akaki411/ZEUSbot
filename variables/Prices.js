@@ -219,4 +219,34 @@ module.exports = {
         stone: -15000,
         wood: -15000
     },
+    new_unit_lvl_1: {
+        money: -200
+    },
+    new_unit_lvl_2: {
+        money: -200,
+        iron: -100
+    },
+    new_unit_lvl_3: {
+        money: -200,
+        iron: -150
+    },
+    new_unit_lvl_4: {
+        money: -200,
+        iron: -225
+    },
+    unit_lvl_1: {
+        money: -50
+    },
+    unit_lvl_2: {
+        money: -50,
+        iron: -20
+    },
+    unit_lvl_3: {
+        money: -75,
+        iron: -30
+    },
+    unit_lvl_4: {
+        money: -115,
+        iron: -46
+    }
 }

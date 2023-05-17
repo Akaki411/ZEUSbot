@@ -3,7 +3,6 @@ const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
-const {countriesActive} = require("../variables/Commands");
 
 class CacheData
 {
@@ -41,6 +40,7 @@ class CacheData
         this.voiceMute = {}
         this.activeIgnore = {}
         this.ignore = {}
+        this.botCallTimeouts = {}
 
         this.timeouts = {}
         this.onLoad = () => {}

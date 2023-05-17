@@ -1,4 +1,4 @@
-const {Player, City, PlayerStatus} = require("../database/Models");
+const {Player, City, PlayerStatus, CountryArmy} = require("../database/Models")
 
 class CountryObject
 {
@@ -28,6 +28,13 @@ class CountryObject
         this.warnings = country.dataValues.warnings
         this.tags = country.dataValues.tags
         this.tested = country.dataValues.tested
+        this.barracksLevel = country.dataValues.barracksLevel
+        this.stability = country.dataValues.stability
+        this.peasantry = country.dataValues.peasantry
+        this.religion = country.dataValues.religion
+        this.aristocracy = country.dataValues.aristocracy
+        this.military = country.dataValues.military
+        this.merchants = country.dataValues.merchants
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood
@@ -36,8 +43,6 @@ class CountryObject
         this.copper = resources.dataValues.copper
         this.silver = resources.dataValues.silver
         this.diamond = resources.dataValues.diamond
-        this.lastTaxTime = new Date()
-        this.getResourcesTimeout = null
         this.active = 0
     }
 
@@ -70,6 +75,48 @@ class CountryObject
     GetResources()
     {
         return `Бюджет фракции *public${this.groupID}(${this.name}):\n\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
+    }
+
+    GetUnitType(type)
+    {
+        switch (type)
+        {
+            case "elephant":
+                return "Слоны"
+            case "cavalier":
+                return "Кавалерия"
+            case "soldier":
+                return "Пехота"
+        }
+        return "Не отмеченный тип"
+    }
+
+    async ShowArmy()
+    {
+        const units = await CountryArmy.findAll({where: {countryID: this.id}})
+        if(units.length === 0) return ["🚫 Юниты не добавлены"]
+        let request = [""]
+        let page = 0
+        for(const unit of units)
+        {
+            if(unit.dataValues.count > 0)
+            {
+                request[page] += unit.dataValues.name + "\n"
+                request[page] += "🏹 Количество: " + unit.dataValues.count + "\n"
+                request[page] += "👥 Описание: " + unit.dataValues.description + "\n"
+                request[page] += "💂‍♂ Тип: " + this.GetUnitType(unit.dataValues.type) + "\n"
+                request[page] += "🎖 Боевой опыт: " + unit.dataValues.rating + "\n"
+                request[page] += "\n\n"
+                if(request[page].length > 3500)
+                {
+                    page ++
+                    request[page] = ""
+                }
+            }
+        }
+        request = request.filter(key => {return key.length > 0})
+        if(request[0].length === 0) return ["⚠ Нет армии"]
+        return request
     }
 
     async GetAllInfo()

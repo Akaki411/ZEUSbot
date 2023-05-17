@@ -1,5 +1,5 @@
 const api = require("../middleware/API")
-const {PlayerInfo, PlayerStatus, Country, Player, Buildings, Keys, City, Warning, Ban, CityRoads} = require("../database/Models");
+const {PlayerInfo, PlayerStatus, Player, Buildings, Keys, City, Warning, Ban, CityRoads, Transactions} = require("../database/Models");
 const Data = require("../models/CacheData")
 const keyboard = require("../variables/Keyboards")
 const NameLibrary = require("../variables/NameLibrary");
@@ -21,15 +21,254 @@ class CallbackEventController
         context.eventPayload?.command === "set_road_distance" && await this.HideRoadDistance(context)
         context.eventPayload?.command === "appeal_warning" && await this.AppealWarning(context)
         context.eventPayload?.command === "appeal_ban" && await this.AppealBan(context)
+        context.eventPayload?.command === "transaction_refund_tax" && await this.TransactionRefundTax(context)
+        context.eventPayload?.command === "transaction_tax" && await this.TransactionTax(context)
+        context.eventPayload?.command === "transaction_tax_evasion" && await this.TransactionTaxEvasion(context)
+    }
+
+    async TransactionTaxEvasion(context)
+    {
+        try
+        {
+            const transaction = context.eventPayload.transaction
+            const resources = NameLibrary.ReversePrice(transaction.price)
+            if(!context.player.CanPay(transaction.price))
+            {
+                await api.api.messages.delete({
+                    conversation_message_ids: context.conversationMessageId,
+                    delete_for_all: 1,
+                    peer_id: context.peerId
+                })
+                await api.SendMessage(context.player.id, "❌ Не хватает ресурсов")
+            }
+            await Data.AddPlayerResources(transaction.toUser, resources)
+            await Data.AddPlayerResources(context.player.id, transaction.price)
+            await api.SendNotification(transaction.toUser, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(resources)}`)
+            context.player.dodgeTaxScore += 1
+            await PlayerStatus.update({dodgeTaxScore: context.player.dodgeTaxScore}, {where: {id: context.player.id}})
+            if(NameLibrary.GetChance(Math.log(context.player.dodgeTaxScore) * 20))
+            {
+                if(transaction.tax.in > 0)
+                {
+                    await api.SendNotification(Data.countries[transaction.countries.in].leaderID, `❗ Игрок ${context.player.GetName()} попался на уклонении от налогов, отказ от уплаты налога в ${transaction.tax.in} во время перевода в размере:\n${NameLibrary.GetPrice(transaction.price)}`)
+                    let officials = Data.officials[transaction.countries.in]
+                    if(officials)
+                    {
+                        for(const official of Object.keys(officials))
+                        {
+                            if(officials[official].canUseResources)
+                            {
+                                await api.SendNotification(official, `❗ Игрок ${context.player.GetName()} попался на уклонении от налогов, отказ от уплаты налога в ${transaction.tax.in} во время перевода в размере:\n${NameLibrary.GetPrice(transaction.price)}`)
+                            }
+                        }
+                    }
+                }
+                if(transaction.tax.out > 0)
+                {
+                    await api.SendNotification(Data.countries[transaction.countries.in].leaderID, `❗ Игрок ${context.player.GetName()} попался на уклонении от налогов, отказ от уплаты налога в ${transaction.tax.out} во время перевода в размере:\n${NameLibrary.GetPrice(transaction.price)}`)
+                    let officials = Data.officials[transaction.countries.out]
+                    if(officials)
+                    {
+                        for(const official of Object.keys(officials))
+                        {
+                            if(officials[official].canUseResources)
+                            {
+                                await api.SendNotification(official, `❗ Игрок ${context.player.GetName()} попался на уклонении от налогов, отказ от уплаты налога в ${transaction.tax.in} во время перевода в размере:\n${NameLibrary.GetPrice(transaction.price)}`)
+                            }
+                        }
+                    }
+                }
+            }
+            await Transactions.create({
+                fromID: context.player.id,
+                toID: transaction.toUser,
+                type: "ptp",
+                money: resources.money ? resources.money : null,
+                stone: resources.stone ? resources.stone : null,
+                wood: resources.wood ? resources.wood : null,
+                wheat: resources.wheat ? resources.wheat : null,
+                iron: resources.iron ? resources.iron : null,
+                copper: resources.copper ? resources.copper : null,
+                silver: resources.silver ? resources.silver : null,
+                diamond: resources.diamond ? resources.diamond : null
+            })
+            await api.SendMessage(context.player.id, "✅ Выполнено")
+            await api.api.messages.delete({
+                conversation_message_ids: context.conversationMessageId,
+                delete_for_all: 1,
+                peer_id: context.peerId
+            })
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "CallbackEventController/TransactionRefundTax", e)
+        }
+    }
+
+    async TransactionTax(context)
+    {
+        try
+        {
+            const transaction = context.eventPayload.transaction
+            let resources = NameLibrary.AfterPayTax(transaction.price, transaction.tax.in)
+            let firstTax = NameLibrary.ReversePrice(NameLibrary.PriceMultiply(transaction.price, transaction.tax.in / 100))
+            let secondTax = NameLibrary.ReversePrice(NameLibrary.PriceMultiply(resources, transaction.tax.out / 100))
+            resources = NameLibrary.AfterPayTax(resources, transaction.tax.out)
+            if(!context.player.CanPay(transaction.price))
+            {
+                await api.api.messages.delete({
+                    conversation_message_ids: context.conversationMessageId,
+                    delete_for_all: 1,
+                    peer_id: context.peerId
+                })
+                await api.SendMessage(context.player.id, "❌ Не хватает ресурсов")
+            }
+            await Data.AddPlayerResources(transaction.toUser, NameLibrary.ReversePrice(resources))
+            await Data.AddPlayerResources(context.player.id, transaction.price)
+            !NameLibrary.IsVoidPrice(firstTax) && await Data.AddCountryResources(transaction.countries.in, firstTax)
+            !NameLibrary.IsVoidPrice(secondTax) && await Data.AddCountryResources(transaction.countries.out, secondTax)
+            await api.SendNotification(transaction.toUser, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(resources)}`)
+            resources = NameLibrary.ReversePrice(resources)
+            await Transactions.create({
+                fromID: context.player.id,
+                toID: transaction.toUser,
+                type: "ptp",
+                money: resources.money ? resources.money : null,
+                stone: resources.stone ? resources.stone : null,
+                wood: resources.wood ? resources.wood : null,
+                wheat: resources.wheat ? resources.wheat : null,
+                iron: resources.iron ? resources.iron : null,
+                copper: resources.copper ? resources.copper : null,
+                silver: resources.silver ? resources.silver : null,
+                diamond: resources.diamond ? resources.diamond : null
+            })
+            !NameLibrary.IsVoidPrice(firstTax) && await Transactions.create({
+                fromID: context.player.id,
+                toID: transaction.countries.in,
+                type: "ptctr",
+                money: firstTax.money ? firstTax.money : null,
+                stone: firstTax.stone ? firstTax.stone : null,
+                wood: firstTax.wood ? firstTax.wood : null,
+                wheat: firstTax.wheat ? firstTax.wheat : null,
+                iron: firstTax.iron ? firstTax.iron : null,
+                copper: firstTax.copper ? firstTax.copper : null,
+                silver: firstTax.silver ? firstTax.silver : null,
+                diamond: firstTax.diamond ? firstTax.diamond : null
+            })
+            !NameLibrary.IsVoidPrice(secondTax) && await Transactions.create({
+                fromID: context.player.id,
+                toID: transaction.countries.out,
+                type: "ptctr",
+                money: secondTax.money ? secondTax.money : null,
+                stone: secondTax.stone ? secondTax.stone : null,
+                wood: secondTax.wood ? secondTax.wood : null,
+                wheat: secondTax.wheat ? secondTax.wheat : null,
+                iron: secondTax.iron ? secondTax.iron : null,
+                copper: secondTax.copper ? secondTax.copper : null,
+                silver: secondTax.silver ? secondTax.silver : null,
+                diamond: secondTax.diamond ? secondTax.diamond : null
+            })
+            await api.SendMessage(context.player.id, "✅ Выполнено")
+            await api.api.messages.delete({
+                conversation_message_ids: context.conversationMessageId,
+                delete_for_all: 1,
+                peer_id: context.peerId
+            })
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "CallbackEventController/TransactionRefundTax", e)
+        }
+    }
+
+    async TransactionRefundTax(context)
+    {
+        try
+        {
+            const transaction = context.eventPayload.transaction
+            let resources = NameLibrary.AfterPayTax(transaction.price, transaction.tax.in)
+            let firstTax = NameLibrary.ReversePrice(NameLibrary.PriceMultiply(transaction.price, transaction.tax.in / 100))
+            let secondTax = NameLibrary.ReversePrice(NameLibrary.PriceMultiply(resources, transaction.tax.out / 100))
+            resources = NameLibrary.AfterPayTax(resources, transaction.tax.out)
+            if(!context.player.CanPay(transaction.price))
+            {
+                await api.api.messages.delete({
+                    conversation_message_ids: context.conversationMessageId,
+                    delete_for_all: 1,
+                    peer_id: context.peerId
+                })
+                await api.SendMessage(context.player.id, "❌ Не хватает ресурсов")
+            }
+            await Data.AddPlayerResources(transaction.toUser, NameLibrary.ReversePrice(resources))
+            await Data.AddPlayerResources(context.player.id, transaction.price)
+            !NameLibrary.IsVoidPrice(firstTax) && await Data.AddCountryResources(transaction.countries.in, firstTax)
+            !NameLibrary.IsVoidPrice(secondTax) && await Data.AddCountryResources(transaction.countries.out, secondTax)
+            await api.SendNotification(transaction.toUser, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(resources)}`)
+            resources = NameLibrary.ReversePrice(resources)
+            await Transactions.create({
+                fromID: context.player.id,
+                toID: transaction.toUser,
+                type: "ptp",
+                money: resources.money ? resources.money : null,
+                stone: resources.stone ? resources.stone : null,
+                wood: resources.wood ? resources.wood : null,
+                wheat: resources.wheat ? resources.wheat : null,
+                iron: resources.iron ? resources.iron : null,
+                copper: resources.copper ? resources.copper : null,
+                silver: resources.silver ? resources.silver : null,
+                diamond: resources.diamond ? resources.diamond : null
+            })
+            !NameLibrary.IsVoidPrice(firstTax) && await Transactions.create({
+                fromID: context.player.id,
+                toID: transaction.countries.in,
+                type: "ptctr",
+                money: firstTax.money ? firstTax.money : null,
+                stone: firstTax.stone ? firstTax.stone : null,
+                wood: firstTax.wood ? firstTax.wood : null,
+                wheat: firstTax.wheat ? firstTax.wheat : null,
+                iron: firstTax.iron ? firstTax.iron : null,
+                copper: firstTax.copper ? firstTax.copper : null,
+                silver: firstTax.silver ? firstTax.silver : null,
+                diamond: firstTax.diamond ? firstTax.diamond : null
+            })
+            !NameLibrary.IsVoidPrice(secondTax) && await Transactions.create({
+                fromID: context.player.id,
+                toID: transaction.countries.out,
+                type: "ptctr",
+                money: secondTax.money ? secondTax.money : null,
+                stone: secondTax.stone ? secondTax.stone : null,
+                wood: secondTax.wood ? secondTax.wood : null,
+                wheat: secondTax.wheat ? secondTax.wheat : null,
+                iron: secondTax.iron ? secondTax.iron : null,
+                copper: secondTax.copper ? secondTax.copper : null,
+                silver: secondTax.silver ? secondTax.silver : null,
+                diamond: secondTax.diamond ? secondTax.diamond : null
+            })
+            await api.SendMessage(context.player.id, "✅ Выполнено")
+            await api.api.messages.delete({
+                conversation_message_ids: context.conversationMessageId,
+                delete_for_all: 1,
+                peer_id: context.peerId
+            })
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "CallbackEventController/TransactionRefundTax", e)
+        }
     }
 
     async HideMessage(context)
     {
-        await api.api.messages.delete({
-            conversation_message_ids: context.conversationMessageId,
-            delete_for_all: 1,
-            peer_id: context.peerId
-        })
+        try
+        {
+            await api.api.messages.delete({
+                conversation_message_ids: context.conversationMessageId,
+                delete_for_all: 1,
+                peer_id: context.peerId
+            })
+            await api.SendMessage(context.player.id, "❌ Сообщение скрыто")
+        }
+        catch (e) {}
     }
 
     async Merry(context)
@@ -54,12 +293,14 @@ class CallbackEventController
                 {where: {id: secondUserID}})
             Data.users[secondUserID].marriedID = firstUserID
             Data.users[secondUserID].isMarried = true
-            await api.api.messages.edit({
-                peer_id: context.peerId,
-                message: "✅ Принято",
-                conversation_message_id: context.conversationMessageId,
-                keyboard: keyboard.inlineNone
-            })
+            try
+            {
+                await api.api.messages.delete({
+                    conversation_message_ids: context.conversationMessageId,
+                    delete_for_all: 1,
+                    peer_id: context.peerId
+                })
+            } catch (e) {}
             await api.SendMessage(firstUserID, `❤ Теперь *id${secondUser.id}(${secondUser.nick}) ваш${secondUser.gender ? " муж" : "а жена"}`)
             await api.SendMessage(secondUserID, `❤ Теперь *id${firstUser.id}(${firstUser.nick}) ваш${firstUser.gender ? " муж" : "а жена"}`)
         }
@@ -78,12 +319,14 @@ class CallbackEventController
         try
         {
             Data.users[secondUserID].isMarried = false
-            await api.api.messages.edit({
-                peer_id: context.peerId,
-                message: "❌ Отклонено",
-                conversation_message_id: context.conversationMessageId,
-                keyboard: keyboard.inlineNone
-            })
+            try
+            {
+                await api.api.messages.delete({
+                    conversation_message_ids: context.conversationMessageId,
+                    delete_for_all: 1,
+                    peer_id: context.peerId
+                })
+            } catch (e) {}
             await api.SendMessage(firstUserID, `💔 Вы отвергли предложение брака от игрока *id${secondUser.id}(${secondUser.nick})`)
             await api.SendMessage(secondUserID, `💔 *id${firstUser.id}(${firstUser.nick}) ${firstUser.gender ? "отверг" : "отвергла"} ваше предложение вступить в брак.`)
         }
@@ -99,35 +342,42 @@ class CallbackEventController
         const countryID = context.eventPayload.addition
         try
         {
-            if(Data.users[secondUserID]?.waitingCitizenship)
+            if(Data.timeouts["get_citizenship_" + secondUserID])
             {
-                clearTimeout(Data.users[secondUserID].waitingCitizenship)
+                clearTimeout(Data.timeouts["get_citizenship_" + secondUserID].timeout)
+                delete Data.timeouts["get_citizenship_" + secondUserID]
                 await PlayerStatus.update({citizenship: countryID},{where: {id: secondUserID}})
-                Data.users[secondUserID].citizenship = countryID
-                if(Data.users[secondUserID].status !== "worker")
+                if(Data.users[secondUserID])
                 {
-                    Data.users[secondUserID].status = "citizen"
-                    await Player.update({status: "citizen"}, {where: {id: secondUserID}})
+                    Data.users[secondUserID].citizenship = countryID
+                    if(!Data.users[secondUserID].status.match(/worker|official|leader/))
+                    {
+                        Data.users[secondUserID].status = "citizen"
+                        await Player.update({status: "citizen"}, {where: {id: secondUserID}})
+                    }
                 }
-                const country = await Country.findOne({where: {id: countryID}})
-                country.set({population: country.population + 1})
-                await country.save()
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "✅ Принято",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "✅ Принято")
                 await api.SendMessageWithKeyboard(secondUserID, `✅ Ваша заявка на гражданство принята.`, [[keyboard.backButton]])
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -139,32 +389,34 @@ class CallbackEventController
     async DeclineCitizenship(context)
     {
         const secondUserID = context.eventPayload.item
-        const citizen = Data.users[secondUserID]
         try
         {
-            if(citizen?.waitingCitizenship)
+            if(Data.timeouts["get_citizenship_" + secondUserID])
             {
-                clearTimeout(Data.users[secondUserID].waitingCitizenship)
-                if(Data.users[secondUserID].status !== "worker")
+                clearTimeout(Data.timeouts["get_citizenship_" + secondUserID].timeout)
+                delete Data.timeouts["get_citizenship_" + secondUserID]
+                try
                 {
-                    Data.users[secondUserID].status = "stateless"
-                }
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "❌ Отклонено",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
-                await api.SendMessage(secondUserID, `❌ Ваша заявка на гражданство отклонена.`)
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "❌ Отклонено")
+                await api.SendMessageWithKeyboard(secondUserID, `❌ Ваша заявка на гражданство отклонена.`, [[keyboard.backButton]])
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -179,27 +431,34 @@ class CallbackEventController
         const cityID = context.eventPayload.addition
         try
         {
-            if(Data.users[secondUserID]?.waitingRegistration)
+            if(Data.timeouts["get_registration_" + secondUserID])
             {
-                clearTimeout(Data.users[secondUserID].waitingRegistration)
+                clearTimeout(Data.timeouts["get_registration_" + secondUserID].timeout)
+                delete Data.timeouts["get_registration_" + secondUserID]
                 await PlayerStatus.update({registration: cityID},{where: {id: secondUserID}})
                 Data.users[secondUserID].registration = cityID
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "✅ Принято",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "✅ Принято")
                 await api.SendMessageWithKeyboard(secondUserID, `✅ Ваша заявка принята. Теперь вы прописаны в городе ${Data.GetCityName(cityID)}`, [[keyboard.backButton]])
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -211,28 +470,34 @@ class CallbackEventController
     async DeclineRegistration(context)
     {
         const secondUserID = context.eventPayload.item
-        const citizen = Data.users[secondUserID]
         try
         {
-            if(citizen?.waitingRegistration)
+            if(Data.timeouts["get_registration_" + secondUserID])
             {
-                clearTimeout(Data.users[secondUserID].waitingRegistration)
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "❌ Отклонено",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                clearTimeout(Data.timeouts["get_registration_" + secondUserID].timeout)
+                delete Data.timeouts["get_registration_" + secondUserID]
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "❌ Отклонено")
                 await api.SendMessage(secondUserID, `❌ Ваша заявка на получение прописки отклонена.`)
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -280,22 +545,28 @@ class CallbackEventController
                 const building = await Buildings.findOne({where: {id: buildingID}})
                 if(!building)
                 {
-                    await api.api.messages.edit({
-                        peer_id: context.peerId,
-                        message: "⚠ Не актуально",
-                        conversation_message_id: context.conversationMessageId,
-                        keyboard: keyboard.inlineNone
-                    })
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {}
+                    await api.SendMessage(context.player.id, "⚠ Не актуально")
                     return
                 }
                 if(Data.cities[building.dataValues.cityID].buildingsScore >= Data.cities[building.dataValues.cityID].maxBuildings)
                 {
-                    await api.api.messages.edit({
-                        peer_id: context.peerId,
-                        message: "⚠ Не хватает места в городе",
-                        conversation_message_id: context.conversationMessageId,
-                        keyboard: keyboard.inlineNone
-                    })
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {}
+                    await api.SendMessage(context.player.id, "⚠ Не хватает места в городе")
                     await Buildings.destroy({where: {id: buildingID}})
                     const price = NameLibrary.ReversePrice(Prices["new_" + building.dataValues.type.replace("building_of_", "")])
                     await Data.AddPlayerResources(userID, price)
@@ -312,22 +583,28 @@ class CallbackEventController
                 await Data.ResetBuildings()
                 Data.cities[building.dataValues.cityID].buildingsScore++
                 await City.update({buildingsScore: Data.cities[building.dataValues.cityID].buildingsScore}, {where: {id: building.dataValues.cityID}})
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "✅ Принято",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "✅ Принято")
                 await api.SendMessageWithKeyboard(userID, `✅ Ваша заявка принята. Теперь вы владелец постройки ${NameLibrary.GetBuildingType(building.dataValues.type)} в городе ${Data.GetCityName(building.dataValues.cityID)}`, [[keyboard.backButton]])
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -377,22 +654,28 @@ class CallbackEventController
                 await Buildings.destroy({where: {id: buildingID}})
                 const price = NameLibrary.ReversePrice(Prices["new_" + building.dataValues.type.replace("building_of_", "")])
                 await Data.AddPlayerResources(userID, price)
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "❌ Отклонено",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "❌ Отклонено")
                 await api.SendMessageWithKeyboard(userID, `❌ Ваша заявка на размещение в городе постройки ${NameLibrary.GetBuildingType(building.dataValues.type)} отклонена. Глава города не дал одобрение на строительство. Ресурсы возвращены.`, [[keyboard.backButton]])
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -410,23 +693,29 @@ class CallbackEventController
             const road = await CityRoads.findOne({where: {id: roadFromID}})
             if(road?.dataValues.time === 0 && road?.dataValues.isBlocked)
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "✅ Принято",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "✅ Принято")
                 await api.SendMessageWithKeyboard(context.peerId, "ℹ Вы направлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" для того чтобы начать ввод информации о новой дороге", [[keyboard.startButton({type: "build_the_road", roadFromID: roadFromID, roadToID: roadToID})]])
                 Data.users[context.peerId].state = Scenes.FillingOutTheForm
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -492,21 +781,35 @@ class CallbackEventController
                         message: `⚠ Игрок ${context.player.GetName()} обжаловал репорт игрока *id${user.dataValues.id}(${user.dataValues.nick})`
                     })
                 }
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "✅ Обжаловано",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                for(const id of Object.keys(Data.moderators))
+                {
+                    await api.api.messages.send({
+                        user_id: id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠ Игрок ${context.player.GetName()} обжаловал репорт игрока *id${user.dataValues.id}(${user.dataValues.nick})`
+                    })
+                }
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "✅ Обжаловано")
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)
@@ -561,21 +864,27 @@ class CallbackEventController
                         message: `⚠ Игрок ${context.player.GetName()} обжаловал бан игрока *id${user.dataValues.id}(${user.dataValues.nick})`
                     })
                 }
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "✅ Обжаловано",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "✅ Обжаловано")
             }
             else
             {
-                await api.api.messages.edit({
-                    peer_id: context.peerId,
-                    message: "⚠ Не актуально",
-                    conversation_message_id: context.conversationMessageId,
-                    keyboard: keyboard.inlineNone
-                })
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
         }
         catch (e)

@@ -4,11 +4,14 @@ const keyboard = require("../variables/Keyboards")
 const api = require("../middleware/API")
 const Data = require("../models/CacheData")
 const {Player, PlayerStatus, PlayerInfo, Country, CountryRoads, CityRoads, PlayerResources, Warning, OfficialInfo,
-    Transactions
+    Transactions, CountryTaxes, Keys
 } = require("../database/Models")
 const Samples = require("../variables/Samples")
 const sequelize = require("../database/DataBase")
 const OutputManager = require("../controllers/OutputManager")
+const axios = require('axios')
+const groupId = parseInt(process.env.GROUPID)
+const botCallInterval = 40
 
 class ChatController
 {
@@ -49,7 +52,7 @@ class ChatController
             }
             if(context.command?.match(Commands.aboutMe))
             {
-                await context.send(context.player.GetInfo())
+                await context.send(context.player.GetInfo(), {attachment: context.player.avatar})
                 return true
             }
             if(context.command?.match(Commands.checkLocation))
@@ -95,6 +98,11 @@ class ChatController
             if(context.command?.match(Commands.countries))
             {
                 await this.ShowCountriesInfo(context)
+                return true
+            }
+            if(context.command?.match(Commands.events))
+            {
+                await this.ShowEvents(context)
                 return true
             }
             if(context.command?.match(Commands.countriesActive))
@@ -192,6 +200,11 @@ class ChatController
                 await this.Registration(context)
                 return true
             }
+            if(context.command?.match(Commands.info))
+            {
+                await this.CountryInfo(context)
+                return true
+            }
 
 
             //Модератор+
@@ -273,6 +286,7 @@ class ChatController
                 await this.LocatePlayer(context)
                 return true
             }
+
 
             //Админы+
             if(context.command?.match(Commands.ban))
@@ -360,6 +374,16 @@ class ChatController
             }
 
             if(context.peerType !== "chat") return false
+            if(context.replyMessage?.senderId === groupId)
+            {
+                await this.ReplyRequest(context)
+                return true
+            }
+            if(context.command?.match(/^бот,? /))
+            {
+                await this.BotRequest(context)
+                return true
+            }
 
             if(Data.samples[context.player.id])
             {
@@ -413,6 +437,174 @@ class ChatController
         }
     }
 
+
+
+    async CountryInfo(context)
+    {
+        try
+        {
+            let temp, country, request = ""
+            for(const key of Data.countries)
+            {
+                if(key?.tags)
+                {
+                    temp = new RegExp(key.tags)
+                    if(context.command.match(temp))
+                    {
+                        country = key
+                        break
+                    }
+                }
+            }
+            if(!country) return
+            const photos = []
+            photos.push(country.photoURL)
+            photos.push(country.welcomePhotoURL)
+            photos.push(Data.cities[country.capitalID].photoURL)
+            const population = await PlayerStatus.count({where: {citizenship: country.id}})
+            const leader = await Player.findOne({where: {id: country.leaderID}, attributes: ["nick"]})
+            request += country.GetName() + "\n"
+            request += country.description + "\n\n"
+            request += "🌐 Столица - " + Data.cities[country.capitalID].name + "\n"
+            request += "👥 Население - " + population + "\n"
+            request += `👑 Правитель - *id${country.leaderID}(${leader.dataValues.nick})\n`
+            request += "🏛 Форма правления - " + country.governmentForm + "\n\n"
+            request += "На территории можно добыть:\n\n"
+            let res = country.resources.split(".")
+            for(const r of res)
+            {
+                request += NameLibrary.GetResourceName(r) + "\n"
+            }
+            if(country.tested) request += "\n❗ Фракция находится на испытательном сроке\n"
+            request += "\n🏆 Стабильность - " + country.stability + "\n"
+            request += "🌾 Крестьянство и горожане - " + country.peasantry + "\n"
+            request += "🙏 Религия - " + country.religion + "\n"
+            request += "👑 Аристократия - " + country.aristocracy + "\n"
+            request += "⚔ Военные - " + country.military + "\n"
+            request += "💰 Купечество - " + country.merchants + "\n"
+            await context.send(request, {attachment: photos.join(",")})
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/CountryInfo", e)
+        }
+    }
+
+    async ReplyRequest(context)
+    {
+        try
+        {
+            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0)
+            {
+                await context.reply(`⏳ Спросите через ${NameLibrary.ParseFutureTime(Data.botCallTimeouts[context.player.id].time)}`)
+                return
+            }
+            let messages = Data.variables["isTest"] ? [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть."}]
+            let time = new Date()
+            time.setSeconds(time.getSeconds() + botCallInterval)
+            messages.push({role: "assistant", content: context.replyMessage.text})
+            messages.push({role: "user", content: context.text})
+            if(NameLibrary.RoleEstimator(context.player.role) === 0)
+            {
+                Data.botCallTimeouts[context.player.id] = {
+                    time: time,
+                    timeout: setTimeout(() => {
+                        delete Data.botCallTimeouts[context.player.id]
+                    }, botCallInterval * 1000)
+                }
+            }
+            let request = await this.GetChatGPTRequest(messages)
+            if(!request) return
+            for (const sample of request)
+            {
+                const index = request.indexOf(sample);
+                if(index === 0) await context.reply(sample)
+                else await context.send(sample)
+            }
+        } catch (e) {console.log(e)}
+    }
+
+    async BotRequest(context)
+    {
+        try
+        {
+            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0)
+            {
+                await context.reply(`⏳ Спросите через ${NameLibrary.ParseFutureTime(Data.botCallTimeouts[context.player.id].time)}`)
+                return
+            }
+            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть."}]
+            let limit = 10
+            let time = new Date()
+            time.setSeconds(time.getSeconds() + botCallInterval)
+            if(context.forwards.length > 0)
+            {
+                for(const msg of context.forwards)
+                {
+                    if(msg.text?.length > 0 && limit > 0)
+                    {
+                        messages.push({role: msg.senderId > 0 ? "user" : "assistant", content: msg.text})
+                        limit --
+                    }
+                }
+            }
+            if(context.replyMessage && context.replyMessage?.text?.length > 0)
+            {
+                messages.push({role: context.replyMessage.senderId > 0 ? "user" : "assistant", content: context.replyMessage.text})
+            }
+            for(const a of context.attachments)
+            {
+                if(a.type === "audio")
+                {
+                    messages.push({role: "user", content: `Песня ${a.title} от исполнителя ${a.artist}`})
+                    break
+                }
+            }
+            messages.push({role: "user", content: context.text})
+            if(NameLibrary.RoleEstimator(context.player.role) === 0)
+            {
+                Data.botCallTimeouts[context.player.id] = {
+                    time: time,
+                    timeout: setTimeout(() => {
+                        delete Data.botCallTimeouts[context.player.id]
+                    }, botCallInterval * 1000)
+                }
+            }
+            let request = await this.GetChatGPTRequest(messages)
+            if(!request) return
+            for (const sample of request)
+            {
+                const index = request.indexOf(sample);
+                if(index === 0) await context.reply(sample)
+                else await context.send(sample)
+            }
+        } catch (e) {}
+    }
+
+    async GetChatGPTRequest(messages)
+    {
+        try
+        {
+            let request = await axios.post("https://api.openai.com/v1/chat/completions", {
+                    model: "gpt-3.5-turbo",
+                    messages: messages
+                },
+                {
+                    headers: {
+                        Authorization: 'Bearer ' + process.env.OPENAI_API_KEY
+                    }
+                })
+            request = request.data.choices[0].message.content
+            let pages = []
+            for(let i = 0; i < Math.ceil(request.length/4000); i++)
+            {
+                pages[i] = request.slice((i * 4000), (i * 4000) + 4000)
+            }
+            return pages
+        }
+        catch (e) {return undefined}
+    }
+
     async Registration(context)
     {
         let result = await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы изменить данные аккаунта`, [[keyboard.startButton({type: "registration"})], [keyboard.backButton]])
@@ -449,7 +641,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/GetChatInfo", e)
+            await api.SendLogs(context, "ChatController/IsRegistered", e)
         }
     }
 
@@ -503,7 +695,7 @@ class ChatController
                 })
                 if(link?.link)
                 {
-                    await context.send("✅ Держи: " + link.link)
+                    await api.SendMessage(context.player.id, "✅ Держи: " + link.link)
                 }
                 else
                 {
@@ -517,7 +709,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
+            await api.SendLogs(context, "ChatController/GetChatLink", e)
         }
     }
 
@@ -547,7 +739,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
+            await api.SendLogs(context, "ChatController/GetUserObject", e)
         }
     }
 
@@ -585,7 +777,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
+            await api.SendLogs(context, "ChatController/GetBudget", e)
         }
     }
 
@@ -703,7 +895,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/MusicAnalysis", e)
+            await api.SendLogs(context, "ChatController/GetResFromBudget", e)
         }
     }
 
@@ -753,7 +945,6 @@ class ChatController
             if(!user)
             {
                 await context.send("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             const userStatus = await PlayerStatus.findOne({where: {id: context.replyPlayers[0]}, attributes: ["location", "countryID"]})
@@ -761,7 +952,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/ResetLeaders", e)
+            await api.SendLogs(context, "ChatController/LocatePlayer", e)
         }
     }
 
@@ -769,19 +960,25 @@ class ChatController
     {
         try
         {
+            let time = new Date()
+            if(context.player.botForgotTime - time < 0 && NameLibrary.RoleEstimator(context.player.role) === 0)
+            {
+                return
+            }
             if(Data.requests[context.player.id])
             {
                 delete Data.requests[context.player.id]
+                await PlayerInfo.update({botMemory: null}, {where: {id: context.player.id}})
                 await context.send("✅ Ладно, забыл.")
             }
             else
             {
-                await context.send("⚠ Что ты хочешь чтобы я забыл?")
+                await context.send("⚠ Что забыть, то что ты мне писюны в личку шлешь? Ну, ок.")
             }
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/ResetLeaders", e)
+            await api.SendLogs(context, "ChatController/BotForgot", e)
         }
     }
 
@@ -789,9 +986,9 @@ class ChatController
     {
         try
         {
-            if(context.command.match(Commands.censorship))
+            let time = new Date()
+            if(context.player.botForgotTime - time < 0 && NameLibrary.RoleEstimator(context.player.role) === 0)
             {
-                await context.send("⚠ Я не буду материться")
                 return
             }
             let phrase = context.text.replace(Commands.botMem, "")
@@ -805,6 +1002,7 @@ class ChatController
                         sample: phrase ? phrase : ".",
                         attachment: context.attachments?.length > 0 ? context.attachments.map((key) => {return key.toString()}).join(",") : null
                     }
+                    await PlayerInfo.update({botMemory: JSON.stringify(Data.requests[context.replyPlayers[0]])}, {where: {id: context.replyPlayers[0]}})
                     await context.send("✅ Ок, запомнил.")
                     return
                 }
@@ -813,11 +1011,12 @@ class ChatController
                 sample: phrase ? phrase : ".",
                 attachment: context.attachments?.length > 0 ? context.attachments.map((key) => {return key.toString()}).join(",") : null
             }
+            await PlayerInfo.update({botMemory: JSON.stringify(Data.requests[context.player.id])}, {where: {id: context.player.id}})
             await context.send("✅ Ок, запомнил.")
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/ResetLeaders", e)
+            await api.SendLogs(context, "ChatController/BotMem", e)
         }
     }
 
@@ -836,7 +1035,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/ResetLeaders", e)
+            await api.SendLogs(context, "ChatController/BotCall", e)
         }
     }
 
@@ -872,7 +1071,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/ResetLeaders", e)
+            await api.SendLogs(context, "ChatController/StopTrolling", e)
         }
     }
 
@@ -917,7 +1116,7 @@ class ChatController
         }
         catch (e)
         {
-            await api.SendLogs(context, "ChatController/ResetLeaders", e)
+            await api.SendLogs(context, "ChatController/AddTrollSample", e)
         }
     }
 
@@ -1946,7 +2145,6 @@ class ChatController
             if(!status)
             {
                 await context.send("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${user}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             for(const key of Data.countries)
@@ -2018,7 +2216,6 @@ class ChatController
                 if(!resources)
                 {
                     await context.send("⚠ Игрок не зарегистрирован")
-                    await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                     return
                 }
                 const msg = await context.send(`*id${context.replyPlayers[0]}(Инвентарь):\n\n💰 Монеты - ${resources.dataValues.money}\n🪨 Камень - ${resources.dataValues.stone}\n🌾 Зерно - ${resources.dataValues.wheat}\n🪵 Дерево - ${resources.dataValues.wood}\n🌑 Железо - ${resources.dataValues.iron}\n🥉 Бронза - ${resources.dataValues.copper}\n🥈 Серебро - ${resources.dataValues.silver}\n💎 Алмазы - ${resources.dataValues.diamond}`)
@@ -2060,10 +2257,6 @@ class ChatController
         {
             let temp = null
             let country = null
-            if(context.command.match(/я лев ислама и русского халифата/))
-            {
-                context.command = "имарат донбасс"
-            }
             for(const key of Data.countries)
             {
                 if(key?.tags)
@@ -2086,7 +2279,7 @@ class ChatController
                 await context.send("⚠ Правители и чиновники не могут менять гражданство")
                 return
             }
-            if(context.player.status.match(/candidate/))
+            if(Data.timeouts["get_citizenship_" + context.player.id])
             {
                 await context.send("⚠ Вы уже подали на гражданство")
                 return
@@ -2118,16 +2311,19 @@ class ChatController
                     }
                 }
             }
-            if(!context.player.status.match(/worker/))
-            {
-                Data.users[context.player.id].status = "candidate"
+            let time = new Date()
+            time.setHours(time.getHours() + 24)
+            Data.timeouts["get_citizenship_" + context.player.id] = {
+                type: "user_timeout",
+                subtype: "get_citizenship",
+                userId: context.player.id,
+                time: time,
+                countryID: country,
+                timeout: setTimeout(async () => {
+                    await api.SendMessage(context.player.id, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[country].GetName(context.player.platform === "IOS")}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                    delete Data.timeouts["get_citizenship_" + context.player.id]
+                }, 86400000)
             }
-            context.player.waitingCitizenship = setTimeout(() => {
-                if(!context.player.status.match(/worker/))
-                {
-                    Data.users[context.player.id].status = "stateless"
-                }
-            }, 86400000)
             await context.send("✅ Заявка отправлена")
         }
         catch (e)
@@ -2294,7 +2490,6 @@ class ChatController
                     if(!user)
                     {
                         await context.send("⚠ Игрок не зарегистрирован")
-                        await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                         return
                     }
                     activity.allMessages = user.dataValues.msgs
@@ -2379,7 +2574,6 @@ class ChatController
             if(!user)
             {
                 await context.send("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             const userInfo = await PlayerInfo.findOne({where: {id: user.dataValues.id}, attributes: ["marriedID"]})
@@ -2670,11 +2864,41 @@ class ChatController
                     user = await Player.findOne({where: {id: country[0].leaderID}, attributes: ["nick"]})
                     request += `${country[0].GetName(context.player.platform === "IOS")}\n`
                     request += `👥 Население - ${country[1]} чел.\n`
+                    request += `🏆 Стабильность - ${country[0].stability}\n`
                     request += `👑 Правитель - ${user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен"}\n`
                     request += `🌆 Столица - ${Data.cities[country[0].capitalID].name}\n\n`
                 }
             }
             await context.send(request, {disable_mentions: true})
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/RoadMap", e)
+        }
+    }
+
+    async ShowEvents(context)
+    {
+        try
+        {
+            let request = "⏳ Сейчас " + NameLibrary.GetGameSeason() + "\n\n"
+            let messages = await sequelize.query(`SELECT "name", "description", "date" FROM "events" ORDER BY id DESC LIMIT 5`)
+            messages = messages[0]
+            if(messages.length > 0)
+            {
+                for (let i = messages.length - 1; i >= 0; i--)
+                {
+                    request += `📰 ${messages[i].name}\n🕑 ${NameLibrary.GetGameTime(messages[i].date)}\n\n${messages[i].description}\n\n\n`
+                }
+            }
+            else
+            {
+                request += "🤨 Не добавлено"
+            }
+            for(let i = 0; i < Math.ceil(request.length/3900); i++)
+            {
+                await context.send(request.slice((i * 3900), (i * 3900) + 3900), {disable_mentions: true})
+            }
         }
         catch (e)
         {
@@ -3026,8 +3250,11 @@ class ChatController
                 {
                     if(Data.users[user])
                     {
-                        if(Data.users[user].relaxingEndTimeout) clearTimeout(Data.users[user].relaxingEndTimeout)
-                        if(Data.users[user].timeout) clearTimeout(Data.users[user].timeout)
+                        if(Data.timeouts["user_timeout_sleep_" + user])
+                        {
+                            clearTimeout(Data.timeouts["user_timeout_sleep_" + user].timeout)
+                            delete Data.timeouts["user_timeout_sleep_" + user]
+                        }
                         delete Data.users[user]
                         if(Data.samples[user]) delete Data.samples[user]
                         if(Data.requests[user]) delete Data.requests[user]
@@ -3142,12 +3369,16 @@ class ChatController
                 await context.send(`☕ Будете слишком бодрым - сердце посадите.`)
                 return
             }
+            const lvls = {
+                0: 360,
+                1: 300
+            }
             const now = new Date()
             const time = Math.max(0, Math.round((Data.timeouts["user_timeout_sleep_" + context.player.id].time - now) / 60000))
+            context.player.isRelaxing = false
+            context.player.fatigue = Math.round(100 - (time * (100 / lvls[Data.timeouts["user_timeout_sleep_" + context.player.id].houseLevel])))
             clearTimeout(Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
             delete Data.timeouts["user_timeout_sleep_" + context.player.id]
-            context.player.isRelaxing = false
-            context.player.fatigue = Math.round(100 - (time * (100 / 360)))
             await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`)
         }
         catch (e)
@@ -3170,7 +3401,28 @@ class ChatController
                 await context.send(`💪 Вы полны сил`)
                 return
             }
-            const need = (100 - context.player.fatigue) * 3.6
+            const lvls = {
+                0: 3.6,
+                1: 3.0
+            }
+            const keys = await Keys.findAll({where: {ownerID: context.player.id}})
+            let houseLevel = 0
+
+            for(let i = 0; i < Data.buildings[context.player.location]?.length; i++)
+            {
+                if (Data.buildings[context.player.location][i].ownerType === "user" && Data.buildings[context.player.location][i].type.match(/house/))
+                {
+                    for (const key of keys)
+                    {
+                        if (key.dataValues.houseID === Data.buildings[context.player.location][i].id)
+                        {
+                            houseLevel = 1
+                            break
+                        }
+                    }
+                }
+            }
+            const need = (100 - context.player.fatigue) * lvls[houseLevel]
             const time = new Date()
             time.setMinutes(time.getMinutes() + need)
             Data.timeouts["user_timeout_sleep_" + context.player.id] = {
@@ -3178,6 +3430,7 @@ class ChatController
                 subtype: "sleep",
                 userId: context.player.id,
                 time: time,
+                houseLevel: houseLevel,
                 timeout: setTimeout(async () => {
                     await api.SendMessage(context.player.id, "☕ Ваши силы восстановлены")
                     context.player.fatigue = 100
@@ -3200,8 +3453,20 @@ class ChatController
         {
             if(context.player.CantTransact())
             {
-                await context.send("Вы не можете делать переводы, причина:\n\n" + context.player.WhyCantTransact())
+                await context.send("⚠ Вы не можете делать переводы, причина:\n\n" + context.player.WhyCantTransact())
                 return
+            }
+            const getTax = async (toUserID) => {
+                const user = await PlayerStatus.findOne({where: {id: toUserID}})
+                if(user.dataValues.countryID === context.player.countryID && context.player.citizenship && user.dataValues.citizenship) return {outTax: 0, inTax: 0}
+                let outTax = context.player.countryID === context.player.citizenship ? Data.countries[context.player.countryID].citizenTax : Data.countries[context.player.countryID].nonCitizenTax
+                let inTax = user.dataValues.countryID === user.dataValues.citizenship ? Data.countries[user.dataValues.countryID].citizenTax : Data.countries[user.dataValues.countryID].nonCitizenTax
+                if(context.player.countryID === context.player.citizenship)
+                {
+                    let countryTax = await CountryTaxes.findOne({where: {countryID: user.dataValues.countryID, toCountryID: context.player.countryID}})
+                    inTax = countryTax ? countryTax.dataValues.tax : Data.countries[user.dataValues.countryID].nonCitizenTax
+                }
+                return {outTax: outTax, inTax: inTax}
             }
             let country = false
             let city = false
@@ -3238,7 +3503,6 @@ class ChatController
                 if(!user)
                 {
                     await context.send("⚠ Игрок не зарегистрирован")
-                    await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                     return
                 }
             }
@@ -3286,14 +3550,11 @@ class ChatController
                 }
                 if(resource.match(/money|wheat|stone|wood|iron|copper|silver|diamond/))
                 {
-                    if(send.match(/все|всё|всю|всех|весь/))
+                    if(send.match(/все|всё|всю|всех|весь/) || context.player[resource] < count)
                     {
                         count = context.player[resource]
                     }
-                    if(context.player[resource] < count)
-                    {
-                        continue
-                    }
+                    if(count === 0) continue
                     objIN[resource] = objIN[resource] ? objIN[resource] - Math.abs(count) : -Math.abs(count)
                     objOUT[resource] = objOUT[resource] ? objOUT[resource] + Math.abs(count) : Math.abs(count)
                 }
@@ -3350,8 +3611,8 @@ class ChatController
                     }
                     if(res === "florence vine")
                     {
-                        request += "\n🍷 Флорентийское вино - ✅ Передано " + esterEgg[res]
-                        await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} поделился с вами вином. На вкус - флорентийское.`)
+                        request += "\n🍷 Фалернское вино - ✅ Передано " + esterEgg[res]
+                        await api.SendNotification(user.dataValues.id, `✅ Игрок ${context.player.GetName()} поделился с вами вином. Похоже на фалернское.`)
                     }
                     if(res === "sicilian vine")
                     {
@@ -3381,7 +3642,7 @@ class ChatController
                     await api.SendNotification(Data.countries[context.player.countryID].leaderID, `✅ В бюджет фракции ${Data.countries[context.player.countryID].GetName()} поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
                     await Transactions.create({
                         fromID: context.player.id,
-                        toID: user.dataValues.id,
+                        toID: context.player.countryID,
                         type: "ptctr",
                         money: objOUT.money ? objOUT.money : null,
                         stone: objOUT.stone ? objOUT.stone : null,
@@ -3400,7 +3661,7 @@ class ChatController
                     await api.SendNotification(Data.cities[context.player.location].leaderID, `✅ В бюджет города ${Data.cities[context.player.location].name} поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
                     await Transactions.create({
                         fromID: context.player.id,
-                        toID: user.dataValues.id,
+                        toID: context.player.location,
                         type: "ptct",
                         money: objOUT.money ? objOUT.money : null,
                         stone: objOUT.stone ? objOUT.stone : null,
@@ -3414,22 +3675,98 @@ class ChatController
                 }
                 else
                 {
-                    await Data.AddPlayerResources(user.dataValues.id, objOUT)
-                    await Data.AddPlayerResources(context.player.id, objIN)
-                    await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
-                    await Transactions.create({
-                        fromID: context.player.id,
-                        toID: user.dataValues.id,
-                        type: "ptp",
-                        money: objOUT.money ? objOUT.money : null,
-                        stone: objOUT.stone ? objOUT.stone : null,
-                        wood: objOUT.wood ? objOUT.wood : null,
-                        wheat: objOUT.wheat ? objOUT.wheat : null,
-                        iron: objOUT.iron ? objOUT.iron : null,
-                        copper: objOUT.copper ? objOUT.copper : null,
-                        silver: objOUT.silver ? objOUT.silver : null,
-                        diamond: objOUT.diamond ? objOUT.diamond : null
-                    })
+                    const {outTax, inTax} = await getTax(user.dataValues.id)
+                    if(outTax === 100 || inTax === 100)
+                    {
+                        await context.send("⚠ Установлен 100% налог, нет смысла передавать ресурсы")
+                        return
+                    }
+                    if(outTax === 0 || inTax === 0)
+                    {
+                        await Data.AddPlayerResources(user.dataValues.id, objOUT)
+                        await Data.AddPlayerResources(context.player.id, objIN)
+                        await api.SendNotification(user.dataValues.id, `✅ Вам поступил перевод от игрока ${context.player.GetName()} в размере:\n${NameLibrary.GetPrice(objIN)}`)
+                        await Transactions.create({
+                            fromID: context.player.id,
+                            toID: user.dataValues.id,
+                            type: "ptp",
+                            money: objOUT.money ? objOUT.money : null,
+                            stone: objOUT.stone ? objOUT.stone : null,
+                            wood: objOUT.wood ? objOUT.wood : null,
+                            wheat: objOUT.wheat ? objOUT.wheat : null,
+                            iron: objOUT.iron ? objOUT.iron : null,
+                            copper: objOUT.copper ? objOUT.copper : null,
+                            silver: objOUT.silver ? objOUT.silver : null,
+                            diamond: objOUT.diamond ? objOUT.diamond : null
+                        })
+                    }
+                    else
+                    {
+                        let kb = [[], []]
+                        let canRefund = false
+                        const playerLocation = await PlayerStatus.findOne({where: {id: user.dataValues.id}, attributes: ["countryID"]})
+                        let refundTax = NameLibrary.PriceTaxRefund(NameLibrary.PriceTaxRefund(objIN, outTax), inTax)
+                        if(context.player.CanPay(refundTax))
+                        {
+                            kb[0].push(keyboard.positiveCallbackButton({label: "💸 Покрыть", payload: {
+                                command: "transaction_refund_tax",
+                                transaction: {
+                                    price: refundTax,
+                                    tax: {
+                                        in: inTax,
+                                        out: outTax
+                                    },
+                                    countries: {
+                                        in: context.player.countryID,
+                                        out: playerLocation.dataValues.countryID
+                                    },
+                                    toUser: user.dataValues.id
+                                }
+                            }}))
+                            canRefund = true
+                        }
+                        kb[0].push(keyboard.positiveCallbackButton({label: "💸 Оплатить", payload: {
+                            command: "transaction_tax",
+                            transaction: {
+                                price: objIN,
+                                tax: {
+                                    in: inTax,
+                                    out: outTax
+                                },
+                                countries: {
+                                    in: context.player.countryID,
+                                    out: playerLocation.dataValues.countryID
+                                },
+                                toUser: user.dataValues.id
+                            }
+                        }}))
+                        kb[0].push(keyboard.secondaryCallbackButton({label: "💰 Уклониться", payload: {
+                            command: "transaction_tax_evasion",
+                            transaction: {
+                                price: objIN,
+                                tax: {
+                                    in: inTax,
+                                    out: outTax
+                                },
+                                countries: {
+                                    in: context.player.countryID,
+                                    out: playerLocation.dataValues.countryID
+                                },
+                                toUser: user.dataValues.id
+                            }
+                        }}))
+                        kb[0].push(keyboard.negativeCallbackButton({label: "🚫 Отменить", payload: {
+                            command: "hide_message"
+                        }}))
+                        await context.send("ℹ Подтвердите оплату налога в ЛС")
+                        await api.api.messages.send({
+                            user_id: context.player.id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `ℹ Для совершения перевода игроку *id${user.dataValues.id}(${user.dataValues.nick}) необходимо уплатить налоги в размере ${inTax}% и ${outTax}%\n\nПеревод в размере:\n${NameLibrary.GetPrice(objIN)}\n\nПосле уплаты налога останется:\n${NameLibrary.GetPrice(NameLibrary.AfterPayTax(NameLibrary.AfterPayTax(objIN, inTax), outTax))}\n\n${canRefund ? "ℹ Также вы можете взять на себя компенсацию налога, но тогда сумма перевода будет составлять:\n" + NameLibrary.GetPrice(refundTax) : ""}`,
+                            keyboard: keyboard.build(kb).inline()
+                        })
+                        return
+                    }
                 }
             }
             if(request.length !== 0) await context.send(request)
@@ -3461,7 +3798,6 @@ class ChatController
             if(player === 0)
             {
                 await context.send("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             context.command = context.command.replace(Commands.cheating, "")
@@ -3515,6 +3851,19 @@ class ChatController
             }
             await Data.AddPlayerResources(user, objOUT)
             await api.SendNotification(user, `✅ Вам поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
+            await Transactions.create({
+                fromID: context.player.id,
+                toID: user,
+                type: "gmtp",
+                money: objOUT.money ? objOUT.money : null,
+                stone: objOUT.stone ? objOUT.stone : null,
+                wood: objOUT.wood ? objOUT.wood : null,
+                wheat: objOUT.wheat ? objOUT.wheat : null,
+                iron: objOUT.iron ? objOUT.iron : null,
+                copper: objOUT.copper ? objOUT.copper : null,
+                silver: objOUT.silver ? objOUT.silver : null,
+                diamond: objOUT.diamond ? objOUT.diamond : null
+            })
             await context.send(request)
         }
         catch (e)
@@ -3544,7 +3893,6 @@ class ChatController
             if(player === 0)
             {
                 await context.send("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             context.command = context.command.replace(Commands.pickUp, "")
@@ -3610,6 +3958,19 @@ class ChatController
             }
             await Data.AddPlayerResources(user, objOUT)
             await api.SendNotification(user, `✅ У вас было отобрано:\n${NameLibrary.GetPrice(objOUT)}`)
+            await Transactions.create({
+                fromID: context.player.id,
+                toID: user,
+                type: "ptgm",
+                money: objOUT.money ? objOUT.money : null,
+                stone: objOUT.stone ? objOUT.stone : null,
+                wood: objOUT.wood ? objOUT.wood : null,
+                wheat: objOUT.wheat ? objOUT.wheat : null,
+                iron: objOUT.iron ? objOUT.iron : null,
+                copper: objOUT.copper ? objOUT.copper : null,
+                silver: objOUT.silver ? objOUT.silver : null,
+                diamond: objOUT.diamond ? objOUT.diamond : null
+            })
             await context.send(request)
         }
         catch (e)
@@ -3631,12 +3992,11 @@ class ChatController
             if(!user)
             {
                 await context.send("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             const userInfo = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
             const userStatus = await PlayerStatus.findOne({where: {id: context.replyPlayers[0]}})
-            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘Муж)` : `*id${userInfo.dataValues.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true})
+            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘Муж)` : `*id${userInfo.dataValues.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true, attachment: user.dataValues.avatar})
         }
         catch (e)
         {
@@ -3662,7 +4022,6 @@ class ChatController
             if(!user)
             {
                 await context.send("⚠ Игрок не зарегистрирован")
-                await context.send(`⚠ А *id${context.replyPlayers[0]}(вас) я попрошу зарегистрироваться, иначе вы не сможете пользоваться функционалом бота. Вот ссылОчка где это можно сделать https://vk.com/im?sel=-218388422`)
                 return
             }
             if(user.dataValues.location === context.player.location)
@@ -3850,14 +4209,13 @@ class ChatController
                 await context.send("⚠ У вас не хватает монет для отправки жалобы (стоимость 150 монет)")
                 return
             }
-            await Data.AddPlayerResources(context.player.id, {money: -150})
             const users = context.replyPlayers.join(";")
             context.player.lastReportTime = time
             await api.SendMessageWithKeyboard(context.player.id, `Вы перенаправлены в режим ввода данных.\n\nℹ Нажмите кнопку \"Начать\" чтобы ввести данные репорта на игрок${context.replyPlayers.length > 1 ? "ов" : "а"}:\n${context.replyPlayers?.map(user => {
                 return `*id${user}(${user})\n`
             })}`, [[keyboard.startButton({type: "new_report", users: users})], [keyboard.backButton]])
             context.player.state = context.scenes.FillingOutTheForm
-            await context.send("ℹ Снято 150 монет, заполните форму в ЛС")
+            await context.send("ℹ Заполните форму в ЛС")
         }
         catch (e)
         {

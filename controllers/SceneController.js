@@ -15,6 +15,7 @@ class SceneController
         let kb = [
             [keyboard.menuButton]
         ]
+        let time = new Date()
         if(Data.cities[context.player.location]?.leaderID === context.player.id || NameLibrary.RoleEstimator(context.player.role) > 2)
         {
             if(!kb[1]) kb[1] = []
@@ -42,6 +43,10 @@ class SceneController
             if(!kb[2]) kb[2] = []
             kb[2].push(keyboard.adminPanelButton)
         }
+        if(context.player.botCallTime - time > 0 || NameLibrary.RoleEstimator(context.player.role) !== 0)
+        {
+            kb.push([keyboard.talkButtonButton])
+        }
         return kb
     }
 
@@ -57,7 +62,7 @@ class SceneController
                 })
                 return
             }
-            if(context.messagePayload?.choice?.match(/menu|admin|mayor_menu|leader_menu|gm_menu/))
+            if(context.messagePayload?.choice?.match(/menu|admin|mayor_menu|leader_menu|gm_menu|talk/))
             {
                 if(context.messagePayload.choice === "menu")
                 {
@@ -101,6 +106,11 @@ class SceneController
                     })
                     context.player.state = this.GMMenu
                 }
+                if(context.messagePayload.choice === "talk")
+                {
+                    context.send("▶ Диалог с ботом\n\nℹ Бот видит контекст сообщения если если ответить на него, также он может видеть контекст пересланных сообщений (15 сообщений не важно от кого)", {keyboard: keyboard.build(this.GetBotTalkMenuKeyboard())})
+                    context.player.state = this.BotTalkMenu
+                }
             }
             else
             {
@@ -112,6 +122,65 @@ class SceneController
         catch (e)
         {
             await api.SendLogs(context, "SceneController/StartScreen", e)
+        }
+    }
+
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    //Говорить с ботом
+
+    GetBotTalkMenuKeyboard = () =>
+    {
+        return [[keyboard.backButton]]
+    }
+
+    BotTalkMenu = async (context) =>
+    {
+        let time = new Date()
+        if(context.player.botCallTime - time < 0 && NameLibrary.RoleEstimator(context.player.role) === 0)
+        {
+            await context.send("❗ Вы не можете сейчас тут находиться",{keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+            context.player.state = this.StartScreen
+            return
+        }
+        if(context.messagePayload?.choice?.match(/back/))
+        {
+            await context.send("↪ Назад",{keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+            context.player.state = this.StartScreen
+            return
+        }
+        let messages = []
+        let limit = 15
+        if(context.forwards.length > 0)
+        {
+            for(const msg of context.forwards)
+            {
+                if(msg.text?.length > 0 && limit > 0)
+                {
+                    messages.push({role: msg.senderId > 0 ? "user" : "assistant", content: msg.text})
+                    limit --
+                }
+            }
+        }
+        if(context.replyMessage && context.replyMessage?.text?.length > 0)
+        {
+            messages.push({role: context.replyMessage.senderId > 0 ? "user" : "assistant", content: context.replyMessage.text})
+        }
+        for(const a of context.attachments)
+        {
+            if(a.type === "audio")
+            {
+                messages.push({role: "user", content: `Песня ${a.title} от исполнителя ${a.artist}`})
+                break
+            }
+        }
+        messages.push({role: "user", content: context.text})
+        let request = await Builders.GetChatGPTRequest(messages)
+        for (const sample of request)
+        {
+            await context.send(sample)
         }
     }
 
@@ -194,6 +263,16 @@ class SceneController
         ]
     }
 
+    GetOfficialsArmyMenuKeyboard = () =>
+    {
+        return [
+            [keyboard.upgradeBarakButton],
+            [keyboard.trainUnitButton, keyboard.refuseUnitButton],
+            [keyboard.armyButton, keyboard.expensesButton],
+            [keyboard.backButton]
+        ]
+    }
+
     OfficialMenu = async(context) =>
     {
         try
@@ -227,6 +306,11 @@ class SceneController
                     await context.send("▶ Города",{keyboard: keyboard.build(this.GetOfficialsCitiesMenuKeyboard())})
                     context.player.state = this.OfficialsCitiesMenu
                 }
+                if(context.messagePayload?.choice?.match(/army/))
+                {
+                    await context.send("▶ Армия",{keyboard: keyboard.build(this.GetOfficialsArmyMenuKeyboard())})
+                    context.player.state = this.OfficialsArmyMenu
+                }
             }
             else
             {
@@ -238,6 +322,67 @@ class SceneController
         catch (e)
         {
             await api.SendLogs(context, "SceneController/OfficialMenu", e)
+        }
+    }
+
+    OfficialsArmyMenu = async(context) =>
+    {
+        try
+        {
+            if(await ChatController.CommandHandler(context)) return
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || (context.official?.canBuildCity && context.official?.countryID === context.player.countryID))
+            {
+                context.country = Data.countries[context.player.countryID]
+            }
+            if(!context.country)
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
+            const current_keyboard = this.GetCountryArmyMenuKeyboard()
+            if(context.messagePayload?.choice?.match(/back|train_unit|refuse_unit|expenses|army|upgrade_barak/))
+            {
+                if(context.messagePayload?.choice?.match(/back/))
+                {
+                    await context.send("↪ Назад",{keyboard: keyboard.build(this.GetOfficialMenuKeyboard(context))})
+                    context.player.state = this.OfficialMenu
+                }
+                if (context.messagePayload.choice.match(/train_unit/))
+                {
+                    await Builders.TrainUnit(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/refuse_unit/))
+                {
+                    await Builders.RefuseUnit(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/upgrade_barak/))
+                {
+                    await Builders.UpgradeBarak(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/expenses/))
+                {
+                    await Builders.UnitsExpenses(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/army/))
+                {
+                    const army = await context.country.ShowArmy()
+                    for(const a of army)
+                    {
+                        await context.send(a)
+                    }
+                }
+            }
+            else
+            {
+                context.send("👉🏻 Управление городом",{
+                    keyboard: keyboard.build(current_keyboard)
+                })
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "SceneController/CountryInfoMenu", e)
         }
     }
 
@@ -516,21 +661,13 @@ class SceneController
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+    //ГМ-меню
+
     GetGMMenuKeyboard = () =>
     {
         return [
-            [keyboard.eventsButton, keyboard.controlsButton],
-            [keyboard.applyEffectsButton, keyboard.removeEffectsButton],
-            [keyboard.backButton]
-        ]
-    }
-
-    GetGMControlsMenuKeyboard = () =>
-    {
-        return [
-            [keyboard.usersButton],
-            [keyboard.citiesButton, keyboard.buildingsButton],
-            [keyboard.chatListButton, keyboard.roadsButton],
+            [keyboard.citiesButton, keyboard.usersButton],
+            [keyboard.chatListButton, keyboard.eventsButton],
             [keyboard.backButton]
         ]
     }
@@ -538,15 +675,17 @@ class SceneController
     GetGMUsersMenuKeyboard = () =>
     {
         return [
+            [keyboard.applyEffectsButton, keyboard.removeEffectsButton],
             [keyboard.userInfoButton, keyboard.cheatingResourceButton, keyboard.teleportButton],
-            [keyboard.backButton]
+            [keyboard.backButton, keyboard.notesButton]
         ]
     }
 
     GetGMCitiesMenuKeyboard = () =>
     {
         return [
-            [keyboard.cityInfoButton, keyboard.cheatingResourceButton],
+            [keyboard.cheatingResourceButton, keyboard.notesButton],
+            [keyboard.cityInfoButton, keyboard.buildingsButton],
             [keyboard.backButton]
         ]
     }
@@ -562,7 +701,17 @@ class SceneController
     GetGMCountriesMenuKeyboard = () =>
     {
         return [
-            [keyboard.countryInfoButton, keyboard.cheatingResourceButton, keyboard.resourcesButton],
+            [keyboard.cheatingResourceButton, keyboard.resourcesButton, keyboard.armyButton],
+            [keyboard.countryInfoButton, keyboard.notesButton, keyboard.roadsButton],
+            [keyboard.backButton, keyboard.variablesButton]
+        ]
+    }
+
+    GetGMArmyMenuKeyboard = () =>
+    {
+        return [
+            [keyboard.createUnitButton],
+            [keyboard.editUnitButton, keyboard.deleteUnitButton],
             [keyboard.backButton]
         ]
     }
@@ -573,7 +722,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|events|apply_effects|remove_effects|controls/))
+            if(context.messagePayload?.choice?.match(/back|events|users|cities|chat_list/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
@@ -582,20 +731,26 @@ class SceneController
                     })
                     context.player.state = this.StartScreen
                 }
-                if(context.messagePayload?.choice?.match(/controls/))
+                if(context.messagePayload?.choice?.match(/users/))
                 {
-                    await context.send("▶ Управление",{
-                        keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
+                    context.send("▶ Игроки", {
+                        keyboard: keyboard.build(this.GetGMUsersMenuKeyboard())
                     })
-                    context.player.state = this.GMControlsMenu
+                    context.player.state = this.GMUsersMenu
                 }
-                if(context.messagePayload?.choice?.match(/remove_effects/))
+                if(context.messagePayload?.choice?.match(/cities/))
                 {
-                    await Builders.RemoveEffect(context, current_keyboard)
+                    context.send("▶ Города", {
+                        keyboard: keyboard.build(this.GetGMCitiesMenuKeyboard())
+                    })
+                    context.player.state = this.GMCitiesMenu
                 }
-                if(context.messagePayload?.choice?.match(/apply_effects/))
+                if(context.messagePayload?.choice?.match(/chat_list/))
                 {
-                    await Builders.AddEffect(context, current_keyboard)
+                    context.send("▶ Фракции", {
+                        keyboard: keyboard.build(this.GetGMCountriesMenuKeyboard())
+                    })
+                    context.player.state = this.GMCountriesMenu
                 }
                 if(context.messagePayload?.choice?.match(/events/))
                 {
@@ -615,64 +770,44 @@ class SceneController
         }
     }
 
-    GMControlsMenu = async(context) =>
+    GMArmyMenu = async(context) =>
     {
         try
         {
             if(await ChatController.CommandHandler(context)) return
-            const current_keyboard = this.GetGMControlsMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|roads|users|cities|buildings|chat_list/))
+            const current_keyboard = this.GetGMArmyMenuKeyboard()
+            if(context.messagePayload?.choice?.match(/back|create_unit|delete_unit|edit_unit/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
-                        keyboard: keyboard.build(this.GetGMMenuKeyboard(context))
-                    })
-                    context.player.state = this.GMMenu
-                }
-                if(context.messagePayload?.choice?.match(/roads/))
-                {
-                    await Builders.RoadControls(context, current_keyboard)
-                }
-                if(context.messagePayload?.choice?.match(/users/))
-                {
-                    context.send("▶ Игроки", {
-                        keyboard: keyboard.build(this.GetGMUsersMenuKeyboard())
-                    })
-                    context.player.state = this.GMUsersMenu
-                }
-                if(context.messagePayload?.choice?.match(/cities/))
-                {
-                    context.send("▶ Города", {
-                        keyboard: keyboard.build(this.GetGMCitiesMenuKeyboard())
-                    })
-                    context.player.state = this.GMCitiesMenu
-                }
-                if(context.messagePayload?.choice?.match(/buildings/))
-                {
-                    context.send("▶ Постройки", {
-                        keyboard: keyboard.build(this.GetGMBuildingsMenuKeyboard())
-                    })
-                    context.player.state = this.GMBuildingsMenu
-                }
-                if(context.messagePayload?.choice?.match(/chat_list/))
-                {
-                    context.send("▶ Фракции", {
                         keyboard: keyboard.build(this.GetGMCountriesMenuKeyboard())
                     })
                     context.player.state = this.GMCountriesMenu
                 }
+                if (context.messagePayload.choice.match(/create_unit/))
+                {
+                    await Builders.CreateUnit(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/delete_unit/))
+                {
+                    await Builders.DeleteUnit(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/edit_unit/))
+                {
+                    await Builders.EditUnit(context, current_keyboard)
+                }
             }
             else
             {
-                context.send("👉🏻 Управление",{
+                context.send("👉🏻 Армия",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
         }
         catch (e)
         {
-            await api.SendLogs(context, "SceneController/GMControlsMenu", e)
+            await api.SendLogs(context, "SceneController/GMCountriesMenu", e)
         }
     }
 
@@ -682,14 +817,14 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMCountriesMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|cheating_resource|country_info|resources/))
+            if(context.messagePayload?.choice?.match(/back|cheating_resource|country_info|resources|roads|army|notes|variables/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
-                        keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
+                        keyboard: keyboard.build(this.GetGMMenuKeyboard())
                     })
-                    context.player.state = this.GMControlsMenu
+                    context.player.state = this.GMMenu
                 }
                 if (context.messagePayload.choice.match(/cheating_resource/))
                 {
@@ -703,10 +838,29 @@ class SceneController
                 {
                     await Builders.ChangeCountryResource(context, current_keyboard)
                 }
+                if(context.messagePayload?.choice?.match(/roads/))
+                {
+                    await Builders.RoadControls(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/notes/))
+                {
+                    await Builders.CountryNotes(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/variables/))
+                {
+                    await Builders.SetCountryVariable(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/army/))
+                {
+                    context.send("▶ Армия",{
+                        keyboard: keyboard.build(this.GetGMArmyMenuKeyboard())
+                    })
+                    context.player.state = this.GMArmyMenu
+                }
             }
             else
             {
-                context.send("👉🏻 Игроки",{
+                context.send("👉🏻 Фракции",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
@@ -728,9 +882,9 @@ class SceneController
                 if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
-                        keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
+                        keyboard: keyboard.build(this.GetGMCitiesMenuKeyboard())
                     })
-                    context.player.state = this.GMControlsMenu
+                    context.player.state = this.GMCitiesMenu
                 }
                 if(context.messagePayload?.choice?.match(/building_info/))
                 {
@@ -756,14 +910,14 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMCitiesMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|cheating_resource|city_info/))
+            if(context.messagePayload?.choice?.match(/back|cheating_resource|city_info|buildings|notes/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
-                        keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
+                        keyboard: keyboard.build(this.GetGMMenuKeyboard())
                     })
-                    context.player.state = this.GMControlsMenu
+                    context.player.state = this.GMMenu
                 }
                 if (context.messagePayload.choice.match(/cheating_resource/))
                 {
@@ -772,6 +926,17 @@ class SceneController
                 if(context.messagePayload?.choice?.match(/city_info/))
                 {
                     await Builders.GetCityInfo(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/notes/))
+                {
+                    await Builders.CityNotes(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/buildings/))
+                {
+                    context.send("▶ Постройки", {
+                        keyboard: keyboard.build(this.GetGMBuildingsMenuKeyboard())
+                    })
+                    context.player.state = this.GMBuildingsMenu
                 }
             }
             else
@@ -793,14 +958,14 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMUsersMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|cheating_resource|user_info|teleport/))
+            if(context.messagePayload?.choice?.match(/back|cheating_resource|user_info|teleport|remove_effects|apply_effects|notes/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
                     context.send("↪ Назад",{
-                        keyboard: keyboard.build(this.GetGMControlsMenuKeyboard())
+                        keyboard: keyboard.build(this.GetGMMenuKeyboard())
                     })
-                    context.player.state = this.GMControlsMenu
+                    context.player.state = this.GMMenu
                 }
                 if (context.messagePayload.choice.match(/cheating_resource/))
                 {
@@ -813,6 +978,18 @@ class SceneController
                 if(context.messagePayload?.choice?.match(/teleport/))
                 {
                     await Builders.TeleportUser(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/remove_effects/))
+                {
+                    await Builders.RemoveEffect(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/apply_effects/))
+                {
+                    await Builders.AddEffect(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/notes/))
+                {
+                    await Builders.PlayerNotes(context, current_keyboard)
                 }
             }
             else
@@ -955,7 +1132,6 @@ class SceneController
     {
         try
         {
-            if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetAdminTechnicalMenuKeyboard()
             if(NameLibrary.RoleEstimator(context.player.role) < 3)
             {
@@ -1200,18 +1376,19 @@ class SceneController
     GetGovernanceCountryMenuKeyboard = () =>
     {
         return [
-            [keyboard.controlsButton],
-            [keyboard.budgetButton, keyboard.infoButton],
-            [keyboard.officialsButton, keyboard.parametersButton],
-            [keyboard.backButton]
+            [keyboard.budgetButton],
+            [keyboard.citiesButton, keyboard.citizensButton],
+            [keyboard.officialsButton, keyboard.armyButton],
+            [keyboard.backButton, keyboard.parametersButton]
         ]
     }
 
-    GetCountryInfoMenuKeyboard = () =>
+    GetCountryArmyMenuKeyboard = () =>
     {
         return [
-            [keyboard.resourcesButton, keyboard.playersListButton],
-            [keyboard.citiesButton, keyboard.citizenListButton, keyboard.countryInfoButton],
+            [keyboard.upgradeBarakButton],
+            [keyboard.trainUnitButton, keyboard.refuseUnitButton],
+            [keyboard.armyButton, keyboard.expensesButton],
             [keyboard.backButton]
         ]
     }
@@ -1219,10 +1396,10 @@ class SceneController
     GetChangeCountryMenuKeyboard = (context) =>
     {
         let kb = [
-            [keyboard.nameButton],
-            [keyboard.descriptionButton, keyboard.publicButton],
-            [keyboard.photoButton, keyboard.welcomePictureButton],
-            [keyboard.backButton]
+            [keyboard.transferPowerButton],
+            [keyboard.nameButton, keyboard.descriptionButton, keyboard.governmentFormButton],
+            [keyboard.publicButton, keyboard.photoButton, keyboard.welcomePictureButton],
+            [keyboard.backButton, keyboard.countryInfoButton]
         ]
         if(Data.countries[context.player.countryID].notifications) kb[0].push(keyboard.notificationsOffButton)
         else kb[0].push(keyboard.notificationsOnButton)
@@ -1232,25 +1409,19 @@ class SceneController
     GetCountryBudgetMenuKeyboard = () =>
     {
         return [
-            [keyboard.getTaxButton],
-            [keyboard.transactionButton, keyboard.getResourcesButton],
-            [keyboard.backButton]
+            [keyboard.getResourcesButton, keyboard.mintingMoneyButton],
+            [keyboard.setTaxButton, keyboard.getTaxButton, keyboard.transactionButton],
+            [keyboard.backButton, keyboard.resourcesButton]
         ]
     }
 
-    GetCountryControlsMenuKeyboard = (context) =>
+    GetCountryCitiesMenuKeyboard = () =>
     {
-        let kb = [
-            [keyboard.setTaxButton],
-            [keyboard.buildCityButton, keyboard.buildingsButton],
-            [keyboard.takeAwayCitizenshipButton, keyboard.setMayorButton],
+        return [
+            [keyboard.setMayorButton, keyboard.buildCityButton],
+            [keyboard.citiesButton, keyboard.buildingsButton],
             [keyboard.backButton]
         ]
-        if(context.player.id === Data.countries[context.player.countryID].leaderID)
-        {
-            kb[2].push(keyboard.transferPowerButton)
-        }
-        return kb
     }
 
     GetCountryOfficialsMenuKeyboard = () =>
@@ -1258,8 +1429,7 @@ class SceneController
         return [
             [keyboard.officialListButton],
             [keyboard.changeRightsButton, keyboard.setButton],
-            [keyboard.takeAwayRightsButton],
-            [keyboard.backButton]
+            [keyboard.backButton, keyboard.takeAwayRightsButton]
         ]
     }
 
@@ -1271,35 +1441,43 @@ class SceneController
         ]
     }
 
+    GetCountryCitizensMenuKeyboard = () =>
+    {
+        return [
+            [keyboard.playersListButton, keyboard.citizenListButton],
+            [keyboard.backButton, keyboard.takeAwayCitizenshipButton]
+        ]
+    }
+
     GovernanceCountryMenu = async(context) =>
     {
         try
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGovernanceCountryMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|budget|controls|info|officials|params/))
+            if(context.messagePayload?.choice?.match(/back|budget|cities|citizens|officials|params|army/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
                     await context.send("↪ Назад", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                     context.player.state = this.StartScreen
                 }
-                if(context.messagePayload.choice.match(/info/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official))
+                if(context.messagePayload.choice.match(/army/))
                 {
-                    await context.send("▶ Информация о фракции",{keyboard: keyboard.build(this.GetCountryInfoMenuKeyboard())})
-                    context.player.state = this.CountryInfoMenu
+                    await context.send("▶ Армия",{keyboard: keyboard.build(this.GetCountryArmyMenuKeyboard())})
+                    context.player.state = this.CountryArmyMenu
                 }
-                if(context.messagePayload.choice.match(/params/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id))
+                if(context.messagePayload.choice.match(/params/))
                 {
                     await context.send("▶ Параметры",{keyboard: keyboard.build(this.GetChangeCountryMenuKeyboard(context))})
                     context.player.state = this.ChangeCountryMenu
                 }
-                if(context.messagePayload.choice.match(/controls/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity || context.official?.canAppointMayors || context.official?.canBeDelegate || context.official?.canUseResources))
+                if(context.messagePayload.choice.match(/cities/))
                 {
-                    await context.send("▶ Управление ",{keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard(context))})
-                    context.player.state = this.CountryControlsMenu
+                    await context.send("▶ Города ",{keyboard: keyboard.build(this.GetCountryCitiesMenuKeyboard())})
+                    context.player.state = this.CountryCitiesMenu
                 }
-                if(context.messagePayload.choice.match(/budget/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canUseResources))
+                if(context.messagePayload.choice.match(/budget/))
                 {
                     if(Data.countries[context.player.countryID].capitalID !== context.player.location && context.player.status !== "worker")
                     {
@@ -1309,22 +1487,77 @@ class SceneController
                     await context.send("▶ Бюджет",{keyboard: keyboard.build(this.GetCountryBudgetMenuKeyboard())})
                     context.player.state = this.CountryBudgetMenu
                 }
-                if(context.messagePayload.choice.match(/officials/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canAppointOfficial))
+                if(context.messagePayload.choice.match(/officials/))
                 {
                     await context.send("▶ Чиновники",{keyboard: keyboard.build(this.GetCountryOfficialsMenuKeyboard())})
                     context.player.state = this.CountryOfficialsMenu
                 }
+                if(context.messagePayload.choice.match(/citizens/))
+                {
+                    await context.send("▶ Граждане",{keyboard: keyboard.build(this.GetCountryCitizensMenuKeyboard())})
+                    context.player.state = this.CountryCitizensMenu
+                }
             }
             else
             {
-                context.send("👉🏻 Управление фракцией",{
+                context.send("👉🏻 Управление фракцией",{keyboard: keyboard.build(current_keyboard)})
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "SceneController/GovernanceCountryMenu", e)
+        }
+    }
+
+    CountryCitizensMenu = async(context) =>
+    {
+        try
+        {
+            if(await ChatController.CommandHandler(context)) return
+            const current_keyboard = this.GetCountryCitizensMenuKeyboard()
+            context.country = null
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
+            {
+                context.country = Data.countries[context.player.countryID]
+            }
+            if(!context.country)
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
+            if(context.messagePayload?.choice?.match(/back|players_list|citizen_list|take_away_citizenship/))
+            {
+                if (context.messagePayload.choice.match(/back/))
+                {
+                    context.send("↪ Назад", {
+                        keyboard: keyboard.build(this.GetGovernanceCountryMenuKeyboard(context))
+                    })
+                    context.player.state = this.GovernanceCountryMenu
+                }
+                if (context.messagePayload.choice.match(/players_list/))
+                {
+                    await Builders.GetCountryPlayersList(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/citizen_list/))
+                {
+                    await Builders.GetCitizenList(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/take_away_citizenship/))
+                {
+                    await Builders.TakeAwayCitizenship(context, current_keyboard)
+                }
+            }
+            else
+            {
+                context.send("👉🏻 Граждане",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
         }
         catch (e)
         {
-            await api.SendLogs(context, "SceneController/GovernanceCountryMenu", e)
+            await api.SendLogs(context, "SceneController/CountryOfficialsMenu", e)
         }
     }
 
@@ -1354,19 +1587,19 @@ class SceneController
                     })
                     context.player.state = this.GovernanceCountryMenu
                 }
-                if (context.messagePayload.choice.match(/official_list/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canAppointOfficial))
+                if (context.messagePayload.choice.match(/official_list/))
                 {
                     await Builders.GetCountryOfficials(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/set/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canAppointOfficial))
+                if (context.messagePayload.choice.match(/set/))
                 {
                     await Builders.SetOfficial(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/change_rights/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id))
+                if (context.messagePayload.choice.match(/change_rights/))
                 {
                     await Builders.ChangeOfficial(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/take_away/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id))
+                if (context.messagePayload.choice.match(/take_away/))
                 {
                     await Builders.TakeAwayOfficial(context, current_keyboard)
                 }
@@ -1384,14 +1617,14 @@ class SceneController
         }
     }
 
-    CountryControlsMenu = async(context) =>
+    CountryCitiesMenu = async(context) =>
     {
         try
         {
             if(await ChatController.CommandHandler(context)) return
-            const current_keyboard = this.GetCountryControlsMenuKeyboard(context)
+            const current_keyboard = this.GetCountryCitiesMenuKeyboard()
             context.country = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
             {
                 context.country = Data.countries[context.player.countryID]
             }
@@ -1401,7 +1634,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|set_mayor|build_city|set_tax|buildings|take_away_citizenship|transfer_power/))
+            if(context.messagePayload?.choice?.match(/back|set_mayor|build_city|buildings|cities/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1410,37 +1643,29 @@ class SceneController
                     })
                     context.player.state = this.GovernanceCountryMenu
                 }
-                if (context.messagePayload.choice.match(/set_mayor/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canAppointMayors))
+                if (context.messagePayload.choice.match(/set_mayor/))
                 {
                     await Builders.SetMayor(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/set_tax/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id  || context.official?.canUseResources))
-                {
-                    await Builders.SetTax(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/build_city/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity))
+                if (context.messagePayload.choice.match(/build_city/))
                 {
                     await Builders.BuildNewCity(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/buildings/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity))
+                if (context.messagePayload.choice.match(/cities/))
+                {
+                    await Builders.GetCountryCities(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/buildings/))
                 {
                     context.send("▶ Постройки", {
                         keyboard: keyboard.build(this.GetCountryBuildingsMenuKeyboard())
                     })
                     context.player.state = this.CountryBuildingsMenu
                 }
-                if (context.messagePayload.choice.match(/take_away_citizenship/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBeDelegate))
-                {
-                    await Builders.TakeAwayCitizenship(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/transfer_power/))
-                {
-                    await Builders.TransferPower(context, current_keyboard, {GetMenuKeyboard: this.GetStartMenuKeyboard, MenuScene: this.StartScreen})
-                }
             }
             else
             {
-                context.send("👉🏻 Управление",{
+                context.send("👉🏻 Города",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
@@ -1458,7 +1683,7 @@ class SceneController
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetCountryBuildingsMenuKeyboard()
             context.country = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
             {
                 context.country = Data.countries[context.player.countryID]
             }
@@ -1473,19 +1698,19 @@ class SceneController
                 if (context.messagePayload.choice.match(/back/))
                 {
                     await context.send("↪ Назад", {
-                        keyboard: keyboard.build(this.GetCountryControlsMenuKeyboard(context))
+                        keyboard: keyboard.build(this.GetCountryCitiesMenuKeyboard())
                     })
-                    context.player.state = this.CountryControlsMenu
+                    context.player.state = this.CountryCitiesMenu
                 }
-                if (context.messagePayload.choice.match(/new_building/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity))
+                if (context.messagePayload.choice.match(/new_building/))
                 {
                     await Builders.CreateCountryBuilding(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/upgrade/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity))
+                if (context.messagePayload.choice.match(/upgrade/))
                 {
                     await Builders.UpgradeCountryBuilding(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/give_to_city/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canBuildCity))
+                if (context.messagePayload.choice.match(/give_to_city/))
                 {
                     await Builders.GiveToCityBuilding(context, current_keyboard)
                 }
@@ -1510,7 +1735,7 @@ class SceneController
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetCountryBudgetMenuKeyboard()
             context.country = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
             {
                 context.country = Data.countries[context.player.countryID]
             }
@@ -1520,7 +1745,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|get_tax|transaction|get_resource/))
+            if(context.messagePayload?.choice?.match(/back|get_tax|transaction|get_resource|minting_money|set_tax|resources/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1529,11 +1754,11 @@ class SceneController
                     })
                     context.player.state = this.GovernanceCountryMenu
                 }
-                if (context.messagePayload.choice.match(/get_resource/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canUseResources))
+                if (context.messagePayload.choice.match(/get_resource/))
                 {
                     await Builders.GetAllCountryResources(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/transaction/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canUseResources))
+                if (context.messagePayload.choice.match(/transaction/))
                 {
                     if(context.country.isSiege)
                     {
@@ -1542,9 +1767,21 @@ class SceneController
                     }
                     await Builders.CountryTransaction(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/get_tax/) && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.countries[context.player.countryID].leaderID === context.player.id || context.official?.canUseResources))
+                if (context.messagePayload.choice.match(/get_tax/))
                 {
                     await Builders.GetCountryTax(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/minting_money/))
+                {
+                    await Builders.MintingMoney(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/set_tax/))
+                {
+                    await Builders.SetTax(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/resources/))
+                {
+                    await context.send(context.country.GetResources())
                 }
             }
             else
@@ -1577,7 +1814,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|name|description|public|photo|welcome_picture|notifications_off|notifications_on/))
+            if(context.messagePayload?.choice?.match(/back|name|government_form|country_info|description|transfer_power|public|photo|welcome_picture|notifications_off|notifications_on/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1602,6 +1839,10 @@ class SceneController
                 {
                     await Builders.ChangeCountryPhoto(context, current_keyboard)
                 }
+                if (context.messagePayload.choice.match(/government_form/))
+                {
+                    await Builders.ChangeCountryParliamentForm(context, current_keyboard)
+                }
                 if (context.messagePayload.choice.match(/welcome_picture/))
                 {
                     await Builders.ChangeCountryWelcomePhoto(context, current_keyboard)
@@ -1618,7 +1859,15 @@ class SceneController
                     context.country.notifications = true
                     await Country.update({notifications: true}, {where: {id: context.country.id}})
                     current_keyboard[0][1] = keyboard.notificationsOffButton
-                    await context.send("🔇 Уведомления отключены", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🔊 Уведомления включены", {keyboard: keyboard.build(current_keyboard)})
+                }
+                if (context.messagePayload.choice.match(/transfer_power/))
+                {
+                    await Builders.TransferPower(context, current_keyboard, {GetMenuKeyboard: this.GetStartMenuKeyboard, MenuScene: this.StartScreen})
+                }
+                if (context.messagePayload.choice.match(/country_info/))
+                {
+                    await context.send(await context.country.GetAllInfo())
                 }
             }
             else
@@ -1634,14 +1883,14 @@ class SceneController
         }
     }
 
-    CountryInfoMenu = async(context) =>
+    CountryArmyMenu = async(context) =>
     {
         try
         {
             if(await ChatController.CommandHandler(context)) return
-            const current_keyboard = this.GetCountryInfoMenuKeyboard()
+            const current_keyboard = this.GetCountryArmyMenuKeyboard()
             context.country = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id || context.official)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
             {
                 context.country = Data.countries[context.player.countryID]
             }
@@ -1651,7 +1900,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|resources|cities|country_info|players_list|citizen_list/))
+            if(context.messagePayload?.choice?.match(/back|train_unit|refuse_unit|expenses|army|upgrade_barak/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1660,25 +1909,29 @@ class SceneController
                     })
                     context.player.state = this.GovernanceCountryMenu
                 }
-                if (context.messagePayload.choice.match(/resources/))
+                if (context.messagePayload.choice.match(/train_unit/))
                 {
-                    await context.send(context.country.GetResources())
+                    await Builders.TrainUnit(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/cities/))
+                if (context.messagePayload.choice.match(/refuse_unit/))
                 {
-                    await Builders.GetCountryCities(context, current_keyboard)
+                    await Builders.RefuseUnit(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/country_info/))
+                if (context.messagePayload.choice.match(/upgrade_barak/))
                 {
-                    await context.send(await context.country.GetAllInfo())
+                    await Builders.UpgradeBarak(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/players_list/))
+                if (context.messagePayload.choice.match(/expenses/))
                 {
-                    await Builders.GetCountryPlayersList(context)
+                    await Builders.UnitsExpenses(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/citizen_list/))
+                if (context.messagePayload.choice.match(/army/))
                 {
-                    await Builders.GetCitizenList(context)
+                    const army = await context.country.ShowArmy()
+                    for(const a of army)
+                    {
+                        await context.send(a)
+                    }
                 }
             }
             else
@@ -2079,7 +2332,7 @@ class SceneController
         let kb = [
             [],
             [keyboard.aboutMeButton, keyboard.propertyButton, keyboard.effectsButton],
-            [keyboard.resourcesButton],
+            [keyboard.resourcesButton, keyboard.subscribesButton],
             [keyboard.backButton, keyboard.transactionButton]
         ]
         context.player.citizenship !== null ? kb[0].push(keyboard.refuseCitizenshipButton) : kb[0].push(keyboard.getCitizenshipButton)
@@ -2087,15 +2340,16 @@ class SceneController
         context.player.lastWill ? kb[0].push(keyboard.deleteLastWillButton) : kb[0].push(keyboard.createLastWillButton)
         if(parseInt(context.player.citizenship) === parseInt(Data.GetCountryForCity(context.player.location).id))
         {
-            if(!context.player.registration || context.player.registration === "candidate")
+            if(!context.player.registration && !Data.timeouts["get_registration_" + context.player.id])
             {
-                kb[2][1] = keyboard.getRegistrationButton
+                kb[2].push(keyboard.getRegistrationButton)
             }
             else if(context.player.registration)
             {
-                kb[2][1] = keyboard.refuseRegistrationButton
+                kb[2].push(keyboard.refuseRegistrationButton)
             }
         }
+
         return kb
     }
 
@@ -2118,6 +2372,14 @@ class SceneController
         ]
     }
 
+    GetSubsMenuKeyboard = () =>
+    {
+        return [
+            [keyboard.botMemoryButton, keyboard.botTalksButton],
+            [keyboard.backButton]
+        ]
+    }
+
     GetExtractingMenuKeyboard = (context) =>
     {
         const location = Data.countries[context.player.countryID]
@@ -2125,7 +2387,7 @@ class SceneController
             [context.player.isRelaxing ? keyboard.wakeupButton : keyboard.relaxButton],
             [],
             [],
-            [keyboard.backButton]
+            [keyboard.backButton, keyboard.getResourcesButton]
         ]
         if(context.player.citizenship)
         {
@@ -2166,7 +2428,7 @@ class SceneController
         return [
             [keyboard.changeNickButton, keyboard.changeDescriptionButton, keyboard.gadgetButton],
             [keyboard.changeGenderButton, keyboard.changeNationButton, keyboard.changeAgeButton],
-            [keyboard.backButton]
+            [keyboard.backButton, keyboard.avatarButton]
         ]
     }
 
@@ -2175,25 +2437,16 @@ class SceneController
         switch (context.player.inBuild.type)
         {
             case "building_of_house":
-                return [[keyboard.relaxButton], [keyboard.backButton]]
             case "building_of_bank":
-                return [[keyboard.backButton]]
             case "building_of_mint":
-                return [[keyboard.changeMoneyButton], [keyboard.backButton]]
             case "building_of_barracks":
-                return [[keyboard.backButton]]
             case "building_of_port":
                 return [[keyboard.backButton]]
             case "building_of_wheat":
-                return [[keyboard.getResourcesButton], [keyboard.backButton]]
             case "building_of_stone":
-                return [[keyboard.getResourcesButton], [keyboard.backButton]]
             case "building_of_wood":
-                return [[keyboard.getResourcesButton], [keyboard.backButton]]
             case "building_of_iron":
-                return [[keyboard.getResourcesButton], [keyboard.backButton]]
             case "building_of_copper":
-                return [[keyboard.getResourcesButton], [keyboard.backButton]]
             case "building_of_silver":
                 return [[keyboard.getResourcesButton], [keyboard.backButton]]
         }
@@ -2264,6 +2517,41 @@ class SceneController
         }
     }
 
+    BotSubsMenu = async(context) =>
+    {
+        try
+        {
+            if(await ChatController.CommandHandler(context)) return
+            let current_keyboard = this.GetSubsMenuKeyboard()
+            if (context.messagePayload?.choice?.match(/back|memory|talks/))
+            {
+                if (context.messagePayload.choice.match(/back/))
+                {
+                    await context.send("▶ Профиль", {
+                        keyboard: keyboard.build(await this.GetProfileMenuKeyboard(context))
+                    })
+                    context.player.state = this.Profile
+                }
+                if (context.messagePayload.choice.match(/memory/))
+                {
+                    await Builders.SubscribeToMemory(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/talks/))
+                {
+                    await Builders.SubscribeToTalking(context, current_keyboard)
+                }
+            }
+            else
+            {
+                await context.send("👉🏻 Подписки",{keyboard: keyboard.build(current_keyboard)})
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "SceneController/Params", e)
+        }
+    }
+
     Params = async(context) =>
     {
         try
@@ -2283,14 +2571,14 @@ class SceneController
                 {
                     context.player.notifications = true
                     await PlayerStatus.update({notifications: true}, {where: {id: context.player.id}})
-                    current_keyboard[0][0] = keyboard.notificationsOffButton
+                    current_keyboard[0][1] = keyboard.notificationsOffButton
                     await context.send("✅ Уведомления включены", {keyboard: keyboard.build(current_keyboard)})
                 }
                 if (context.messagePayload.choice.match(/notifications_off/))
                 {
                     context.player.notifications = false
                     await PlayerStatus.update({notifications: false}, {where: {id: context.player.id}})
-                    current_keyboard[0][0] = keyboard.notificationsOnButton
+                    current_keyboard[0][1] = keyboard.notificationsOnButton
                     await context.send("❌ Уведомления отключены", {keyboard: keyboard.build(current_keyboard)})
                 }
                 if (context.messagePayload.choice.match(/admins/))
@@ -2365,7 +2653,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             let current_keyboard = this.GetChangeAccountMenuKeyboard()
-            if (context.messagePayload?.choice?.match(/back|change_description|change_nick|gadget|change_nation|change_gender|change_age/))
+            if (context.messagePayload?.choice?.match(/back|change_description|avatar|change_nick|gadget|change_nation|change_gender|change_age/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -2395,6 +2683,10 @@ class SceneController
                 if (context.messagePayload.choice.match(/change_age/))
                 {
                     await Builders.ChangeAge(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/avatar/))
+                {
+                    await Builders.ChangeAvatar(context, current_keyboard)
                 }
             }
             else
@@ -2562,52 +2854,6 @@ class SceneController
         }
     }
 
-    RelaxingInTheHouse = async(context) =>
-    {
-        try
-        {
-            if(await ChatController.CommandHandler(context)) return
-            if (context.messagePayload?.choice?.match(/wakeup/))
-            {
-                let need
-                const now = new Date()
-                switch (context.player.inBuild.level)
-                {
-                    case 1:
-                        need = 330
-                        break
-                    case 2:
-                        need = 300
-                        break
-                    case 3:
-                        need = 270
-                        break
-                    case 4:
-                        need = 240
-                        break
-                }
-                if(context.player.timeout)
-                {
-                    clearTimeout(context.player.timeout)
-                }
-                const time = Math.max(0, Math.round((context.player.lastActionTime - now) / 60000))
-                context.player.isFreezed = false
-                context.player.inBuild = null
-                context.player.fatigue = Math.round(100 - (time * (100 / need)))
-                await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(this.GetMenuKeyboard())})
-                context.player.state = this.Menu
-            }
-            else
-            {
-                await context.send(`💤 До полного восстановления сил осталось ${NameLibrary.ParseFutureTime(context.player.lastActionTime)}`)
-            }
-        }
-        catch (e)
-        {
-            await api.SendLogs(context, "SceneController/RelaxingInTheHouse", e)
-        }
-    }
-
     Profile = async(context) =>
     {
         try
@@ -2615,18 +2861,21 @@ class SceneController
             if(await ChatController.CommandHandler(context)) return
             let current_keyboard = await this.GetProfileMenuKeyboard(context)
 
-            if (context.messagePayload?.choice?.match(/back|get_registration|resources|refuse_registration|get_citizenship|refuse_citizenship|merry|transaction|divorce|create_last_will|delete_last_will|about_me|effects|property/))
+            if (context.messagePayload?.choice?.match(/back|get_registration|resources|subscribes|refuse_registration|get_citizenship|refuse_citizenship|merry|transaction|divorce|create_last_will|delete_last_will|about_me|effects|property/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
-                    await context.send("▶ Меню",{
-                        keyboard: keyboard.build(this.GetMenuKeyboard())
-                    })
+                    await context.send("▶ Меню", {keyboard: keyboard.build(this.GetMenuKeyboard())})
                     context.player.state = this.Menu
+                }
+                if(context.messagePayload.choice.match(/subscribes/))
+                {
+                    await context.send("▶ Подписки", {keyboard: keyboard.build(this.GetSubsMenuKeyboard())})
+                    context.player.state = this.BotSubsMenu
                 }
                 if(context.messagePayload.choice.match(/about_me/))
                 {
-                    await context.send(`Информация о вас:\n${context.player.GetInfo()}`)
+                    await context.send(`Информация о вас:\n${context.player.GetInfo()}`, {attachment: context.player.avatar})
                 }
                 if(context.messagePayload.choice.match(/effects/))
                 {
@@ -2819,7 +3068,7 @@ class SceneController
                 }
                 if(context.messagePayload.choice.match(/chat_list/))
                 {
-                    let request = "💬 Список чатов:\n"
+                    let request = "💬 Список чатов:"
                     const chats = await Chats.findAll()
                     let flag = true
                     for (let i = 0; i < Data.countries.length; i++)
@@ -2827,12 +3076,12 @@ class SceneController
                         flag = true
                         if(Data.countries[i])
                         {
-                            request += "\n🔶 Фракция " + Data.GetCountryName(Data.countries[i].id) + ":"
+                            request += "\n\n🔶 Фракция " + Data.GetCountryName(Data.countries[i].id) + ":"
                             for(const chat of chats)
                             {
                                 if(Data.countries[i].id === chat.dataValues.countryID)
                                 {
-                                    request += "\n🔸 " + chat.dataValues.name + " - " + "https://vk.cc/" + chat.dataValues.link + "\n"
+                                    request += "\n🔸 " + chat.dataValues.name + " - " + "https://vk.cc/" + chat.dataValues.link
                                     flag = false
                                 }
                             }
@@ -2876,17 +3125,6 @@ class SceneController
                 {
                     await Builders.GetResourcesFormBuilding(context, current_keyboard)
                 }
-                if(context.messagePayload.choice.match(/change_money/))
-                {
-                    await Builders.GetChangeSilverInMintBuilding(context, current_keyboard)
-                }
-                if(context.messagePayload.choice.match(/relax/) && context.player.inBuild?.type.match(/house/))
-                {
-                    await Builders.RelaxInTheHouse(context, current_keyboard, {
-                        Menu: this.Menu,
-                        Relaxing: this.RelaxingInTheHouse
-                    })
-                }
             }
             else if (!context.player.inBuild)
             {
@@ -2905,7 +3143,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             let current_keyboard = this.GetExtractingMenuKeyboard(context)
-            if (context.messagePayload?.choice?.match(/back|extract_wheat|extract_stone|extract_wood|extract_iron|extract_copper|extract_silver|relax|wakeup/))
+            if (context.messagePayload?.choice?.match(/back|get_resource|extract_wheat|extract_stone|extract_wood|extract_iron|extract_copper|extract_silver|relax|wakeup/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -2913,6 +3151,10 @@ class SceneController
                         keyboard: keyboard.build(this.GetMenuKeyboard())
                     })
                     context.player.state = this.Menu
+                }
+                if(context.messagePayload.choice.match(/get_resource/))
+                {
+                    await Builders.GetAllUserResources(context, current_keyboard)
                 }
                 if(context.messagePayload.choice.match(/extract_wheat/))
                 {

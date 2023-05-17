@@ -127,6 +127,99 @@ class NameLibrary
         return 0
     }
 
+    PriceMultiply(price, multiplier)
+    {
+        let newPrice = {}
+        for(const res of Object.keys(price))
+        {
+            newPrice[res] = Math.round(price[res] * multiplier)
+        }
+        return newPrice
+    }
+
+    PriceTaxRefund(price, tax)
+    {
+        if(tax === 0) return price
+        let newPrice = {}
+        for(const res of Object.keys(price))
+        {
+            newPrice[res] = Math.round(price[res] / (1 - (tax / 100)))
+        }
+        return newPrice
+    }
+
+    AfterPayTax(price, tax)
+    {
+        if(tax === 0) return price
+        let newPrice = {}
+        for(const res of Object.keys(price))
+        {
+            newPrice[res] = Math.round(price[res] * (1 - (tax / 100)))
+        }
+        return newPrice
+    }
+
+    IsVoidPrice(price)
+    {
+        let isVoid = true
+        for(const res of Object.keys(price)) if(price[res] !== 0) isVoid = false
+        return isVoid
+    }
+
+    GetDateByDayOfYear(day)
+    {
+        const date = new Date(new Date().getFullYear(), 0, day)
+        const month = date.toLocaleString('ru-RU', { month: 'long' })
+        const dayOfMonth = date.getDate()
+        return `${dayOfMonth} ${month.charAt(0).toUpperCase() + month.slice(1)}`
+    }
+
+    GetGameTime(time)
+    {
+        let now = new Date(time)
+        const year = (year) => {
+            return year > 0 ? `${year} год` : `${Math.abs(year)} год до Н.Э.`
+        }
+        let daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()
+        let day = Math.round((now.getDate() / daysInMonth) * 365)
+        return `${this.GetDateByDayOfYear(day)} ${year(Data.variables["year"])} (${this.ParseDateTime(time)})`
+    }
+
+    GetGameSeason()
+    {
+        let now = new Date()
+        let daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()
+        const season = (month, day) =>
+        {
+            const seasons = {
+                1: "☃ Зима",
+                2: "🍃 Весна",
+                3: "☀ Лето",
+                4: "🍁 Осень"
+            }
+            const seasonDuration = month / 4
+            return seasons[Math.ceil(day / seasonDuration)]
+        }
+        const year = (year) => {
+            return year > 0 ? `${year} год` : `${Math.abs(year)} год до Н.Э.`
+        }
+        return `${year(Data.variables["year"])}, ${season(daysInMonth, now.getDate())}`
+    }
+
+    PriceSum(array)
+    {
+        let newPrice = {}
+        for(const price of array)
+        {
+            for(const res of Object.keys(price))
+            {
+                if(!newPrice[res]) newPrice[res] = 0
+                newPrice[res] += price[res]
+            }
+        }
+        return newPrice
+    }
+
     GetTransactionType(type)
     {
         switch (type)
@@ -138,6 +231,21 @@ class NameLibrary
             case "ptctr":
                 return "Перевод фракции"
         }
+        return "Не отмеченный тип"
+    }
+
+    GetUnitType(type)
+    {
+        switch (type)
+        {
+            case "elephant":
+                return "Слоны"
+            case "cavalier":
+                return "Кавалерия"
+            case "soldier":
+                return "Пехота"
+        }
+        return "Не отмеченный тип"
     }
 
     GetResourceName(res)
@@ -341,7 +449,6 @@ class NameLibrary
         if(!user) return "Не зарегистрирован"
         return `*id${user.dataValues.id}(${user.dataValues.nick})`
     }
-
 
     async GetFullUserInfo(id, userObject)
     {
