@@ -11,7 +11,6 @@ const sequelize = require("../database/DataBase")
 const OutputManager = require("../controllers/OutputManager")
 const axios = require('axios')
 const groupId = parseInt(process.env.GROUPID)
-const botCallInterval = 40
 
 class ChatController
 {
@@ -24,10 +23,20 @@ class ChatController
             {
                 return await this.ChatButtonHandler(context)
             }
+
             // Игроки+
             if(context.command?.match(/^бот$/))
             {
                 await this.BotCall(context)
+                return true
+            }
+            if(context.command?.match(/^give me history$/))
+            {
+                let h = await api.api.messages.getHistory({
+                    peer_id: context.peerId,
+                    count: 10
+                })
+                console.log(h)
                 return true
             }
             if(context.command?.match(Commands.botCall))
@@ -206,7 +215,6 @@ class ChatController
                 return true
             }
 
-
             //Модератор+
             if(context.command?.match(/^id$|^ид$/))
             {
@@ -372,6 +380,11 @@ class ChatController
                 await this.GetChatInfo(context)
                 return true
             }
+            if(context.command?.match(/^подсчет актива/) && NameLibrary.RoleEstimator(context.player.role) >= 4)
+            {
+                await api.EveryDayLoop()
+                return true
+            }
 
             if(context.peerType !== "chat") return false
             if(context.replyMessage?.senderId === groupId)
@@ -379,7 +392,7 @@ class ChatController
                 await this.ReplyRequest(context)
                 return true
             }
-            if(context.command?.match(/^бот,? /))
+            if(context.command?.match(/^бот,? |^дементий,? /))
             {
                 await this.BotRequest(context)
                 return true
@@ -494,14 +507,14 @@ class ChatController
     {
         try
         {
-            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0)
+            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
+            let time = new Date()
+            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time > 0 && context.command.length > 0)
             {
                 await context.reply(`⏳ Спросите через ${NameLibrary.ParseFutureTime(Data.botCallTimeouts[context.player.id].time)}`)
                 return
             }
-            let messages = Data.variables["isTest"] ? [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть."}]
-            let time = new Date()
-            time.setSeconds(time.getSeconds() + botCallInterval)
+            time.setSeconds(time.getSeconds() + Data.variables["botCallInterval"])
             messages.push({role: "assistant", content: context.replyMessage.text})
             messages.push({role: "user", content: context.text})
             if(NameLibrary.RoleEstimator(context.player.role) === 0)
@@ -510,7 +523,7 @@ class ChatController
                     time: time,
                     timeout: setTimeout(() => {
                         delete Data.botCallTimeouts[context.player.id]
-                    }, botCallInterval * 1000)
+                    }, Data.variables["botCallInterval"] * 1000)
                 }
             }
             let request = await this.GetChatGPTRequest(messages)
@@ -528,15 +541,15 @@ class ChatController
     {
         try
         {
-            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0)
+            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
+            let limit = 10
+            let time = new Date()
+            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time > 0 && context.command.length > 0)
             {
                 await context.reply(`⏳ Спросите через ${NameLibrary.ParseFutureTime(Data.botCallTimeouts[context.player.id].time)}`)
                 return
             }
-            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть."}]
-            let limit = 10
-            let time = new Date()
-            time.setSeconds(time.getSeconds() + botCallInterval)
+            time.setSeconds(time.getSeconds() + Data.variables["botCallInterval"])
             if(context.forwards.length > 0)
             {
                 for(const msg of context.forwards)
@@ -567,7 +580,7 @@ class ChatController
                     time: time,
                     timeout: setTimeout(() => {
                         delete Data.botCallTimeouts[context.player.id]
-                    }, botCallInterval * 1000)
+                    }, Data.variables["botCallInterval"] * 1000)
                 }
             }
             let request = await this.GetChatGPTRequest(messages)
@@ -696,6 +709,7 @@ class ChatController
                 if(link?.link)
                 {
                     await api.SendMessage(context.player.id, "✅ Держи: " + link.link)
+
                 }
                 else
                 {

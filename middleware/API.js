@@ -68,7 +68,11 @@ class VK_API
                     await this.SendMessage(warn.dataValues.userID, `✅ Срок действия предупреждения от ${NameLibrary.ParseDateTime(warn.dataValues.createdAt)} истек, предупреждение обжаловано`)
                     temp = await Warning.count({where: {id: warn.dataValues.id}})
                     await Player.update({warningScore: temp, isBanned: false}, {where: {id: warn.dataValues.userID}})
-                    await Ban.destroy({where: warn.dataValues.userID})
+                    temp = await Ban.count({where: {userID: warn.dataValues.userID}})
+                    if(temp !== 0)
+                    {
+                        await Ban.destroy({where: {userID: warn.dataValues.userID}})
+                    }
                 }
             }
 
