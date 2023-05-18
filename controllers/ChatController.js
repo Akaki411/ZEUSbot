@@ -39,11 +39,6 @@ class ChatController
                 console.log(h)
                 return true
             }
-            if(context.command?.match(Commands.botCall))
-            {
-                await context.send(NameLibrary.GetRandomSample("dungeon_master_request"))
-                return true
-            }
             if(context.command?.match(Commands.clearKeyboard) && context.peerType === "chat")
             {
                 await context.send("Убираю", {keyboard: keyboard.none})
@@ -355,6 +350,11 @@ class ChatController
                 await this.SetVar(context)
                 return true
             }
+            if(context.command?.match(/^установить актив /))
+            {
+                await this.SetActive(context)
+                return true
+            }
             if(context.command?.match(/^переменные/))
             {
                 await this.ShowVars(context)
@@ -380,9 +380,10 @@ class ChatController
                 await this.GetChatInfo(context)
                 return true
             }
-            if(context.command?.match(/^подсчет актива/) && NameLibrary.RoleEstimator(context.player.role) >= 4)
+            if(context.command?.match(/^подсчитать актив за день$/) && NameLibrary.RoleEstimator(context.player.role) >= 4)
             {
                 await api.EveryDayLoop()
+                await context.send("✅ Подсчитал")
                 return true
             }
 
@@ -392,7 +393,7 @@ class ChatController
                 await this.ReplyRequest(context)
                 return true
             }
-            if(context.command?.match(/^бот,? |^дементий,? /))
+            if(context.command?.match(/^бот,? |^дементий,? |bot,? /))
             {
                 await this.BotRequest(context)
                 return true
@@ -450,7 +451,48 @@ class ChatController
         }
     }
 
-
+    async SetActive(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            let temp = null
+            let country = null
+            for(const key of Data.countries)
+            {
+                if(key?.tags)
+                {
+                    temp = new RegExp(key.tags)
+                    if(context.command.match(temp))
+                    {
+                        country = key
+                        break
+                    }
+                }
+            }
+            if(!country)
+            {
+                await context.send("⚠ Фракция не найдена")
+                return
+            }
+            let newActive = context.command.match(/\d+/)
+            newActive = parseInt(newActive)
+            if(isNaN(newActive))
+            {
+                await context.send("⚠ Не верный формат числа")
+                return
+            }
+            country.active = newActive
+            await context.send(`Для фракции ${country.GetName(context.player.platform === "IOS")} установлен актив ${newActive} сообщений`)
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/SetActive", e)
+        }
+    }
 
     async CountryInfo(context)
     {
@@ -507,14 +549,14 @@ class ChatController
     {
         try
         {
-            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
+            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче и не кидай никаких ссылок. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
             let time = new Date()
-            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time > 0 && context.command.length > 0)
+            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
             {
                 await context.reply(`⏳ Спросите через ${NameLibrary.ParseFutureTime(Data.botCallTimeouts[context.player.id].time)}`)
                 return
             }
-            time.setSeconds(time.getSeconds() + Data.variables["botCallInterval"])
+            time.setSeconds(time.getSeconds() + parseInt(Data.variables["botCallInterval"]))
             messages.push({role: "assistant", content: context.replyMessage.text})
             messages.push({role: "user", content: context.text})
             if(NameLibrary.RoleEstimator(context.player.role) === 0)
@@ -523,7 +565,7 @@ class ChatController
                     time: time,
                     timeout: setTimeout(() => {
                         delete Data.botCallTimeouts[context.player.id]
-                    }, Data.variables["botCallInterval"] * 1000)
+                    },  parseInt(Data.variables["botCallInterval"]) * 1000)
                 }
             }
             let request = await this.GetChatGPTRequest(messages)
@@ -541,15 +583,15 @@ class ChatController
     {
         try
         {
-            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
+            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче и не кидай никаких ссылок. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
             let limit = 10
             let time = new Date()
-            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time > 0 && context.command.length > 0)
+            if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
             {
                 await context.reply(`⏳ Спросите через ${NameLibrary.ParseFutureTime(Data.botCallTimeouts[context.player.id].time)}`)
                 return
             }
-            time.setSeconds(time.getSeconds() + Data.variables["botCallInterval"])
+            time.setSeconds(time.getSeconds() + parseInt(Data.variables["botCallInterval"]))
             if(context.forwards.length > 0)
             {
                 for(const msg of context.forwards)
@@ -580,7 +622,7 @@ class ChatController
                     time: time,
                     timeout: setTimeout(() => {
                         delete Data.botCallTimeouts[context.player.id]
-                    }, Data.variables["botCallInterval"] * 1000)
+                    }, parseInt(Data.variables["botCallInterval"]) * 1000)
                 }
             }
             let request = await this.GetChatGPTRequest(messages)
@@ -607,7 +649,7 @@ class ChatController
                         Authorization: 'Bearer ' + process.env.OPENAI_API_KEY
                     }
                 })
-            request = request.data.choices[0].message.content
+            request = request.data["choices"][0].message.content
             let pages = []
             for(let i = 0; i < Math.ceil(request.length/4000); i++)
             {
