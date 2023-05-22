@@ -14,6 +14,7 @@ class User
         this.status = user.dataValues.status
         this.platform = user.dataValues.platform
         this.avatar = user.dataValues.avatar
+        this.beer = parseFloat(user.dataValues.beer)
         this.location = status.dataValues.location
         this.countryID = status.dataValues.countryID
         this.citizenship = status.dataValues.citizenship
@@ -47,6 +48,7 @@ class User
         this.isRelaxing = false
         this.lastActionTime = new Date()
         this.stayInCityTime = new Date()
+        this.lastBeerCup = new Date()
         this.state = () => {delete this}
         if(info.dataValues.botMemory)
         {
@@ -128,7 +130,7 @@ class User
     {
         try
         {
-            return `👤 ${this.id > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? this.gender ? `*id${this.marriedID}(💘Муж)` : `*id${this.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n💭 Описание: ${this.description}`
+            return `👤 ${parseInt(this.id) > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${this.beer.toFixed(1)} л.\n💭 Описание: ${this.description}`
         }
         catch (e)
         {

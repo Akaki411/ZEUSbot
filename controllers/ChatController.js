@@ -11,6 +11,8 @@ const sequelize = require("../database/DataBase")
 const OutputManager = require("../controllers/OutputManager")
 const axios = require('axios')
 const groupId = parseInt(process.env.GROUPID)
+const ChatGPTModes = require('../variables/BotCallModes')
+const Rules = require("../variables/Rules")
 
 class ChatController
 {
@@ -30,15 +32,15 @@ class ChatController
                 await this.BotCall(context)
                 return true
             }
-            if(context.command?.match(/^give me history$/))
-            {
-                let h = await api.api.messages.getHistory({
-                    peer_id: context.peerId,
-                    count: 10
-                })
-                console.log(h)
-                return true
-            }
+            // if(context.command?.match(/^give me history$/))
+            // {
+            //     let h = await api.api.messages.getHistory({
+            //         peer_id: context.peerId,
+            //         count: 10
+            //     })
+            //     console.log(h)
+            //     return true
+            // }
             if(context.command?.match(Commands.clearKeyboard) && context.peerType === "chat")
             {
                 await context.send("Убираю", {keyboard: keyboard.none})
@@ -56,7 +58,7 @@ class ChatController
             }
             if(context.command?.match(Commands.aboutMe))
             {
-                await context.send(context.player.GetInfo(), {attachment: context.player.avatar})
+                await context.send(context.player.GetInfo(), {attachment: context.player.avatar, disable_mentions: true})
                 return true
             }
             if(context.command?.match(Commands.checkLocation))
@@ -209,6 +211,16 @@ class ChatController
                 await this.CountryInfo(context)
                 return true
             }
+            if(context.command?.match(Commands.rules))
+            {
+                await this.GetRule(context)
+                return true
+            }
+            if(context.command?.match(/пиво/))
+            {
+                await this.DrinkBeer(context)
+                return true
+            }
 
             //Модератор+
             if(context.command?.match(/^id$|^ид$/))
@@ -264,6 +276,11 @@ class ChatController
             if(context.command?.match(Commands.getChatLink) && context.peerType === "chat")
             {
                 await this.GetChatLink(context)
+                return true
+            }
+            if(context.command?.match(/бот,? режим/) && context.peerType === "chat")
+            {
+                await this.ChangeBotMode(context)
                 return true
             }
 
@@ -451,6 +468,82 @@ class ChatController
         }
     }
 
+    async DrinkBeer(context)
+    {
+        try
+        {
+            let time = new Date()
+            if(context.player.lastBeerCup - time > 0)
+            {
+                await context.send(`${context.player.nick}, повтори через ${NameLibrary.ParseFutureTime(context.player.lastBeerCup)} Выпито всего - ${context.player.beer} л. 🍺`)
+                return
+            }
+            time.setHours(time.getHours() + 1)
+            let drinking = Math.random() * 3
+            context.player.beer += parseFloat(drinking.toFixed(1))
+            context.player.lastBeerCup = time
+            await Player.update({beer: context.player.beer}, {where: {id: context.player.id}})
+            await context.send(`${context.player.nick}, ты выпил ${drinking.toFixed(1)} л. пива. Выпито всего - ${context.player.beer.toFixed(1)} л. 🍺\nСледующая попытка через час`)
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/DrinkBeer", e)
+        }
+    }
+
+    async GetRule(context)
+    {
+        try
+        {
+            let part = context.command.match(/\d+[,.\/]\d+/)
+            if(part)
+            {
+                part = part[0].split(/[,.\/]/)
+                if(!Rules[part[0]])
+                {
+                    await context.send("⚠ Статьи " + part[0] + " не существует")
+                    return
+                }
+                if(Rules[part[0]]["text"])
+                {
+                    await context.send(Rules[part[0]]["text"])
+                    return
+                }
+                if(!Rules[part[0]][part[1]])
+                {
+                    await context.send("⚠ Пункта " + part[1] + " в статье " + part[0] + " не существует")
+                    return
+                }
+                await context.send(Rules[part[0]][part[1]]["text"])
+                return
+            }
+            part = context.command.match(/\d+/)
+            if(part)
+            {
+                if(!Rules[part])
+                {
+                    await context.send("⚠ Статьи " + part[0] + " не существует")
+                    return
+                }
+                if(Rules[part]["text"])
+                {
+                    await context.send(Rules[part[0]]["text"])
+                    return
+                }
+                let request = ""
+                for(const key of Object.keys(Rules[part]))
+                {
+                    request += Rules[part][key]["text"] + "\n\n"
+                }
+                await context.send(request)
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/GetRule", e)
+        }
+    }
+
     async SetActive(context)
     {
         try
@@ -545,11 +638,51 @@ class ChatController
         }
     }
 
+    async ChangeBotMode(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) === 0)
+            {
+                return
+            }
+            let temp = null
+            for(const mode of Object.keys(ChatGPTModes))
+            {
+                if(context.command.match(ChatGPTModes[mode].keywords))
+                {
+                    temp = ChatGPTModes[mode]
+                    break
+                }
+            }
+            if(context.command.match(/default|стандарт|дефолт/) && !temp)
+            {
+                delete Data.botCallModes[context.peerId]
+                await context.send("✅ Установлен режим ответов по умолчанию")
+                return
+            }
+            if(!temp)
+            {
+                let request = "Доступные режимы:\n\n"
+                for(const mode of Object.keys(ChatGPTModes))
+                {
+                    request += ChatGPTModes[mode].name + "\n"
+                }
+                await context.send(request)
+                return
+            }
+            Data.botCallModes[context.peerId] = temp
+            await context.send("✅ Установлен режим ответов " + temp.name)
+        }
+        catch (e) {console.log(e)}
+    }
+
     async ReplyRequest(context)
     {
         try
         {
-            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче и не кидай никаких ссылок. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
+            let messages = []
+            messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
             let time = new Date()
             if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
             {
@@ -568,6 +701,7 @@ class ChatController
                     },  parseInt(Data.variables["botCallInterval"]) * 1000)
                 }
             }
+            messages = messages.filter(key => {return !!key})
             let request = await this.GetChatGPTRequest(messages)
             if(!request) return
             for (const sample of request)
@@ -576,14 +710,16 @@ class ChatController
                 if(index === 0) await context.reply(sample)
                 else await context.send(sample)
             }
-        } catch (e) {console.log(e)}
+        }
+        catch (e) {console.log(e)}
     }
 
     async BotRequest(context)
     {
         try
         {
-            let messages = Data.variables["isTest"] ?  [] : [{role: "system", content: "Ты находишься в русскоязычном общем чате в роли чат бота по имени Дементий, твоя задача ответить на заданный вопрос, не важно в каком формате, просто сделай ответ короче и не кидай никаких ссылок. Если тебя просят написать что-то недопустимое - отшутись и не упоминай что ты нейросеть. Если пишут что-то непонятное ответь \"Мде\""}]
+            let messages = []
+            messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
             let limit = 10
             let time = new Date()
             if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
@@ -625,6 +761,7 @@ class ChatController
                     }, parseInt(Data.variables["botCallInterval"]) * 1000)
                 }
             }
+            messages = messages.filter(key => {return !!key})
             let request = await this.GetChatGPTRequest(messages)
             if(!request) return
             for (const sample of request)
@@ -633,7 +770,9 @@ class ChatController
                 if(index === 0) await context.reply(sample)
                 else await context.send(sample)
             }
-        } catch (e) {}
+        } catch (e) {
+            console.log(e)
+        }
     }
 
     async GetChatGPTRequest(messages)
@@ -657,7 +796,11 @@ class ChatController
             }
             return pages
         }
-        catch (e) {return undefined}
+        catch (e)
+        {
+            Data.variables["isTest"] && console.log(e)
+            return undefined
+        }
     }
 
     async Registration(context)
@@ -2016,6 +2159,37 @@ class ChatController
                     request += `${i+1}. ${await NameLibrary.GetPlayerNick(array[i][1])} - ${array[i][0]}\n`
                 }
             }
+            if(context.messagePayload.action === "alcoholics")
+            {
+                request += "🍺 Они уже выпили очень много пива, но их все равно не остановить 🥴\n\n"
+                const players = await sequelize.query("SELECT \"id\", \"nick\", \"beer\" FROM \"players\" ORDER BY beer DESC LIMIT 10")
+                let temp
+                let active = []
+                for(const player of players[0])
+                {
+                    active.push({
+                        id: player.id,
+                        nick: player.nick,
+                        beer: player.beer
+                    })
+                }
+                for (let j = active.length - 1; j > 0; j--)
+                {
+                    for (let i = 0; i < j; i++)
+                    {
+                        if (active[i].beer < active[i + 1].beer)
+                        {
+                            temp = active[i];
+                            active[i] = active[i + 1];
+                            active[i + 1] = temp;
+                        }
+                    }
+                }
+                for(let i = 0; i < active.length; i++)
+                {
+                    request += `${i+1} *id${active[i].id}(${active[i].nick}) - ${active[i].beer.toFixed(1)}\n`
+                }
+            }
             await context.send(request, {disable_mentions: true})
         }
         catch (e)
@@ -2033,9 +2207,10 @@ class ChatController
                 "😡 Некультурные люди. Осуждаем!\n" +
                 "💬 Самые активные люди в проекте.\n" +
                 "😼 Богатые перцы со стикерами.\n" +
-                "🎶 Любители поделиться музыкой.", {
+                "🎶 Любители поделиться музыкой.\n" +
+                "🍺 Главные алкоголики проекта.\n", {
                 keyboard: keyboard.build([
-                    [keyboard.greyButton({name: "💰 Богачи", type: "ratings", action: "most_rich"})],
+                    [keyboard.greyButton({name: "💰 Богачи", type: "ratings", action: "most_rich"}), keyboard.greyButton({name: "🍺 Алкоголики", type: "ratings", action: "alcoholics"})],
                     [keyboard.greenButton({name: "☢️ Самые активные", type: "ratings", action: "most_active"}), keyboard.greenButton({name: "😡 Некультурные", type: "ratings", action: "uncultured"})],
                     [keyboard.greenButton({name: "😼 Стикеры", type: "ratings", action: "stickermans"}), keyboard.greenButton({name: "🎶 Меломаны", type: "ratings", action: "music_lovers"})]
                 ]).inline()
@@ -3732,12 +3907,12 @@ class ChatController
                 else
                 {
                     const {outTax, inTax} = await getTax(user.dataValues.id)
-                    if(outTax === 100 || inTax === 100)
+                    if(outTax === 100 || inTax === 100 && !(NameLibrary.RoleEstimator(context.player.role) >= 2 || NameLibrary.RoleEstimator(user.dataValues.role)))
                     {
                         await context.send("⚠ Установлен 100% налог, нет смысла передавать ресурсы")
                         return
                     }
-                    if(outTax === 0 || inTax === 0)
+                    if(outTax === 0 || inTax === 0 || (NameLibrary.RoleEstimator(context.player.role) >= 2 || NameLibrary.RoleEstimator(user.dataValues.role)))
                     {
                         await Data.AddPlayerResources(user.dataValues.id, objOUT)
                         await Data.AddPlayerResources(context.player.id, objIN)
@@ -3758,7 +3933,7 @@ class ChatController
                     }
                     else
                     {
-                        let kb = [[], []]
+                        let kb = [[], [], []]
                         let canRefund = false
                         const playerLocation = await PlayerStatus.findOne({where: {id: user.dataValues.id}, attributes: ["countryID"]})
                         let refundTax = NameLibrary.PriceTaxRefund(NameLibrary.PriceTaxRefund(objIN, outTax), inTax)
@@ -3796,7 +3971,7 @@ class ChatController
                                 toUser: user.dataValues.id
                             }
                         }}))
-                        kb[0].push(keyboard.secondaryCallbackButton({label: "💰 Уклониться", payload: {
+                        kb[1].push(keyboard.secondaryCallbackButton({label: "💰 Уклониться", payload: {
                             command: "transaction_tax_evasion",
                             transaction: {
                                 price: objIN,
@@ -3811,7 +3986,7 @@ class ChatController
                                 toUser: user.dataValues.id
                             }
                         }}))
-                        kb[0].push(keyboard.negativeCallbackButton({label: "🚫 Отменить", payload: {
+                        kb[2].push(keyboard.negativeCallbackButton({label: "🚫 Отменить", payload: {
                             command: "hide_message"
                         }}))
                         await context.send("ℹ Подтвердите оплату налога в ЛС")
@@ -4052,7 +4227,7 @@ class ChatController
             }
             const userInfo = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
             const userStatus = await PlayerStatus.findOne({where: {id: context.replyPlayers[0]}})
-            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘Муж)` : `*id${userInfo.dataValues.marriedID}(💘Жена)` : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true, attachment: user.dataValues.avatar})
+            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? (user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘 Жена)` : `*id${userInfo.dataValues.marriedID}(💘 Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n🍺 Выпито пива: ${parseFloat(user.dataValues.beer).toFixed(1)} л.\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true, attachment: user.dataValues.avatar})
         }
         catch (e)
         {
@@ -4168,11 +4343,7 @@ class ChatController
             country.resources.match(/copper/) && kb[2].push(keyboard.lightButton({name: "🥉 Добыть бронзы ⛏", type: "extract", action: "copper"}))
             country.resources.match(/silver/) && kb[2].push(keyboard.lightButton({name: "🥈 Добыть серебра ⛏", type: "extract", action: "silver"}))
             const photo = Data.cities[context.player.location].photoURL || country.photoURL
-            await context.send(`🧭 *id${context.player.id}(Вы) находитесь в ${Data.cities[context.player.location].isCapital ? "столице" : ""} фракции ${country.GetName(context.player.platform === "IOS")}, в городе ${Data.cities[context.player.location].name}\n\n${Data.cities[context.player.location].description}`,
-                {
-                    attachment: photo,
-                    keyboard: keyboard.build(kb).inline()
-                })
+            await context.send(`🧭 *id${context.player.id}(Вы) находитесь в ${Data.cities[context.player.location].isCapital ? "столице" : ""} фракции ${country.GetName(context.player.platform === "IOS")}, в городе ${Data.cities[context.player.location].name}\n\n${Data.cities[context.player.location].description}`, {attachment: photo, keyboard: keyboard.build(kb).inline()})
         }
         catch (e)
         {

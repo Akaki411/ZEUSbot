@@ -1924,7 +1924,7 @@ class BuildersAndControlsScripts
                 const buttons = [
                     [keyboard.secondaryButton(["💰 Налог для граждан конкретной фракции", "countryTax"])],
                     [keyboard.secondaryButton(["💸😺 Гражданский налог", "citizenTax"]), keyboard.secondaryButton(["💸😾 Налог для приезжих", "nonCitizenTax"])],
-                    [keyboard.secondaryButton(["🏙 Городской налог", "tax"]), keyboard.secondaryButton(["⏩ Въездная пошлина", "entranceFee"])],
+                    [keyboard.secondaryButton(["🏙 Городской налог", "tax"]), keyboard.secondaryButton(["🏢 Налог на постройки", "privateBuildingTax"]), keyboard.secondaryButton(["⏩ Въездная пошлина", "entranceFee"])],
                     [keyboard.backButton],
                 ]
                 const taxType = await InputManager.ChooseButton(context, "1️⃣ Какой тип налога вы хотите установить?", buttons)
@@ -1942,7 +1942,8 @@ class BuildersAndControlsScripts
                     tax: "2️⃣ Укажите городской налог в процентах (этот налог вы можете снимать с городов раз в неделю)",
                     citizenTax: "2️⃣ Укажите налог для граждан в процентах (этот налог будет сниматься с граждан при добыче ресурсов и обмене ресурсами)",
                     nonCitizenTax: "2️⃣ Укажите налог для граждан другой фракции и апатридов в процентах (этот налог будет сниматься с игроков, не являющихся гражданами фракции, при добыче ресурсов и обмене ресурсами)",
-                    entranceFee: "2️⃣ Укажите въездную пошлину в монетах (это та сумма, которую надо оплатить перед отправкой в вашу фракцию)"
+                    entranceFee: "2️⃣ Укажите въездную пошлину в монетах (это та сумма, которую надо оплатить перед отправкой в вашу фракцию)",
+                    privateBuildingTax: "2️⃣ Укажите налог на частные постройки в процентах"
                 }
                 const tax = await InputManager.InputInteger(context, taxSamples[taxType], current_keyboard, 0, taxType === "entranceFee" ? Number.MAX_SAFE_INTEGER : 100)
                 if(tax === null) return resolve()
@@ -2298,30 +2299,27 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
+                let city = await InputManager.KeyboardBuilder(context, "Выберите город, в котором находится постройка", Data.GetCityForCountryButtons(context.country.id), current_keyboard)
+                if(!city) return resolve()
+                city = Data.ParseButtonID(city)
                 let request = "🏢 Постройки:\n\n"
                 const buildingButtons = []
-                for(let i = 0; i < Data.cities.length; i++)
+                request += `🌇 Город ${Data.cities[city].name}:\n`
+                if(Data.buildings[Data.cities[city].id])
                 {
-                    if(Data.cities[i]?.countryID === context.country.id)
+                    for(let j = 0; j < Data.buildings[Data.cities[city].id].length; j++)
                     {
-                        request += `🌇 Город ${Data.cities[i].name}:\n`
-                        if(Data.buildings[Data.cities[i].id])
+                        if(Data.buildings[Data.cities[city].id][j].ownerType === "country")
                         {
-                            for(let j = 0; j < Data.buildings[Data.cities[i].id].length; j++)
-                            {
-                                if(Data.buildings[Data.cities[i].id][j].ownerType === "country")
-                                {
-                                    buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[Data.cities[i].id][j].type) + Data.buildings[Data.cities[i].id][j].name, "ID" + Data.buildings[Data.cities[i].id][j].id])
-                                    request += `${NameLibrary.GetBuildingType(Data.buildings[Data.cities[i].id][j].type)} \"${Data.buildings[Data.cities[i].id][j].name}\" ${Data.buildings[Data.cities[i].id][j].level} ур\n`
-                                }
-                            }
+                            buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[Data.cities[city].id][j].type) + Data.buildings[Data.cities[city].id][j].name, "ID" + Data.buildings[Data.cities[city].id][j].id])
+                            request += `${NameLibrary.GetBuildingType(Data.buildings[Data.cities[city].id][j].type)} \"${Data.buildings[Data.cities[city].id][j].name}\" ${Data.buildings[Data.cities[city].id][j].level} ур\n`
                         }
-                        if(!Data.buildings[Data.cities[i].id])
-                        {
-                            request += "⛺ В городе нет построек"
-                        }
-                        request += "\n\n"
                     }
+                }
+                if(!Data.buildings[Data.cities[city].id])
+                {
+                    await context.send("⛺ В городе нет построек", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
                 }
                 if(buildingButtons.length === 0)
                 {
@@ -2331,18 +2329,12 @@ class BuildersAndControlsScripts
                 let building = await InputManager.KeyboardBuilder(context, request + "\n\n1️⃣ Выберите постройку для улучшения", buildingButtons, current_keyboard)
                 if(!building) return resolve()
                 building = Data.ParseButtonID(building)
-                for(let i = 0; i < Data.cities.length; i++)
+                for(let j = 0; j < Data.buildings[Data.cities[city].id]?.length; j++)
                 {
-                    if(Data.cities[i]?.countryID === context.country.id)
+                    if(Data.buildings[Data.cities[city].id][j].id === building)
                     {
-                        for(let j = 0; j < Data.buildings[Data.cities[i].id]?.length; j++)
-                        {
-                            if(Data.buildings[Data.cities[i].id][j].id === building)
-                            {
-                                building = Data.buildings[Data.cities[i].id][j]
-                                break
-                            }
-                        }
+                        building = Data.buildings[Data.cities[city].id][j]
+                        break
                     }
                 }
                 if(building.level >= 4)
@@ -7435,6 +7427,8 @@ class BuildersAndControlsScripts
                 const future = new Date()
                 future.setHours(future.getHours() + 6)
                 let extraction = {}
+                let tax = {}
+                let countryIncome = 0
                 let extract = 0
                 let resource = ""
                 let isProperty = false
@@ -7460,16 +7454,12 @@ class BuildersAndControlsScripts
                             isVoid = false
                             resource = Data.buildings[context.player.location][i].type.replace("building_of_", "")
                             extract = NameLibrary.GetFarmRandom(resource + "_lvl" + Data.buildings[context.player.location][i].level)
-                            request += ` - добыто ${extract}`
+                            countryIncome = Math.round(extract * (Data.GetCountryForCity(context.player.location).privateBuildingTax / 100))
+                            extract -= countryIncome
+                            request += ` - добыто ${extract} (налог ${countryIncome})`
                             Data.buildings[context.player.location][i].lastActivityTime = future
-                            if(extraction[resource])
-                            {
-                                extraction[resource] += -extract
-                            }
-                            else
-                            {
-                                extraction[resource] = -extract
-                            }
+                            extraction[resource] = extraction[resource] ? extraction[resource] + extract : extract
+                            tax[resource] = tax[resource] ? tax[resource] + countryIncome : countryIncome
                         }
                         else
                         {
@@ -7503,9 +7493,9 @@ class BuildersAndControlsScripts
                         }, 21600000)
                     }
                 }
-                request += isVoid ? "" : ("\n\nДобыто всего:\n" + NameLibrary.GetPrice(extraction))
-                extraction = NameLibrary.ReversePrice(extraction)
+                request += isVoid ? "" : (`\n\nДобыто всего (после взятия налога ${Data.GetCountryForCity(context.player.location).privateBuildingTax}%):\n` + NameLibrary.GetPrice(extraction))
                 await Data.AddPlayerResources(context.player.id, extraction)
+                await Data.AddCountryResources(context.player.countryID, tax)
                 await context.send(request)
             }
             catch (e)

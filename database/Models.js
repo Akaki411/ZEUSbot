@@ -11,7 +11,8 @@ const Player = sequelize.define("player", {
     role: {type: DataTypes.STRING, allowNull: false, defaultValue: "player"},
     status: {type: DataTypes.STRING, allowNull: false, defaultValue: "stateless"},
     platform: {type: DataTypes.STRING, allowNull: false, defaultValue: "ANDROID"},
-    avatar: {type: DataTypes.STRING, unique: false, allowNull: true}
+    avatar: {type: DataTypes.STRING, unique: false, allowNull: true},
+    beer: {type: DataTypes.REAL, defaultValue: 0.0}
 })
 const PlayerStatus = sequelize.define("player-status", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
@@ -103,6 +104,7 @@ const Country = sequelize.define("country", {
     citizenTax: {type: DataTypes.INTEGER, defaultValue: 0},
     nonCitizenTax: {type: DataTypes.INTEGER, defaultValue: 0},
     tax: {type: DataTypes.INTEGER, defaultValue: 0},
+    privateBuildingTax: {type: DataTypes.INTEGER, defaultValue: 0},
     entranceFee: {type: DataTypes.INTEGER, defaultValue: 0},
     isSiege: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
     isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
@@ -245,6 +247,12 @@ const Warning = sequelize.define("warnings", {
     banned: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
     moderID: {type: DataTypes.INTEGER, allowNull: false}
 })
+const CountryWarning = sequelize.define("country-warnings", {
+    id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
+    countryID: {type: DataTypes.INTEGER, allowNull: false},
+    prohibit: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    time: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 21}
+})
 const Ban = sequelize.define("ban", {
     id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
     userID: {type: DataTypes.INTEGER, allowNull: false},
@@ -296,6 +304,7 @@ module.exports = {
     Buildings,
     BuildingAddon,
     Warning,
+    CountryWarning,
     Ban,
     Keys,
     LastWills,

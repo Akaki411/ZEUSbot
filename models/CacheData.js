@@ -41,6 +41,7 @@ class CacheData
         this.activeIgnore = {}
         this.ignore = {}
         this.botCallTimeouts = {}
+        this.botCallModes = {}
 
         this.timeouts = {}
         this.onLoad = () => {}

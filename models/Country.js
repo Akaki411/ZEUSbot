@@ -35,6 +35,7 @@ class CountryObject
         this.aristocracy = country.dataValues.aristocracy
         this.military = country.dataValues.military
         this.merchants = country.dataValues.merchants
+        this.privateBuildingTax = country.dataValues.privateBuildingTax
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood

@@ -16,7 +16,7 @@ class SceneController
             [keyboard.menuButton]
         ]
         let time = new Date()
-        if(Data.cities[context.player.location]?.leaderID === context.player.id || NameLibrary.RoleEstimator(context.player.role) > 2)
+        if(Data.cities[context.player.location]?.leaderID === context.player.id || Data.countries[context.player.countryID]?.leaderID === context.player.id || NameLibrary.RoleEstimator(context.player.role) > 2)
         {
             if(!kb[1]) kb[1] = []
             kb[1].push(keyboard.mayorMenuButton)
@@ -71,7 +71,7 @@ class SceneController
                     })
                     context.player.state = this.Menu
                 }
-                if(context.messagePayload.choice === "mayor_menu" && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id))
+                if(context.messagePayload.choice === "mayor_menu" && (NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id || Data.countries[context.player.countryID]?.leaderID === context.player.id))
                 {
                     context.send("▶ Управление городом",{
                         keyboard: keyboard.build(this.GetCityControlsKeyboard())
@@ -138,50 +138,54 @@ class SceneController
 
     BotTalkMenu = async (context) =>
     {
-        let time = new Date()
-        if(context.player.botCallTime - time < 0 && NameLibrary.RoleEstimator(context.player.role) === 0)
+        try
         {
-            await context.send("❗ Вы не можете сейчас тут находиться",{keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
-            context.player.state = this.StartScreen
-            return
-        }
-        if(context.messagePayload?.choice?.match(/back/))
-        {
-            await context.send("↪ Назад",{keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
-            context.player.state = this.StartScreen
-            return
-        }
-        let messages = []
-        let limit = 15
-        if(context.forwards.length > 0)
-        {
-            for(const msg of context.forwards)
+            let time = new Date()
+            if(context.player.botCallTime - time < 0 && NameLibrary.RoleEstimator(context.player.role) === 0)
             {
-                if(msg.text?.length > 0 && limit > 0)
+                await context.send("❗ Вы не можете сейчас тут находиться",{keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                context.player.state = this.StartScreen
+                return
+            }
+            if(context.messagePayload?.choice?.match(/back/))
+            {
+                await context.send("↪ Назад",{keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                context.player.state = this.StartScreen
+                return
+            }
+            let messages = []
+            let limit = 15
+            if(context.forwards.length > 0)
+            {
+                for(const msg of context.forwards)
                 {
-                    messages.push({role: msg.senderId > 0 ? "user" : "assistant", content: msg.text})
-                    limit --
+                    if(msg.text?.length > 0 && limit > 0)
+                    {
+                        messages.push({role: msg.senderId > 0 ? "user" : "assistant", content: msg.text})
+                        limit --
+                    }
                 }
             }
-        }
-        if(context.replyMessage && context.replyMessage?.text?.length > 0)
-        {
-            messages.push({role: context.replyMessage.senderId > 0 ? "user" : "assistant", content: context.replyMessage.text})
-        }
-        for(const a of context.attachments)
-        {
-            if(a.type === "audio")
+            if(context.replyMessage && context.replyMessage?.text?.length > 0)
             {
-                messages.push({role: "user", content: `Песня ${a.title} от исполнителя ${a.artist}`})
-                break
+                messages.push({role: context.replyMessage.senderId > 0 ? "user" : "assistant", content: context.replyMessage.text})
+            }
+            for(const a of context.attachments)
+            {
+                if(a.type === "audio")
+                {
+                    messages.push({role: "user", content: `Песня ${a.title} от исполнителя ${a.artist}`})
+                    break
+                }
+            }
+            messages.push({role: "user", content: context.text})
+            let request = await Builders.GetChatGPTRequest(messages)
+            for (const sample of request)
+            {
+                await context.send(sample)
             }
         }
-        messages.push({role: "user", content: context.text})
-        let request = await Builders.GetChatGPTRequest(messages)
-        for (const sample of request)
-        {
-            await context.send(sample)
-        }
+        catch (e) {}
     }
 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -191,6 +195,7 @@ class SceneController
     //Ожидание
     WaitingWalkMenu = async (context) =>
     {
+        if(await ChatController.CommandHandler(context)) return
         if(Data.timeouts["user_timeout_walk_" + context.player.id])
         {
             context.send(`♿ Вы находитесь в пути.\n\nДо прибытия ${NameLibrary.ParseFutureTime(Data.timeouts["user_timeout_walk_" + context.player.id].time)}`, {
@@ -2066,7 +2071,7 @@ class SceneController
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetControlsCityMenuKeyboard()
             context.cityID = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id || Data.countries[context.player.countryID]?.leaderID === context.player.id)
             {
                 context.cityID = context.player.location
             }
@@ -2123,7 +2128,7 @@ class SceneController
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetChangeCityMenuKeyboard(context)
             context.city = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id || Data.countries[context.player.countryID]?.leaderID === context.player.id)
             {
                 context.city = Data.cities[context.player.location]
             }
@@ -2189,7 +2194,7 @@ class SceneController
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetCityControlsBuildingsMenuKeyboard()
             context.cityID = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id || Data.countries[context.player.countryID]?.leaderID === context.player.id)
             {
                 context.cityID = context.player.location
             }
@@ -2249,7 +2254,7 @@ class SceneController
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetCityInfoMenuKeyboard()
             context.cityID = null
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id)
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.cities[context.player.location].leaderID === context.player.id || Data.countries[context.player.countryID]?.leaderID === context.player.id)
             {
                 context.cityID = context.player.location
             }
