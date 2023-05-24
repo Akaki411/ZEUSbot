@@ -3118,7 +3118,7 @@ class BuildersAndControlsScripts
                     context.send("🚫 Какой смысл переводить самому себе?", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                await context.send(`*id${context.player.id}(Ваш) инвентарь:\n💵 Деньги:  ${context.player.money}\n🪨 Камень:${context.player.stone}\n🌾 Зерно:${context.player.wheat}\n🪵 Дерево:${context.player.wood}\n🌑 Железо:${context.player.iron}\n🪙 Медь:${context.player.copper}\n🥈 Серебро:${context.player.silver}\n💎 Алмазы:${context.player.diamond}`)
+                await context.send(context.player.GetResources())
                 const resources = [[keyboard.moneyButton, keyboard.diamondButton],
                     [keyboard.wheatButton, keyboard.woodButton, keyboard.stoneButton],
                     [keyboard.ironButton, keyboard.copperButton, keyboard.silverButton],
@@ -6235,7 +6235,7 @@ class BuildersAndControlsScripts
                     }
                 }
                 let names = await api.api.users.get({
-                    user_ids: players.map(key => {return key.dataValues.id}).join(",")
+                    user_ids: players.filter(key => {return key.dataValues.id > 0}).map(key => {return key.dataValues.id}).join(",")
                 })
                 let userIds = {}
                 for(const user of names)
@@ -6245,7 +6245,7 @@ class BuildersAndControlsScripts
                 let page = 0
                 for(const player of users)
                 {
-                    request[page] += `🔸 *id${player.id}(${player.nick}) ${userIds[player.id] ? "[" + userIds[player.id].first_name + " " + userIds[player.id].last_name + "]" : ""}\n`
+                    request[page] += `🔸 *id${player.id}(${player.nick}) ${userIds[player.id] ? ("[" + userIds[player.id].first_name + " " + userIds[player.id].last_name + "]") : ""}\n`
                     if(request[page].length > 3500)
                     {
                         page ++

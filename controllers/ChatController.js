@@ -216,7 +216,7 @@ class ChatController
                 await this.GetRule(context)
                 return true
             }
-            if(context.command?.match(/пиво/))
+            if(context.command?.match(/^пиво$/))
             {
                 await this.DrinkBeer(context)
                 return true
@@ -475,7 +475,7 @@ class ChatController
             let time = new Date()
             if(context.player.lastBeerCup - time > 0)
             {
-                await context.send(`${context.player.nick}, повтори через ${NameLibrary.ParseFutureTime(context.player.lastBeerCup)} Выпито всего - ${context.player.beer} л. 🍺`)
+                await context.send(`${context.player.nick}, повтори через ${NameLibrary.ParseFutureTime(context.player.lastBeerCup)} Выпито всего - ${context.player.beer.toFixed(1)} л. 🍺`)
                 return
             }
             time.setHours(time.getHours() + 1)
@@ -483,7 +483,7 @@ class ChatController
             context.player.beer += parseFloat(drinking.toFixed(1))
             context.player.lastBeerCup = time
             await Player.update({beer: context.player.beer}, {where: {id: context.player.id}})
-            await context.send(`${context.player.nick}, ты выпил ${drinking.toFixed(1)} л. пива. Выпито всего - ${context.player.beer.toFixed(1)} л. 🍺\nСледующая попытка через час`)
+            await context.send(`${context.player.nick}, ты выпил${context.player.gender ? "" : "а"} ${drinking.toFixed(1)} л. пива. Выпито всего - ${context.player.beer.toFixed(1)} л. 🍺\nСледующая попытка через час`)
         }
         catch (e)
         {
@@ -681,6 +681,7 @@ class ChatController
     {
         try
         {
+            if(Data.botCallModes[context.peerId]?.name.match(/выкл/i)) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
             let time = new Date()
@@ -718,6 +719,7 @@ class ChatController
     {
         try
         {
+            if(Data.botCallModes[context.peerId]?.name.match(/выкл/i)) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
             let limit = 10
@@ -1760,11 +1762,11 @@ class ChatController
                     await PlayerInfo.update({nationality: "☝ Имарат Донбасс"}, {where: {id: context.player.id}})
                     await context.send(`☝ Ты принял${context.player.gender ? "" : "а"} ислам во имя Имарата Донбасса, мы гордимся тобой ${context.player.gender ? "брат" : "сестра"}.`)
                 }
-                else if(context.command.match(/отца|христиан|право/) && !context.player.nationality.match(/священ/i))
+                else if(context.command.match(/отца|христиан|право/) && !context.player.nationality.match(/великая/i))
                 {
-                    context.player.nationality = "☦ Священный Донбасс"
-                    await PlayerInfo.update({nationality: "☦ Священный Донбасс"}, {where: {id: context.player.id}})
-                    await context.send(`☦ Теперь ты христиан${context.player.gender ? "ин" : "ка"}, гордись этим, Имарат Донбасс рад принять тебя в свои ряды!`)
+                    context.player.nationality = "☦ Великая Донецкая Империя"
+                    await PlayerInfo.update({nationality: "☦ Великая Донецкая Империя"}, {where: {id: context.player.id}})
+                    await context.send(`☦ Теперь ты христиан${context.player.gender ? "ин" : "ка"}, гордись этим, Великая Донецкая Империя рада принять тебя в свои ряды!`)
                 }
             }
             else
@@ -2187,7 +2189,7 @@ class ChatController
                 }
                 for(let i = 0; i < active.length; i++)
                 {
-                    request += `${i+1} *id${active[i].id}(${active[i].nick}) - ${active[i].beer.toFixed(1)}\n`
+                    request += `${i+1} *id${active[i].id}(${active[i].nick}) - ${active[i].beer.toFixed(1)} л.\n`
                 }
             }
             await context.send(request, {disable_mentions: true})
