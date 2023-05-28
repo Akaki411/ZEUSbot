@@ -697,7 +697,7 @@ class ChatController
                     }
                 }
             }
-            let leader = country.leaderID === context.player.id || (context.official.countryID === country.id && context.official.canAppointOfficial)
+            let leader = country.leaderID === context.player.id || (context.official?.countryID === country.id && context.official?.canAppointOfficial)
             if(!leader && NameLibrary.RoleEstimator(context.player.role) < 1)
             {
                 return
