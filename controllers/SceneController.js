@@ -6,6 +6,7 @@ const Builders = require("./BuildersAndControlsScripts")
 const api = require("../middleware/API")
 const sequelize = require("../database/DataBase")
 const ChatController = require("./ChatController")
+const {relax} = require("../variables/Commands");
 
 class SceneController
 {
@@ -1404,7 +1405,7 @@ class SceneController
             [keyboard.transferPowerButton],
             [keyboard.nameButton, keyboard.descriptionButton, keyboard.governmentFormButton],
             [keyboard.publicButton, keyboard.photoButton, keyboard.welcomePictureButton],
-            [keyboard.backButton, keyboard.countryInfoButton]
+            [keyboard.backButton, keyboard.countryInfoButton, keyboard.countryParliamentButton]
         ]
         if(Data.countries[context.player.countryID].notifications) kb[0].push(keyboard.notificationsOffButton)
         else kb[0].push(keyboard.notificationsOnButton)
@@ -1819,7 +1820,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|name|government_form|country_info|description|transfer_power|public|photo|welcome_picture|notifications_off|notifications_on/))
+            if(context.messagePayload?.choice?.match(/back|name|country_parliament|government_form|country_info|description|transfer_power|public|photo|welcome_picture|notifications_off|notifications_on/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1851,6 +1852,10 @@ class SceneController
                 if (context.messagePayload.choice.match(/welcome_picture/))
                 {
                     await Builders.ChangeCountryWelcomePhoto(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/country_parliament/))
+                {
+                    await Builders.ChangeCountryParliament(context, current_keyboard)
                 }
                 if (context.messagePayload.choice.match(/notifications_off/))
                 {
@@ -2389,7 +2394,7 @@ class SceneController
     {
         const location = Data.countries[context.player.countryID]
         const kb = [
-            [context.player.isRelaxing ? keyboard.wakeupButton : keyboard.relaxButton],
+            [Data.timeouts["user_timeout_sleep_" + context.player.id] ? keyboard.secondaryButton(["☕ Взбодриться", "relax"]) : keyboard.secondaryButton(["💤 Отдохнуть", "relax"])],
             [],
             [],
             [keyboard.backButton, keyboard.getResourcesButton]
@@ -3319,20 +3324,7 @@ class SceneController
                 }
                 if(context.messagePayload.choice.match(/relax/))
                 {
-                    if(context.player.fatigue < 100)
-                    {
-                        current_keyboard[0][0] = keyboard.wakeupButton
-                        await Builders.Relax(context, current_keyboard)
-                    }
-                    else
-                    {
-                        await context.send("💪 Вы полны сил.")
-                    }
-                }
-                if(context.messagePayload.choice.match(/wakeup/))
-                {
-                    current_keyboard[0][0] = keyboard.relaxButton
-                    await Builders.Wakeup(context, current_keyboard)
+                    await Builders.Relaxing(context, this.GetExtractingMenuKeyboard)
                 }
             }
             else

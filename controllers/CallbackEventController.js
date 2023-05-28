@@ -346,10 +346,13 @@ class CallbackEventController
             {
                 clearTimeout(Data.timeouts["get_citizenship_" + secondUserID].timeout)
                 delete Data.timeouts["get_citizenship_" + secondUserID]
-                await PlayerStatus.update({citizenship: countryID},{where: {id: secondUserID}})
+                let time = new Date()
+                time.setDate(time.getDate() + 7)
+                await PlayerStatus.update({citizenship: countryID, lastCitizenship: time},{where: {id: secondUserID}})
                 if(Data.users[secondUserID])
                 {
                     Data.users[secondUserID].citizenship = countryID
+                    Data.users[secondUserID].lastCitizenship = time
                     if(!Data.users[secondUserID].status.match(/worker|official|leader/))
                     {
                         Data.users[secondUserID].status = "citizen"

@@ -23,6 +23,7 @@ class User
         this.dodgeTaxScore = status.dataValues.dodgeTaxScore
         this.botForgotTime = new Date(status.dataValues.botForgotTime)
         this.botCallTime = new Date(status.dataValues.botCallTime)
+        this.lastCitizenship = new Date(status.dataValues.lastCitizenship)
         this.description = info.dataValues.description
         this.marriedID = info.dataValues.marriedID
         this.nationality = info.dataValues.nationality

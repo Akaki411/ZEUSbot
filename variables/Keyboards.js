@@ -784,6 +784,14 @@ class KeyboardButtons
         }
     })
 
+    countryParliamentButton = Keyboard.textButton({
+        label: 'ℹ Парламент',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'country_parliament'
+        }
+    })
+
     getTaxButton = Keyboard.textButton({
         label: '📥 Собрать все налоги',
         color: Keyboard.SECONDARY_COLOR,

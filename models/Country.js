@@ -20,6 +20,7 @@ class CountryObject
         this.entranceFee = country.dataValues.entranceFee
         this.tax = country.dataValues.tax
         this.roadMap = country.dataValues.map
+        this.isParliament = country.dataValues.isParliament
         this.isSiege = country.dataValues.isSiege
         this.isUnderSanctions = country.dataValues.isUnderSanctions
         this.notifications = country.dataValues.notifications

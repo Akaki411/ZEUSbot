@@ -68,33 +68,6 @@ class CacheData
         return request
     }
 
-    async PlayersAreNearby(firID, secID)
-    {
-        let firstLocation = null
-        let secondLocation = null
-        if(this.users[firID])
-        {
-            firstLocation = parseInt(this.users[firID].location)
-        }
-        else
-        {
-            const fUser = await PlayerStatus.findOne({where: {id: firID}})
-            if(!fUser) return false
-            firstLocation = parseInt(fUser.dataValues.location)
-        }
-        if(this.users[secID])
-        {
-            secondLocation = parseInt(this.users[secID].location)
-        }
-        else
-        {
-            const sUser = await PlayerStatus.findOne({where: {id: secID}})
-            if(!sUser) return false
-            secondLocation = parseInt(sUser.dataValues.location)
-        }
-        return firstLocation === secondLocation
-    }
-
     GetCountryButtons()
     {
         const buttons = []

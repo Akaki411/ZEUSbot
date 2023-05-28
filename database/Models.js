@@ -24,7 +24,8 @@ const PlayerStatus = sequelize.define("player-status", {
     isFreezing: {type: DataTypes.BOOLEAN, defaultValue: false},
     dodgeTaxScore: {type: DataTypes.INTEGER, defaultValue: 0},
     botForgotTime: {type: DataTypes.DATE, defaultValue: sequelize.fn("now")},
-    botCallTime: {type: DataTypes.DATE, defaultValue: sequelize.fn("now")}
+    botCallTime: {type: DataTypes.DATE, defaultValue: sequelize.fn("now")},
+    lastCitizenship: {type: DataTypes.DATE, defaultValue: sequelize.fn("now")}
 })
 const PlayerInfo = sequelize.define("player-info", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},

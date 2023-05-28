@@ -11,7 +11,7 @@ class NameLibrary
 
     GetRandomNumb(min, max)
     {
-        return Math.round(min + Math.round(Math.random() * (max - min)))
+        return Math.floor(min + Math.floor(Math.random() * (max - min + 1)))
     }
 
     GetDate()

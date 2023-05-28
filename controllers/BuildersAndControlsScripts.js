@@ -16,6 +16,8 @@ const User = require("../models/User")
 const fs = require('fs')
 const path = require("path")
 const axios = require("axios")
+const APIKeysGenerator = require("../models/ApiKeysGenerator")
+const CrossStates = require("./CrossStates")
 
 class BuildersAndControlsScripts
 {
@@ -34,7 +36,7 @@ class BuildersAndControlsScripts
                     temp = await Player.findOne({where: {nick: name}})
                 }
 
-                const age = await InputManager.InputInteger(context, `2️⃣ Теперь укажите возраст вашего персонажа.\n⚠ Возраст может быть выбран от 16 до 100 лет.`, current_keyboard, 16, 100)
+                const age = await InputManager.InputInteger(context, `2️⃣ Теперь укажите возраст вашего персонажа.\n⚠ Возраст может быть выбран от 16 до 100 лет.`, current_keyboard, 1, 100)
                 if(age === null) return resolve(false)
 
                 const gender = await InputManager.InputBoolean(context, `3️⃣ Укажите пол вашего персонажа.`, current_keyboard, keyboard.manButton, keyboard.womanButton)
@@ -616,91 +618,25 @@ class BuildersAndControlsScripts
         })
     }
 
-    async Relax(context, current_keyboard)
+    async Relaxing(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
             try
             {
-                if(Data.timeouts["user_timeout_sleep_" + context.player.id])
-                {
-                    await context.send(`💤 Сон во сне? Звучит как завязка фильма "Начало"`)
-                    return
-                }
                 if(context.player.fatigue === 100)
                 {
-                    await context.send(`💪 Вы полны сил`)
-                    return
+                    await context.send("💪 Вы полны сил")
+                    return resolve()
                 }
-                const lvls = {
-                    0: 3.6,
-                    1: 3.0
-                }
-                const keys = await Keys.findAll({where: {ownerID: context.player.id}})
-                let houseLevel = 0
-
-                for(let i = 0; i < Data.buildings[context.player.location]?.length; i++)
+                let result = await CrossStates.Relaxing(context)
+                if(result.sleep)
                 {
-                    if (Data.buildings[context.player.location][i].ownerType === "user" && Data.buildings[context.player.location][i].type.match(/house/))
-                    {
-                        for (const key of keys)
-                        {
-                            if (key.dataValues.houseID === Data.buildings[context.player.location][i].id)
-                            {
-                                houseLevel = 1
-                                break
-                            }
-                        }
-                    }
+                    await context.send(`💤 Вы перешли в режим отдыха, до полного восстановления сил ${NameLibrary.ParseFutureTime(result.time)}`, {keyboard: keyboard.build(current_keyboard(context))})
                 }
-                const need = (100 - context.player.fatigue) * lvls[houseLevel]
-                const time = new Date()
-                time.setMinutes(time.getMinutes() + need)
-                Data.timeouts["user_timeout_sleep_" + context.player.id] = {
-                    type: "user_timeout",
-                    subtype: "sleep",
-                    userId: context.player.id,
-                    time: time,
-                    houseLevel: houseLevel,
-                    timeout: setTimeout(async () => {
-                        context.send("☕ Ваши силы восстановлены")
-                        context.player.fatigue = 100
-                        context.player.isRelaxing = false
-                        delete Data.timeouts["user_timeout_sleep_" + context.player.id]
-                    }, need * 60000)
-                }
-                context.player.isRelaxing = true
-                await context.send(`💤 Вы перешли в режим отдыха, до полного восстановления сил ${NameLibrary.ParseFutureTime(time)}`, {keyboard: keyboard.build(current_keyboard)})
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/Relax", e)
-            }
-        })
-    }
-
-    async Wakeup(context, current_keyboard)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                if(!Data.timeouts["user_timeout_sleep_" + context.player.id])
+                else
                 {
-                    context.player.isRelaxing = false
-                    await context.send(`☕ Будете слишком бодрым - сердце посадите.`)
-                    return
+                    await context.send(`💪 Ваш уровень энергии восстановлен до ${result.fatigue}%`, {keyboard: keyboard.build(current_keyboard(context))})
                 }
-                const lvls = {
-                    0: 360,
-                    1: 300
-                }
-                const now = new Date()
-                const time = Math.max(0, Math.round((Data.timeouts["user_timeout_sleep_" + context.player.id].time - now) / 60000))
-                context.player.isRelaxing = false
-                context.player.fatigue = Math.round(100 - (time * (100 / lvls[Data.timeouts["user_timeout_sleep_" + context.player.id].houseLevel])))
-                clearTimeout(Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
-                delete Data.timeouts["user_timeout_sleep_" + context.player.id]
-                await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)
@@ -1550,6 +1486,32 @@ class BuildersAndControlsScripts
                 await Country.update({welcomePhotoURL: photo}, {where: {id: context.country.id}})
                 context.country.welcomePhotoURL = photo
                 await context.send("✅ Приветственное фото фракции изменено.", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryWelcomePhoto", e)
+            }
+        })
+    }
+
+    async ChangeCountryParliament(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(context.country.isParliament)
+                {
+                    await Country.update({isParliament: false}, {where: {id: context.country.id}})
+                    context.country.isParliament = false
+                    await context.send("✅ Теперь у фракции только один правитель.", {keyboard: keyboard.build(current_keyboard)})
+                }
+                else
+                {
+                    await Country.update({isParliament: true}, {where: {id: context.country.id}})
+                    context.country.isParliament = true
+                    await context.send("✅ Теперь у фракции несколько правителей, правителями считаются чиновники с правом назначения чиновников.", {keyboard: keyboard.build(current_keyboard)})
+                }
+                return resolve()
             }
             catch (e)
             {
@@ -2781,6 +2743,12 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
+                let time = new Date()
+                if(context.player.lastCitizenship - time > 0)
+                {
+                    await context.send("⚠ Менять гражданство можно только раз в неделю")
+                    return
+                }
                 if(context.player.status.match(/official|leader/))
                 {
                     await context.send("⚠ Правители и чиновники не могут менять гражданство", {keyboard: keyboard.build(current_keyboard)})
@@ -2826,7 +2794,6 @@ class BuildersAndControlsScripts
                         }
                     }
                 }
-                let time = new Date()
                 time.setHours(time.getHours() + 24)
                 Data.timeouts["get_citizenship_" + context.player.id] = {
                     type: "user_timeout",
@@ -3536,11 +3503,6 @@ class BuildersAndControlsScripts
                 }
                 const user = await InputManager.InputUser(context, "1️⃣ Кому вы хотите отдать этот ключ?", current_keyboard)
                 if(!user) return resolve()
-                if(await Data.PlayersAreNearby(context.player.id, user.dataValues.id))
-                {
-                    await context.send("⚠ Вы находитесь в разных городах", {keyboard: keyboard.build(current_keyboard)})
-                    return resolve()
-                }
                 for(let i = 0; i < keys.length; i++)
                 {
                     keysButton.push([keys[i].dataValues.name, "ID" + keys[i].dataValues.id])
@@ -6474,7 +6436,18 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                context.player.avatar && await context.send("Ваш аватар", {attachment: context.player.avatar})
+                if(context.player.avatar)
+                {
+                    await context.send("Ваш аватар", {attachment: context.player.avatar})
+                    let action = await InputManager.InputBoolean(context, "Что сделать с аватаркой?", current_keyboard, keyboard.secondaryButton(["♻ Изменить", "change"]), keyboard.secondaryButton(["🗑 Удалить", "delete"]))
+                    if(!action)
+                    {
+                        await Player.update({avatar: null}, {where: {id: context.player.id}})
+                        await context.send("✅ Аватар удален", {keyboard: keyboard.build(current_keyboard)})
+                        context.player.avatar = null
+                        return resolve()
+                    }
+                }
                 const photo = await InputManager.InputPhoto(context, `1️⃣ Отправьте новое фото`, current_keyboard)
                 if(photo === null) return resolve()
                 context.player.avatar = photo
@@ -7051,6 +7024,7 @@ class BuildersAndControlsScripts
 
     async GetChatGPTRequest(messages)
     {
+        let key = APIKeysGenerator.GetKey()
         try
         {
             let request = await axios.post("https://api.openai.com/v1/chat/completions", {
@@ -7072,7 +7046,8 @@ class BuildersAndControlsScripts
         }
         catch (e)
         {
-            console.log(e)
+            APIKeysGenerator.WarnKey(key)
+            Data.variables["isTest"] && console.log(e)
             return undefined
         }
     }

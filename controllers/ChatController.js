@@ -4,7 +4,7 @@ const keyboard = require("../variables/Keyboards")
 const api = require("../middleware/API")
 const Data = require("../models/CacheData")
 const {Player, PlayerStatus, PlayerInfo, Country, CountryRoads, CityRoads, PlayerResources, Warning, OfficialInfo,
-    Transactions, CountryTaxes, Keys
+    Transactions, CountryTaxes
 } = require("../database/Models")
 const Samples = require("../variables/Samples")
 const sequelize = require("../database/DataBase")
@@ -13,6 +13,8 @@ const axios = require('axios')
 const groupId = parseInt(process.env.GROUPID)
 const ChatGPTModes = require('../variables/BotCallModes')
 const Rules = require("../variables/Rules")
+const APIKeysGenerator = require("../models/ApiKeysGenerator")
+const CrossStates = require("./CrossStates")
 
 class ChatController
 {
@@ -32,15 +34,6 @@ class ChatController
                 await this.BotCall(context)
                 return true
             }
-            // if(context.command?.match(/^give me history$/))
-            // {
-            //     let h = await api.api.messages.getHistory({
-            //         peer_id: context.peerId,
-            //         count: 10
-            //     })
-            //     console.log(h)
-            //     return true
-            // }
             if(context.command?.match(Commands.clearKeyboard) && context.peerType === "chat")
             {
                 await context.send("Убираю", {keyboard: keyboard.none})
@@ -79,11 +72,6 @@ class ChatController
             if(context.command?.match(Commands.relax))
             {
                 await this.Relax(context)
-                return true
-            }
-            if(context.command?.match(Commands.wakeup))
-            {
-                await this.Wakeup(context)
                 return true
             }
             if(context.command?.match(/^мир$/))
@@ -334,6 +322,11 @@ class ChatController
                 await this.StopTrolling(context)
                 return true
             }
+            if(context.command?.match(Commands.globalKick))
+            {
+                await this.GlobalKick(context)
+                return true
+            }
 
 
             //Тех-поддержка+
@@ -468,6 +461,28 @@ class ChatController
         }
     }
 
+    async GlobalKick(context)
+    {
+        try
+        {
+            if (NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                return
+            }
+            if(context.replyPlayers?.length !== 0)
+            {
+                let player = await Player.findOne({where: {id: context.replyPlayers[0]}, attributes: ["role"]})
+                if(NameLibrary.RoleEstimator(player?.dataValues.role) >= NameLibrary.RoleEstimator(context.player.role))
+                {
+                    await context.send("⚠ Вы не можете кикнуть админа находящегося на одном с вами ранге или выше")
+                    return
+                }
+                await api.BanUser(context.replyPlayers[0])
+            }
+        }
+        catch (e) {}
+    }
+
     async DrinkBeer(context)
     {
         try
@@ -591,6 +606,23 @@ class ChatController
     {
         try
         {
+            const getLeaders = (countryID) => {
+                let request = ""
+                if(Data.officials[countryID])
+                {
+                    for(const id of Object.keys(Data.officials[countryID]))
+                    {
+                        if(Data.officials[countryID][id].canAppointMayors)
+                        {
+                            request += `*id${id}(${Data.officials[countryID].nick})\n`
+                        }
+                    }
+                }
+                else
+                {
+                    return request
+                }
+            }
             let temp, country, request = ""
             for(const key of Data.countries)
             {
@@ -615,7 +647,7 @@ class ChatController
             request += country.description + "\n\n"
             request += "🌐 Столица - " + Data.cities[country.capitalID].name + "\n"
             request += "👥 Население - " + population + "\n"
-            request += `👑 Правитель - *id${country.leaderID}(${leader.dataValues.nick})\n`
+            request += `👑 Правител${country.isParliament ? "и:\n" : "ь - "}${country.isParliament ? ((leader ? `@id${country.leaderID}(${leader.dataValues.nick})` : "") + getLeaders(country.id)) : (leader ? `@id${country.leaderID}(${leader.dataValues.nick})` : "Не назначен")}\n`
             request += "🏛 Форма правления - " + country.governmentForm + "\n\n"
             request += "На территории можно добыть:\n\n"
             let res = country.resources.split(".")
@@ -625,11 +657,14 @@ class ChatController
             }
             if(country.tested) request += "\n❗ Фракция находится на испытательном сроке\n"
             request += "\n🏆 Стабильность - " + country.stability + "\n"
-            request += "🌾 Крестьянство и горожане - " + country.peasantry + "\n"
-            request += "🙏 Религия - " + country.religion + "\n"
-            request += "👑 Аристократия - " + country.aristocracy + "\n"
-            request += "⚔ Военные - " + country.military + "\n"
-            request += "💰 Купечество - " + country.merchants + "\n"
+            if(NameLibrary.RoleEstimator(context.player.role) > 1)
+            {
+                request += "🌾 Крестьянство и горожане - " + country.peasantry + "\n"
+                request += "🙏 Религия - " + country.religion + "\n"
+                request += "👑 Аристократия - " + country.aristocracy + "\n"
+                request += "⚔ Военные - " + country.military + "\n"
+                request += "💰 Купечество - " + country.merchants + "\n"
+            }
             await context.send(request, {attachment: photos.join(",")})
         }
         catch (e)
@@ -642,11 +677,32 @@ class ChatController
     {
         try
         {
-            if(NameLibrary.RoleEstimator(context.player.role) === 0)
+            let temp = null
+            let country = null
+            for(let i = 0; i < Data.countries.length; i++)
+            {
+                if(Data.countries[i])
+                {
+                    if(Data.countries[i].chatID)
+                    {
+                        temp = Data.countries[i].chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            if (parseInt(chat) === context.peerId)
+                            {
+                                country = Data.countries[i]
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+            let leader = country.leaderID === context.player.id || (context.official.countryID === country.id && context.official.canAppointOfficial)
+            if(!leader && NameLibrary.RoleEstimator(context.player.role) < 1)
             {
                 return
             }
-            let temp = null
+            temp = null
             for(const mode of Object.keys(ChatGPTModes))
             {
                 if(context.command.match(ChatGPTModes[mode].keywords))
@@ -655,10 +711,10 @@ class ChatController
                     break
                 }
             }
-            if(context.command.match(/default|стандарт|дефолт/) && !temp)
+            if(context.command.match(/off|выкл|откл|disable/) && !temp)
             {
                 delete Data.botCallModes[context.peerId]
-                await context.send("✅ Установлен режим ответов по умолчанию")
+                await context.send("✅ Бот выключен")
                 return
             }
             if(!temp)
@@ -668,6 +724,7 @@ class ChatController
                 {
                     request += ChatGPTModes[mode].name + "\n"
                 }
+                request += "\nСейчас установлен режим " + (Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].name : "❌ Выключен")
                 await context.send(request)
                 return
             }
@@ -681,7 +738,10 @@ class ChatController
     {
         try
         {
-            if(Data.botCallModes[context.peerId]?.name.match(/выкл/i)) return
+            if(!Data.botCallModes[context.peerId]) return
+            if(context.command.length < 10) return
+            if(context.command.length < 20 && context.command.match(Commands.censorship)) return
+            if(context.command.match(/ахах/)) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
             let time = new Date()
@@ -719,7 +779,7 @@ class ChatController
     {
         try
         {
-            if(Data.botCallModes[context.peerId]?.name.match(/выкл/i)) return
+            if(!Data.botCallModes[context.peerId]) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
             let limit = 10
@@ -779,6 +839,7 @@ class ChatController
 
     async GetChatGPTRequest(messages)
     {
+        let key = APIKeysGenerator.GetKey()
         try
         {
             let request = await axios.post("https://api.openai.com/v1/chat/completions", {
@@ -787,7 +848,7 @@ class ChatController
                 },
                 {
                     headers: {
-                        Authorization: 'Bearer ' + process.env.OPENAI_API_KEY
+                        Authorization: 'Bearer ' + key
                     }
                 })
             request = request.data["choices"][0].message.content
@@ -800,6 +861,7 @@ class ChatController
         }
         catch (e)
         {
+            APIKeysGenerator.WarnKey(key)
             Data.variables["isTest"] && console.log(e)
             return undefined
         }
@@ -2490,6 +2552,7 @@ class ChatController
         {
             let temp = null
             let country = null
+            let time = new Date()
             for(const key of Data.countries)
             {
                 if(key?.tags)
@@ -2501,6 +2564,11 @@ class ChatController
                         break
                     }
                 }
+            }
+            if(context.player.lastCitizenship - time > 0)
+            {
+                await context.send("⚠ Менять гражданство можно только раз в неделю")
+                return
             }
             if(!country)
             {
@@ -2522,6 +2590,7 @@ class ChatController
                 await context.send("⚠ Вы уже являетесь гражданином этой фракции.")
                 return
             }
+
             await api.api.messages.send({
                 user_id: country.leaderID,
                 random_id: Math.round(Math.random() * 100000),
@@ -2544,7 +2613,6 @@ class ChatController
                     }
                 }
             }
-            let time = new Date()
             time.setHours(time.getHours() + 24)
             Data.timeouts["get_citizenship_" + context.player.id] = {
                 type: "user_timeout",
@@ -2779,7 +2847,7 @@ class ChatController
             }
             context.player.marriedID = null
             context.player.isMarried = false
-            await api.SendMessage(player.dataValues.id, `💔 Больше *${context.player.GetName()} не ваш${context.player.gender ? " муж" : "а жена"}`)
+            await api.SendMessage(player.dataValues.id, `💔 Больше ${context.player.GetName()} не ваш${context.player.gender ? " муж" : "а жена"}`)
             await context.send(`💔 *id${player.dataValues.id}(${player.dataValues.nick}) больше не ваш${player.dataValues.gender ? " муж" : "а жена"}`)
         }
         catch (e)
@@ -3065,6 +3133,23 @@ class ChatController
     {
         try
         {
+            const getLeaders = (countryID) => {
+                let request = ""
+                if(Data.officials[countryID])
+                {
+                    for(const id of Object.keys(Data.officials[countryID]))
+                    {
+                        if(Data.officials[countryID][id].canAppointMayors)
+                        {
+                            request += `*id${id}(${Data.officials[countryID].nick})\n`
+                        }
+                    }
+                }
+                else
+                {
+                    return request
+                }
+            }
             let request = "🔰 Государства, населяющие наш мир:\n\n"
             let user = undefined
             let population = 0
@@ -3098,7 +3183,7 @@ class ChatController
                     request += `${country[0].GetName(context.player.platform === "IOS")}\n`
                     request += `👥 Население - ${country[1]} чел.\n`
                     request += `🏆 Стабильность - ${country[0].stability}\n`
-                    request += `👑 Правитель - ${user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен"}\n`
+                    request += `👑 Правител${country[0].isParliament ? "и:\n" : "ь - "}${country[0].isParliament ? ((user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "") + getLeaders(country[0].id)) : (user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен")}\n`
                     request += `🌆 Столица - ${Data.cities[country[0].capitalID].name}\n\n`
                 }
             }
@@ -3592,87 +3677,25 @@ class ChatController
             await api.SendLogs(context, "ChatController/Relax", e)
         }
     }
-    async Wakeup(context)
-    {
-        try
-        {
-            if(!Data.timeouts["user_timeout_sleep_" + context.player.id])
-            {
-                context.player.isRelaxing = false
-                await context.send(`☕ Будете слишком бодрым - сердце посадите.`)
-                return
-            }
-            const lvls = {
-                0: 360,
-                1: 300
-            }
-            const now = new Date()
-            const time = Math.max(0, Math.round((Data.timeouts["user_timeout_sleep_" + context.player.id].time - now) / 60000))
-            context.player.isRelaxing = false
-            context.player.fatigue = Math.round(100 - (time * (100 / lvls[Data.timeouts["user_timeout_sleep_" + context.player.id].houseLevel])))
-            clearTimeout(Data.timeouts["user_timeout_sleep_" + context.player.id].timeout)
-            delete Data.timeouts["user_timeout_sleep_" + context.player.id]
-            await context.send(`💪 Ваш уровень энергии восстановлен до ${context.player.fatigue}%`)
-        }
-        catch (e)
-        {
-            await api.SendLogs(context, "ChatController/Relax", e)
-        }
-    }
 
     async Relax(context)
     {
         try
         {
-            if(Data.timeouts["user_timeout_sleep_" + context.player.id])
-            {
-                await context.send(`💤 Сон во сне? Звучит как завязка фильма "Начало"`)
-                return
-            }
             if(context.player.fatigue === 100)
             {
-                await context.send(`💪 Вы полны сил`)
+                await context.send("💪 Вы полны сил")
                 return
             }
-            const lvls = {
-                0: 3.6,
-                1: 3.0
-            }
-            const keys = await Keys.findAll({where: {ownerID: context.player.id}})
-            let houseLevel = 0
-
-            for(let i = 0; i < Data.buildings[context.player.location]?.length; i++)
+            let result = await CrossStates.Relaxing(context)
+            if(result.sleep)
             {
-                if (Data.buildings[context.player.location][i].ownerType === "user" && Data.buildings[context.player.location][i].type.match(/house/))
-                {
-                    for (const key of keys)
-                    {
-                        if (key.dataValues.houseID === Data.buildings[context.player.location][i].id)
-                        {
-                            houseLevel = 1
-                            break
-                        }
-                    }
-                }
+                await context.send(`💤 Вы перешли в режим отдыха, до полного восстановления сил ${NameLibrary.ParseFutureTime(result.time)}`)
             }
-            const need = (100 - context.player.fatigue) * lvls[houseLevel]
-            const time = new Date()
-            time.setMinutes(time.getMinutes() + need)
-            Data.timeouts["user_timeout_sleep_" + context.player.id] = {
-                type: "user_timeout",
-                subtype: "sleep",
-                userId: context.player.id,
-                time: time,
-                houseLevel: houseLevel,
-                timeout: setTimeout(async () => {
-                    await api.SendMessage(context.player.id, "☕ Ваши силы восстановлены")
-                    context.player.fatigue = 100
-                    context.player.isRelaxing = false
-                    delete Data.timeouts["user_timeout_sleep_" + context.player.id]
-                }, need * 60000)
+            else
+            {
+                await context.send(`💪 Ваш уровень энергии восстановлен до ${result.fatigue}%`)
             }
-            context.player.isRelaxing = true
-            await context.send(`💤 *id${context.player.id}(Вы) перешли в режим отдыха, до полного восстановления сил ${NameLibrary.ParseFutureTime(time)}`)
         }
         catch (e)
         {
@@ -4021,11 +4044,11 @@ class ChatController
             let user
             if(context.replyPlayers?.length !== 0)
             {
-                user = context.replyPlayers[0]
+                user = context.replyPlayers
             }
             else
             {
-                user = context.player.id
+                user = [context.player.id]
             }
             let player = await Player.count({where: {id: user}})
             if(player === 0)
@@ -4039,65 +4062,71 @@ class ChatController
             let objOUT = {}
             let count
             let request = ""
-            for(let send of sends)
+            let temp = null
+            for(const u of user)
             {
-                if(send.match(Commands.money))
+                temp = await Player.findOne({where: {id: u}, attributes: ["nick"]})
+                request += "\n" + temp.dataValues?.nick + ":" + "\n"
+                for(let send of sends)
                 {
-                    resource = "money"
+                    if(send.match(Commands.money))
+                    {
+                        resource = "money"
+                    }
+                    if(send.match(Commands.wheat))
+                    {
+                        resource = "wheat"
+                    }
+                    if(send.match(Commands.stone))
+                    {
+                        resource = "stone"
+                    }
+                    if(send.match(Commands.wood))
+                    {
+                        resource = "wood"
+                    }
+                    if(send.match(Commands.iron))
+                    {
+                        resource = "iron"
+                    }
+                    if(send.match(Commands.copper))
+                    {
+                        resource = "copper"
+                    }
+                    if(send.match(Commands.silver))
+                    {
+                        resource = "silver"
+                    }
+                    if(!resource)
+                    {
+                        return
+                    }
+                    count = send.match(/\d+/)
+                    count = parseInt( count ? count[0] : send)
+                    if(isNaN(count))
+                    {
+                        count = 1
+                    }
+                    objOUT[resource] = Math.abs(count)
+                    request += `${NameLibrary.GetResourceName(resource)} - ✅ Накручено ${Math.abs(count)}\n`
                 }
-                if(send.match(Commands.wheat))
-                {
-                    resource = "wheat"
-                }
-                if(send.match(Commands.stone))
-                {
-                    resource = "stone"
-                }
-                if(send.match(Commands.wood))
-                {
-                    resource = "wood"
-                }
-                if(send.match(Commands.iron))
-                {
-                    resource = "iron"
-                }
-                if(send.match(Commands.copper))
-                {
-                    resource = "copper"
-                }
-                if(send.match(Commands.silver))
-                {
-                    resource = "silver"
-                }
-                if(!resource)
-                {
-                    return
-                }
-                count = send.match(/\d+/)
-                count = parseInt( count ? count[0] : send)
-                if(isNaN(count))
-                {
-                    count = 1
-                }
-                objOUT[resource] = Math.abs(count)
-                request += `${NameLibrary.GetResourceName(resource)} - ✅ Накручено ${Math.abs(count)}\n`
+                await Data.AddPlayerResources(u, objOUT)
+                await api.SendNotification(u, `✅ Вам поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
+                await Transactions.create({
+                    fromID: context.player.id,
+                    toID: u,
+                    type: "gmtp",
+                    money: objOUT.money ? objOUT.money : null,
+                    stone: objOUT.stone ? objOUT.stone : null,
+                    wood: objOUT.wood ? objOUT.wood : null,
+                    wheat: objOUT.wheat ? objOUT.wheat : null,
+                    iron: objOUT.iron ? objOUT.iron : null,
+                    copper: objOUT.copper ? objOUT.copper : null,
+                    silver: objOUT.silver ? objOUT.silver : null,
+                    diamond: objOUT.diamond ? objOUT.diamond : null
+                })
             }
-            await Data.AddPlayerResources(user, objOUT)
-            await api.SendNotification(user, `✅ Вам поступил перевод в размере:\n${NameLibrary.GetPrice(objOUT)}`)
-            await Transactions.create({
-                fromID: context.player.id,
-                toID: user,
-                type: "gmtp",
-                money: objOUT.money ? objOUT.money : null,
-                stone: objOUT.stone ? objOUT.stone : null,
-                wood: objOUT.wood ? objOUT.wood : null,
-                wheat: objOUT.wheat ? objOUT.wheat : null,
-                iron: objOUT.iron ? objOUT.iron : null,
-                copper: objOUT.copper ? objOUT.copper : null,
-                silver: objOUT.silver ? objOUT.silver : null,
-                diamond: objOUT.diamond ? objOUT.diamond : null
-            })
-            await context.send(request)
+            await context.send(request, {disable_mentions: true})
         }
         catch (e)
         {
