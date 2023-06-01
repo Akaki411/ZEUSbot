@@ -11,7 +11,7 @@ class KeyboardButtons
 
     secondaryButton = (params) => {
         return Keyboard.textButton({
-            label: params[0],
+            label: params[0].slice(0,35),
             color: Keyboard.SECONDARY_COLOR,
             payload: {
                 choice: params[1]
@@ -366,14 +366,6 @@ class KeyboardButtons
         }
     })
 
-    relaxButton = Keyboard.textButton({
-        label: '💤 Отдохнуть',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'relax'
-        }
-    })
-
     chatListButton = Keyboard.textButton({
         label: '🚩 Фракции',
         color: Keyboard.SECONDARY_COLOR,
@@ -565,14 +557,6 @@ class KeyboardButtons
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'copy_key'
-        }
-    })
-
-    wakeupButton = Keyboard.textButton({
-        label: '☕ Взбодриться',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'wakeup'
         }
     })
 
@@ -1394,7 +1378,7 @@ class KeyboardButtons
     //Chat buttons
     greenButton = (context) => {
         return Keyboard.textButton({
-            label: context.name,
+            label: context.name.slice(0,35),
             color: Keyboard.POSITIVE_COLOR,
             payload: {
                 type: context.type,
@@ -1405,7 +1389,7 @@ class KeyboardButtons
 
     greyButton = (context) => {
         return Keyboard.textButton({
-            label: context.name,
+            label: context.name.slice(0,35),
             color: Keyboard.SECONDARY_COLOR,
             payload: {
                 type: context.type,
@@ -1416,7 +1400,7 @@ class KeyboardButtons
 
     lightButton = (context) => {
         return Keyboard.textButton({
-            label: context.name,
+            label: context.name.slice(0,35),
             color: Keyboard.PRIMARY_COLOR,
             payload: {
                 type: context.type,

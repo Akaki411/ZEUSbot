@@ -28,6 +28,7 @@ class ChatController
                 return await this.ChatButtonHandler(context)
             }
 
+
             // Игроки+
             if(context.command?.match(/^бот$/))
             {
@@ -209,6 +210,7 @@ class ChatController
                 await this.DrinkBeer(context)
                 return true
             }
+
 
             //Модератор+
             if(context.command?.match(/^id$|^ид$/))
@@ -606,22 +608,20 @@ class ChatController
     {
         try
         {
-            const getLeaders = (countryID) => {
-                let request = ""
+            const getLeaders = (countryID) =>
+            {
+                let request = "\n"
                 if(Data.officials[countryID])
                 {
                     for(const id of Object.keys(Data.officials[countryID]))
                     {
                         if(Data.officials[countryID][id].canAppointMayors)
                         {
-                            request += `*id${id}(${Data.officials[countryID].nick})\n`
+                            request += `*id${id}(${Data.officials[countryID][id].nick})\n`
                         }
                     }
                 }
-                else
-                {
-                    return request
-                }
+                return request
             }
             let temp, country, request = ""
             for(const key of Data.countries)
@@ -3133,22 +3133,20 @@ class ChatController
     {
         try
         {
-            const getLeaders = (countryID) => {
-                let request = ""
+            const getLeaders = (countryID) =>
+            {
+                let request = "\n"
                 if(Data.officials[countryID])
                 {
                     for(const id of Object.keys(Data.officials[countryID]))
                     {
                         if(Data.officials[countryID][id].canAppointMayors)
                         {
-                            request += `*id${id}(${Data.officials[countryID].nick})\n`
+                            request += `*id${id}(${Data.officials[countryID][id].nick})\n`
                         }
                     }
                 }
-                else
-                {
-                    return request
-                }
+                return request
             }
             let request = "🔰 Государства, населяющие наш мир:\n\n"
             let user = undefined

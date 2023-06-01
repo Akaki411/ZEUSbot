@@ -7033,7 +7033,7 @@ class BuildersAndControlsScripts
                 },
                 {
                     headers: {
-                        Authorization: 'Bearer ' + process.env.OPENAI_API_KEY
+                        Authorization: 'Bearer ' + key
                     }
                 })
             request = request.data["choices"][0].message.content
