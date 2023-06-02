@@ -15,6 +15,7 @@ const ChatGPTModes = require('../variables/BotCallModes')
 const Rules = require("../variables/Rules")
 const APIKeysGenerator = require("../models/ApiKeysGenerator")
 const CrossStates = require("./CrossStates")
+const BotReactions = require("./Reactions")
 
 class ChatController
 {
@@ -728,8 +729,15 @@ class ChatController
                 await context.send(request)
                 return
             }
-            Data.botCallModes[context.peerId] = temp
-            await context.send("✅ Установлен режим ответов " + temp.name)
+            if(temp.isDangerous && NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                await context.send("⚠ Режим ответов " + temp.name + " могут устанавливать только админы")
+            }
+            else
+            {
+                Data.botCallModes[context.peerId] = temp
+                await context.send("✅ Установлен режим ответов " + temp.name)
+            }
         }
         catch (e) {console.log(e)}
     }
@@ -744,6 +752,14 @@ class ChatController
             if(context.command.match(/ахах/)) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
+            if(Data.botCallModes[context.peerId].stopWords)
+            {
+                if(context.command.match(Data.botCallModes[context.peerId].stopWords))
+                {
+                    await BotReactions.Mute(context)
+                    return
+                }
+            }
             let time = new Date()
             if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
             {
@@ -782,6 +798,14 @@ class ChatController
             if(!Data.botCallModes[context.peerId]) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
+            if(Data.botCallModes[context.peerId].stopWords)
+            {
+                if(context.command.match(Data.botCallModes[context.peerId].stopWords))
+                {
+                    await BotReactions.Mute(context)
+                    return
+                }
+            }
             let limit = 10
             let time = new Date()
             if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
@@ -824,14 +848,14 @@ class ChatController
                 }
             }
             messages = messages.filter(key => {return !!key})
-            let request = await this.GetChatGPTRequest(messages)
-            if(!request) return
-            for (const sample of request)
-            {
-                const index = request.indexOf(sample);
-                if(index === 0) await context.reply(sample)
-                else await context.send(sample)
-            }
+            // let request = await this.GetChatGPTRequest(messages)
+            // if(!request) return
+            // for (const sample of request)
+            // {
+            //     const index = request.indexOf(sample);
+            //     if(index === 0) await context.reply(sample)
+            //     else await context.send(sample)
+            // }
         } catch (e) {
             console.log(e)
         }
@@ -1180,9 +1204,21 @@ class ChatController
             {
                 await context.send("Опять кавер на Iron Maiden")
             }
+            else if(name.match(/eagles/) && NameLibrary.GetChance(80))
+            {
+                await context.send("Слышь, ну перестань. У меня была тяжелая ночь, и я ненавижу, блядь, \"Eagles\".")
+            }
             else
             {
-                await context.send(NameLibrary.GetRandomSample("audio_reaction"))
+                let stickers = [163, 69, 73877, 73055, 73078, 73072, 73083, 142, 161, 162, 131, 167, 158, 102, 104, 37, 36, 18, 2, 60771, 60748, 60753, 60751, 60765, 73887, 73879, 85, 74, 73, 70, 59, 68, 75, 66, 89]
+                if(NameLibrary.GetChance(25))
+                {
+                    await api.SendSticker(context.peerId, stickers[Math.floor(Math.random() * stickers.length)])
+                }
+                else
+                {
+                    await context.send(NameLibrary.GetRandomSample("audio_reaction"))
+                }
             }
         }
         catch (e)

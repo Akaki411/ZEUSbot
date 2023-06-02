@@ -900,6 +900,24 @@ class VK_API
         }
     }
 
+    async SendSticker(peerId, stickerID)
+    {
+        if(!peerId) return false
+        try
+        {
+            await this.api.messages.send({
+                peer_id: peerId,
+                random_id: Math.round(Math.random() * 100000),
+                sticker_id: stickerID
+            })
+            return true
+        }
+        catch (e)
+        {
+            return false
+        }
+    }
+
     async SendMessageWithKeyboard(id, message, kb)
     {
         if(!id) return false
