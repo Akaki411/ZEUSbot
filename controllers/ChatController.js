@@ -611,14 +611,14 @@ class ChatController
         {
             const getLeaders = (countryID) =>
             {
-                let request = "\n"
+                let request = ""
                 if(Data.officials[countryID])
                 {
                     for(const id of Object.keys(Data.officials[countryID]))
                     {
                         if(Data.officials[countryID][id].canAppointMayors)
                         {
-                            request += `*id${id}(${Data.officials[countryID][id].nick})\n`
+                            request += `\n*id${id}(${Data.officials[countryID][id].nick})`
                         }
                     }
                 }
@@ -848,17 +848,15 @@ class ChatController
                 }
             }
             messages = messages.filter(key => {return !!key})
-            // let request = await this.GetChatGPTRequest(messages)
-            // if(!request) return
-            // for (const sample of request)
-            // {
-            //     const index = request.indexOf(sample);
-            //     if(index === 0) await context.reply(sample)
-            //     else await context.send(sample)
-            // }
-        } catch (e) {
-            console.log(e)
-        }
+            let request = await this.GetChatGPTRequest(messages)
+            if(!request) return
+            for (const sample of request)
+            {
+                const index = request.indexOf(sample);
+                if(index === 0) await context.reply(sample)
+                else await context.send(sample)
+            }
+        } catch (e) {console.log(e)}
     }
 
     async GetChatGPTRequest(messages)
@@ -3171,14 +3169,14 @@ class ChatController
         {
             const getLeaders = (countryID) =>
             {
-                let request = "\n"
+                let request = ""
                 if(Data.officials[countryID])
                 {
                     for(const id of Object.keys(Data.officials[countryID]))
                     {
                         if(Data.officials[countryID][id].canAppointMayors)
                         {
-                            request += `*id${id}(${Data.officials[countryID][id].nick})\n`
+                            request += `\n*id${id}(${Data.officials[countryID][id].nick})`
                         }
                     }
                 }
@@ -3217,8 +3215,8 @@ class ChatController
                     request += `${country[0].GetName(context.player.platform === "IOS")}\n`
                     request += `👥 Население - ${country[1]} чел.\n`
                     request += `🏆 Стабильность - ${country[0].stability}\n`
-                    request += `👑 Правител${country[0].isParliament ? "и:\n" : "ь - "}${country[0].isParliament ? ((user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "") + getLeaders(country[0].id)) : (user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен")}\n`
-                    request += `🌆 Столица - ${Data.cities[country[0].capitalID].name}\n\n`
+                    request += `🌆 Столица - ${Data.cities[country[0].capitalID].name}\n`
+                    request += `👑 Правител${country[0].isParliament ? "и:\n" : "ь - "}${country[0].isParliament ? ((user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "") + getLeaders(country[0].id)) : (user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен")}\n\n`
                 }
             }
             await context.send(request, {disable_mentions: true})

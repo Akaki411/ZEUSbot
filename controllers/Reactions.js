@@ -40,11 +40,9 @@ class BotReactions
                 clearTimeout(Data.mute[context.player.id].timeout)
                 delete Data.mute[context.player.id]
             }
-            Data.mute[context.replyPlayers[0]] = {
-                moder: context.player.id,
-                timeout: setTimeout(async () => {
-                    delete Data.mute[context.player.id]
-                }, 60000)
+            Data.mute[context.player.id] = {
+                moder: 1,
+                timeout: setTimeout(async () => {delete Data.mute[context.player.id]}, 60000)
             }
             await context.reply("Посиди в муте, лалка!")
             await this.Waiting(1)
