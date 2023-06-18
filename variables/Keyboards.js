@@ -1289,6 +1289,38 @@ class KeyboardButtons
         }
     })
 
+    freezeBuildingButton = Keyboard.textButton({
+        label: '❄ Заморозить постройку',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'freeze_building'
+        }
+    })
+
+    freezeButton = Keyboard.textButton({
+        label: '❄ Заморозить',
+        color: Keyboard.PRIMARY_COLOR,
+        payload: {
+            choice: 'freeze'
+        }
+    })
+
+    unfreezeButton = Keyboard.textButton({
+        label: '🔥 Разморозить',
+        color: Keyboard.NEGATIVE_COLOR,
+        payload: {
+            choice: 'unfreeze'
+        }
+    })
+
+    killButton = Keyboard.textButton({
+        label: '⚰ Убить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'kill'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

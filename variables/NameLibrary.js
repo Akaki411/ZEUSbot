@@ -230,8 +230,9 @@ class NameLibrary
                 return "Перевод городу"
             case "ptctr":
                 return "Перевод фракции"
+            default:
+                return "Не отмеченный тип"
         }
-        return "Не отмеченный тип"
     }
 
     GetUnitType(type)

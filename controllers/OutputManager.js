@@ -2,6 +2,7 @@ const {Warning, Player} = require("../database/Models");
 const keyboard = require("../variables/Keyboards")
 const NameLibrary = require("../variables/NameLibrary")
 const api = require("../middleware/API")
+const Data = require("../models/CacheData")
 
 class OutputManager
 {
@@ -54,6 +55,85 @@ class OutputManager
                     }
                 }
                 await api.SendLogs(context, "OutputManager/GetUserWarnings", e)
+            }
+        })
+    }
+
+    async WelcomeMessage(context)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let text = "🎉 %имя%, приветствуем тебя в нашем проекте! \n" +
+                    "\n" +
+                    "В чем суть проекта? \n" +
+                    "\n" +
+                    "🌍 Проект представляет из себя античный мир 3 века до нашей эры, наполненный виртуальными государствами (фракциями), у каждой фракции есть один или несколько чатов, своя экономика и взаимоотношения с соседними фракциями.\n" +
+                    "\n" +
+                    "👤 Вы, как игрок, можете создать своего персонажа, принять гражданство одной из фракций, после чего вам станет доступна добыча ресурсов этой фракции, строительство частных построек и возможно даже сможете занять одну из руководящий должностей.\n" +
+                    "\n" +
+                    "🤖 Сердце проекта – бот, который находится во всех чатах и позволяет взаимодействовать с игровыми функциями через команды в привязанных чатах или ЛС бота.\n"
+                let name = await api.GetUserData(context.player.id)
+                text = text.replace("%имя%", name.first_name)
+                await context.send(text)
+                const countries = Data.countries.filter(key => {
+                    return key !== undefined
+                })
+                const pages = []
+                for(let i = 0; i < Math.ceil(countries.length/5); i++)
+                {
+                    pages.push(countries.slice((i * 5), (i * 5) + 5))
+                }
+                for(let i = 0; i < pages.length; i++)
+                {
+                    await context.send(`Фракции ${i + 1}-я страница:`, {
+                        template: `{
+                        "type": "carousel",
+                        "elements": [
+                            ${pages[i].map(key => {
+                                    if(key)
+                                    {
+                                        return JSON.stringify({
+                                            title: key.name,
+                                            description: key.description.slice(0,75),
+                                            photo_id: key.photoURL.replace("photo", ""),
+                                            action: {
+                                                type: "open_link",
+                                                link: "https://vk.com/public" + key.groupID
+                                            },
+                                            buttons: [
+                                                {
+                                                    action: {
+                                                        type: "open_link",
+                                                        link: "https://vk.com/public" + key.groupID,
+                                                        label: "🏛 Перейти в сообщество"
+                                                    }
+                                                },
+                                                {
+                                                    action: {
+                                                        type: "text",
+                                                        label: "💬 Показать чаты",
+                                                        payload: JSON.stringify({
+                                                            type: "show_chat",
+                                                            countryID: key.id
+                                                        })
+                                                    },
+                                                }
+                                            ]
+                                        })
+                                    }
+                                })}
+                            ]
+                        }`
+                    })
+                    await this.Timeout(0.25)
+                }
+                return resolve()
+            }
+            catch (e)
+            {
+                console.log(e)
+                //await api.SendLogs(context, "OutputManager/WelcomeMessage", e)
             }
         })
     }

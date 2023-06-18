@@ -4,7 +4,8 @@ const Data = require("../models/CacheData");
 const keyboard = require("../variables/Keyboards");
 const {City, Country, PlayerStatus, Player, Ban, LastWills, Buildings,
     CountryResources, CityResources, PlayerInfo, CountryRoads, Keys, OfficialInfo, Messages, Chats,
-    Warning, CityRoads, Transactions, CountryArmy, CountryTaxes, CountryNotes, CityNotes, PlayerNotes, Events
+    Warning, CityRoads, Transactions, CountryArmy, CountryTaxes, CountryNotes, CityNotes, PlayerNotes, Events,
+    PlayerResources
 } = require("../database/Models");
 const api = require("../middleware/API");
 const NameLibrary = require("../variables/NameLibrary")
@@ -1251,7 +1252,7 @@ class BuildersAndControlsScripts
                 let isVoid = true
                 for(let i = 0, j = 0; i < Data.buildings[context.cityID]?.length; i++)
                 {
-                    if(Data.buildings[context.cityID][i].ownerType === "city" && Data.buildings[context.cityID][i].type.match(/wheat|stone|wood|iron|silver/))
+                    if(Data.buildings[context.cityID][i].ownerType === "city" && Data.buildings[context.cityID][i].type.match(/wheat|stone|wood|iron|silver/) && !Data.buildings[context.cityID][i].isFreezing)
                     {
                         flag = true
                         j++
@@ -1565,7 +1566,7 @@ class BuildersAndControlsScripts
                         request += "🌇 Город " + Data.cities[k].name + ":"
                         for(let i = 0, j = 0; i < Data.buildings[Data.cities[k].id]?.length; i++)
                         {
-                            if(Data.buildings[Data.cities[k].id][i].ownerType === "country" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/))
+                            if(Data.buildings[Data.cities[k].id][i].ownerType === "country" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/) && !Data.buildings[Data.cities[k].id][i].isFreezing)
                             {
                                 flag = true
                                 j++
@@ -7414,7 +7415,7 @@ class BuildersAndControlsScripts
                         isProperty = false
                         for(const key of keys)
                         {
-                            if(key.dataValues.houseID === Data.buildings[context.player.location][i].id)
+                            if(key.dataValues.houseID === Data.buildings[context.player.location][i].id && !Data.buildings[context.player.location][i]?.isFreezing)
                             {
                                 isProperty = true
                                 break
@@ -7780,6 +7781,120 @@ class BuildersAndControlsScripts
             catch (e)
             {
                 await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitRating", e)
+            }
+        })
+    }
+
+    async FreezeBuilding(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let city = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите город", Data.GetCityButtons(), current_keyboard)
+                if(!city) return resolve()
+                city = Data.ParseButtonID(city)
+                if(!Data.buildings[city])
+                {
+                    await context.send("🚫 В городе нет зданий", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const buttons = []
+                for(let i = 0; i < Data.buildings[city].length; i++)
+                {
+                    buttons.push([Data.buildings[city][i].name, "ID" + i])
+                }
+                let build = await InputManager.KeyboardBuilder(context, "2️⃣ Выберите здание", buttons, current_keyboard)
+                if(!build) return resolve()
+                build = Data.ParseButtonID(build)
+                build = Data.buildings[city][build]
+                let freeze = await InputManager.InputBoolean(context, `Сейчас ${build.name} ${build.isFreezing ? "" : "не "}заморожено`, current_keyboard, keyboard.freezeButton, keyboard.unfreezeButton)
+                build.isFreezing = freeze
+                await Buildings.update({freezing: freeze}, {where: {id: build.id}})
+                await context.send(freeze ? "✅ Постройка заморожена" : "✅ Постройка разморожена", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetBuildingInfo", e)
+            }
+        })
+    }
+
+    async KillPlayer(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let player = await InputManager.InputUser(context, "Выберите игрока которого хотите убить", current_keyboard)
+                if(!player) return resolve()
+                if(NameLibrary.RoleEstimator(player.dataValues.role) !== 0)
+                {
+                    await context.send("🚫 Убить можно только простого игрока", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let res = await PlayerResources.findOne({where: {id: player.dataValues.id}})
+                let status = await PlayerStatus.findOne({where: {id: player.dataValues.id}})
+                let info = await PlayerInfo.findOne({where: {id: player.dataValues.id}})
+                let lastWill = await LastWills.findOne({where: {userID: player.dataValues.id}})
+                let will = false
+                if(lastWill)
+                {
+                    let user = await Player.findOne({where: {id: lastWill.dataValues.successorID}})
+                    will = await InputManager.InputBoolean(context, `У игрока *id${player.dataValues.id}(${player.dataValues.nick}) есть завещание:\n\nКому: *id${user.dataValues.id}(${user.dataValues.nick})\nТекст: ${lastWill.dataValues.text}\n\nВыполнить условия завещания?`, current_keyboard)
+                }
+                let access = await InputManager.InputBoolean(context, `Убить персонажа игрока *id${player.dataValues.id}(${player.dataValues.nick})?`, current_keyboard)
+                if(!access) return resolve()
+                await Country.update({leaderID: null}, {where: {leaderID: player.dataValues.id}})
+                if(will)
+                {
+                    await Data.AddPlayerResources(lastWill.dataValues.successorID, {
+                        money: res.dataValues.money,
+                        stone: res.dataValues.stone,
+                        wood: res.dataValues.wood,
+                        wheat: res.dataValues.wheat,
+                        iron: res.dataValues.iron,
+                        silver: res.dataValues.silver,
+                        diamond: res.dataValues.diamond
+                    })
+                    await Buildings.update({ownerID: lastWill.dataValues.successorID}, {where: {ownerID: player.dataValues.id}})
+                    await Keys.update({ownerID: lastWill.dataValues.successorID}, {where: {ownerID: player.dataValues.id}})
+                }
+                else
+                {
+                    await Data.AddCountryResources(status.dataValues.countryID, {
+                        money: res.dataValues.money,
+                        stone: res.dataValues.stone,
+                        wood: res.dataValues.wood,
+                        wheat: res.dataValues.wheat,
+                        iron: res.dataValues.iron,
+                        silver: res.dataValues.silver,
+                        diamond: res.dataValues.diamond
+                    })
+                    await Buildings.update({ownerID: 0, ownerType: "country"}, {where: {ownerID: player.dataValues.id}})
+                    await Keys.destroy({where: {ownerID: player.dataValues.id}})
+                }
+                if(info.dataValues?.marriedID)
+                {
+                    await PlayerInfo.update({marriedID: null}, {where: {id: info.dataValues.marriedID}})
+                    if(Data.users[info.dataValues.marriedID])
+                    {
+                        Data.users[info.dataValues.marriedID].isMarried = false
+                        Data.users[info.dataValues.marriedID].marriedID = null
+                    }
+                    await api.SendMessage(player.dataValues.id, `🕊 Ваш${player.dataValues.gender ? " муж" : "а жена"} был убит, вы стали ${player.dataValues.gender ? "вдовой" : "вдовцом"}`)
+                }
+                await Player.destroy({where: {id: player.dataValues.id}})
+                await PlayerStatus.destroy({where: {id: player.dataValues.id}})
+                await PlayerResources.destroy({where: {id: player.dataValues.id}})
+                await PlayerInfo.destroy({where: {id: player.dataValues.id}})
+                await api.SendMessage(player.dataValues.id, `💀 Ваш персонаж был убит, всё ваше имущество ${will ? "переходит по завещанию" : "передается в государственное владение"}`)
+                if(Data.users[info.dataValues.marriedID]) delete Data.users[info.dataValues.marriedID]
+                await context.send("✅ Персонаж игрока убит")
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/KillPlayer", e)
             }
         })
     }

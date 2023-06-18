@@ -480,19 +480,15 @@ class CacheData
             const buildings = await Buildings.findAll()
             for(let i = 0; i < buildings.length; i++)
             {
-                if(!buildings[i].dataValues.freezing)
+                if(this.buildings[buildings[i].dataValues.cityID])
                 {
-                    if(this.buildings[buildings[i].dataValues.cityID])
-                    {
-                        this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
-                    }
-                    else
-                    {
-                        this.buildings[buildings[i].dataValues.cityID] = []
-                        this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
-                    }
+                    this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
                 }
-
+                else
+                {
+                    this.buildings[buildings[i].dataValues.cityID] = []
+                    this.buildings[buildings[i].dataValues.cityID].push(new Building(buildings[i]))
+                }
             }
             return resolve()
         })

@@ -141,10 +141,9 @@ const CountryArmy = sequelize.define("country-army", {
     description: {type: DataTypes.STRING, allowNull: false, defaultValue: "Без описания"},
     tags: {type: DataTypes.STRING, allowNull: true},
     barracksLVL: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 1},
-    rating: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
-    count: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     type: {type: DataTypes.STRING, allowNull: false, defaultValue: "soldier"}
 })
+
 const CountryTaxes = sequelize.define("country-taxes", {
     id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
     countryID: {type: DataTypes.INTEGER, primaryKey: true, allowNull: false},

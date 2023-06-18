@@ -216,6 +216,8 @@ class SceneController
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+    //Меню чиновника
+
     GetOfficialMenuKeyboard = (context) =>
     {
         let kb = [
@@ -336,7 +338,7 @@ class SceneController
         try
         {
             if(await ChatController.CommandHandler(context)) return
-            if(NameLibrary.RoleEstimator(context.player.role) > 2 || (context.official?.canBuildCity && context.official?.countryID === context.player.countryID))
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || (context.official?.canUseArmy && context.official?.countryID === context.player.countryID))
             {
                 context.country = Data.countries[context.player.countryID]
             }
@@ -681,7 +683,7 @@ class SceneController
     GetGMUsersMenuKeyboard = () =>
     {
         return [
-            [keyboard.applyEffectsButton, keyboard.removeEffectsButton],
+            [keyboard.applyEffectsButton, keyboard.removeEffectsButton, keyboard.killButton],
             [keyboard.userInfoButton, keyboard.cheatingResourceButton, keyboard.teleportButton],
             [keyboard.backButton, keyboard.notesButton]
         ]
@@ -699,7 +701,7 @@ class SceneController
     GetGMBuildingsMenuKeyboard = () =>
     {
         return [
-            [keyboard.buildingInfoButton],
+            [keyboard.buildingInfoButton, keyboard.freezeBuildingButton],
             [keyboard.backButton]
         ]
     }
@@ -883,7 +885,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMBuildingsMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|building_info/))
+            if(context.messagePayload?.choice?.match(/back|building_info|freeze_building/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
@@ -895,6 +897,10 @@ class SceneController
                 if(context.messagePayload?.choice?.match(/building_info/))
                 {
                     await Builders.GetBuildingInfo(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/freeze_building/))
+                {
+                    await Builders.FreezeBuilding(context, current_keyboard)
                 }
             }
             else
@@ -964,7 +970,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMUsersMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|cheating_resource|user_info|teleport|remove_effects|apply_effects|notes/))
+            if(context.messagePayload?.choice?.match(/back|cheating_resource|user_info|teleport|remove_effects|apply_effects|notes|kill/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
@@ -996,6 +1002,10 @@ class SceneController
                 if(context.messagePayload?.choice?.match(/notes/))
                 {
                     await Builders.PlayerNotes(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/kill/))
+                {
+                    await Builders.KillPlayer(context, current_keyboard)
                 }
             }
             else
@@ -3131,7 +3141,7 @@ class SceneController
                     })
                     context.player.state = this.Location
                 }
-                if(context.messagePayload.choice.match(/get_resource/) && context.player.inBuild?.type.match(/wheat|stone|wood|iron|copper|silver/))
+                if(context.messagePayload.choice.match(/get_resource/) && context.player.inBuild?.type.match(/wheat|stone|wood|iron|copper|silver/) && !context.player.inBuild?.isFreezing)
                 {
                     await Builders.GetResourcesFormBuilding(context, current_keyboard)
                 }

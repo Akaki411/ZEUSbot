@@ -28,13 +28,20 @@ class VK_API
     StartLoop()
     {
         let midnightTime = new Date()
+        let midday = new Date()
         let now = new Date()
         midnightTime.setDate(midnightTime.getDate() + 1)
         midnightTime.setHours(0)
         midnightTime.setMinutes(0)
         midnightTime.setSeconds(0)
+        midday.setDate(midnightTime.getDate() + 1)
+        midday.setHours(12)
+        midday.setMinutes(0)
+        midday.setSeconds(0)
         let toMidnight = midnightTime - now
+        let toMidday = midday - now
         setTimeout(async () => {await this.StartMainLoop()}, toMidnight)
+        setTimeout(async () => {await this.StartMiddayLoop()}, toMidday)
         setInterval(async () => {await Data.SaveActive()}, 300000)
     }
 
@@ -42,6 +49,64 @@ class VK_API
     {
         await this.EveryDayLoop()
         setInterval(async () => {await this.EveryDayLoop()}, 86400000)
+    }
+
+    async StartMiddayLoop()
+    {
+        await this.EveryDayMiddayLoop()
+        setInterval(async () => {await this.EveryDayMiddayLoop()}, 86400000)
+    }
+
+    EveryDayMiddayLoop = async () =>
+    {
+        try
+        {
+            if(this.day === 6)
+            {
+                let army = []
+                let prices = []
+                let priceIds = []
+                let fullPrice = {}
+                let request = ""
+                let reduced = []
+                for(const country of Data.countries)
+                {
+                    if(country)
+                    {
+                        request = `🔔 Обращаем ваше внимание, ваше светлость, что оплата за содержание армии страны была взята. Это обошлось нам в:\n\n`
+                        prices = []
+                        priceIds = []
+                        fullPrice = {}
+                        reduced = []
+                        army = await CountryArmy.findAll({where: {countryID: country.id}})
+                        if(army.length === 0) continue
+                        for(let i = 0; i < army.length; i++)
+                        {
+                            if(army[i].dataValues.count === 0) continue
+                            prices.push(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[i].dataValues.barracksLVL], army[i].dataValues.count))
+                            priceIds.push(i)
+                        }
+                        fullPrice = NameLibrary.PriceSum(prices)
+                        request += NameLibrary.GetPrice(fullPrice) + "\n\n"
+
+                        await Data.AddCountryResources(country.id, fullPrice)
+                        country.leaderID && await this.SendMessage(country.leaderID, request)
+                        let officials = Data.officials[country.id]
+                        if(officials)
+                        {
+                            for(const official of Object.keys(officials))
+                            {
+                                if(officials[official].canUseArmy || officials[official].canUseResources)
+                                {
+                                    await this.SendMessage(country.leaderID, request)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (e) {}
     }
 
     EveryDayLoop = async () =>
@@ -139,7 +204,7 @@ class VK_API
             await Country.update({rating: Data.countries[active].rating}, {where: {id: Data.countries[active].id}})
             await Data.AddCountryResources(Data.countries[active].id, {money: 100})
             await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 балл, в бюджет передан сладкий подарок в размере 100 монет`)
-            await this.SendMessage(Data.countries[activeNegative].leaderID, `⚠ Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 200 ? " и количество сообщений за день не достигло 200, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 200 сообщений, поэтому баллы активности с вас не снимаются."}`)
+            await this.SendMessage(Data.countries[activeNegative].leaderID, `${min < 200 ? "⚠" : "ℹ"} Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 200 ? " и количество сообщений за день не достигло 200, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 200 сообщений, поэтому баллы активности с вас не снимаются."}`)
             await CountryActive.create({
                 json: JSON.stringify(activity),
                 date: yesterday
@@ -285,84 +350,6 @@ class VK_API
                 Data.countriesWeekActive[Data.countries[i].id] = 0
             }
         }
-        // let army = []
-        // let prices = []
-        // let priceIds = []
-        // let fullPrice = {}
-        // let request = ""
-        // let reduced = []
-        // for(const country of Data.countries)
-        // {
-        //     if(country)
-        //     {
-        //         request = `🔔 Обращаем ваше внимание, ваше светлость, что оплата за содержание армии страны была взята. Это обошлось нам в:\n\n`
-        //         prices = []
-        //         priceIds = []
-        //         fullPrice = {}
-        //         reduced = []
-        //         army = await CountryArmy.findAll({where: {countryID: country.id}})
-        //         if(army.length === 0) continue
-        //         for(let i = 0; i < army.length; i++)
-        //         {
-        //             if(army[i].dataValues.count === 0) continue
-        //             prices.push(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[i].dataValues.barracksLVL], army[i].dataValues.count))
-        //             priceIds.push(i)
-        //         }
-        //         fullPrice = NameLibrary.PriceSum(prices)
-        //         for(let i = 0; !country.CanPay(fullPrice); i++)
-        //         {
-        //             if(!country.CanPay(NameLibrary.PriceSum(prices.slice(i + 1))))
-        //             {
-        //                 await CountryArmy.update({count: 0}, {where: {id: army[priceIds[i]].dataValues.id}})
-        //                 reduced.push(army[priceIds[i]].dataValues)
-        //                 fullPrice = NameLibrary.PriceSum(prices.slice(i + 1))
-        //                 continue
-        //             }
-        //             console.log(army[priceIds[i]].dataValues.count)
-        //             for(let j = 0; j < army[priceIds[i]].dataValues.count; j++)
-        //             {
-        //                 console.log(army[priceIds[i]].dataValues.count)
-        //                 if(!country.CanPay(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[priceIds[i]].dataValues.barracksLVL], j + 1)))
-        //                 {
-        //                     await CountryArmy.update({count: army[priceIds[i]].dataValues.count - j}, {where: {id: army[priceIds[i]].dataValues.id}})
-        //                     prices.push(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[priceIds[i]].dataValues.barracksLVL], j))
-        //                     fullPrice = NameLibrary.PriceSum(prices.slice(i + 1))
-        //                     reduced.push({name: army[priceIds[i]].dataValues.name, count: army[priceIds[i]].dataValues.count - j})
-        //                 }
-        //                 else
-        //                 {
-        //                     break
-        //                 }
-        //             }
-        //         }
-        //         request += NameLibrary.GetPrice(fullPrice) + "\n\n"
-        //         if(reduced.length > 0)
-        //         {
-        //             request += `💸 Также сожалеем сообщить, что финансы не позволяют поддерживать текущее количество войск. Под сокращение попали:\n\n`
-        //             for(const red of reduced)
-        //             {
-        //                 request += `${red.name} - ${red.count} мест\n`
-        //             }
-        //         }
-        //         else
-        //         {
-        //             request += `🫡 Воины готовы к выполнению своих обязанностей!`
-        //         }
-        //         await Data.AddCountryResources(country.id, fullPrice)
-        //         country.leaderID && await this.SendMessage(country.leaderID, request)
-        //         let officials = Data.officials[country.id]
-        //         if(officials)
-        //         {
-        //             for(const official of Object.keys(officials))
-        //             {
-        //                 if(officials[official].canUseArmy || officials[official].canUseResources)
-        //                 {
-        //                     await this.SendMessage(country.leaderID, request)
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
     }
 
     async LoadTimeouts(scenes)
@@ -813,7 +800,7 @@ class VK_API
         {
             await this.api.messages.removeChatUser({
                 chat_id: chatID - 2000000000,
-                user_id: userID
+                member_id: userID
             })
             return null
         }
@@ -842,7 +829,7 @@ class VK_API
                 {
                     await this.api.messages.removeChatUser({
                         chat_id: i,
-                        user_id: userID
+                        member_id: userID
                     })
                 } catch (e) {}
             }
@@ -860,6 +847,33 @@ class VK_API
             fields: "sex"
             })
         return info[0]
+    }
+
+    async GetName(id, name_case)
+    {
+        try
+        {
+            if(id > 0)
+            {
+                const info = await this.api.users.get({
+                    user_ids: id,
+                    name_case: name_case ? name_case : "nom"
+                })
+                return `*id${id}(${info[0].first_name + " " + info[0].last_name})`
+            }
+            else
+            {
+                id = Math.abs(id)
+                const info = await this.api.groups.getById({
+                    group_id: id
+                })
+                return `*public${id}(${info[0].name})`
+            }
+        }
+        catch (e)
+        {
+            return "Не удалось найти имя"
+        }
     }
 
     async SendNotification(id, message)

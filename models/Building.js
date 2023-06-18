@@ -11,6 +11,7 @@ class Building
         this.ownerID = building.dataValues.ownerID
         this.ownerType = building.dataValues.ownerType
         this.level = building.dataValues.level
+        this.isFreezing = building.dataValues.freezing
         this.lastActivityTime = new Date()
         this.addons = []
     }
