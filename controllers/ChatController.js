@@ -521,8 +521,9 @@ class ChatController
             if(context.replyPlayers.length === 0) return
             let phrase = context.text.replace(/^тыкнуть ?\n?|^тык ?\n?/i, "")
             let first = await api.GetName(context.player.id)
-            let second = await api.GetName(context.replyPlayers[0], "gen")
-            await context.send(`👉🐽 | ${first} потрогал${context.player.gender ? "" : "а"} палкой ${second}` + (phrase.length !== 0 ? `\n💬 С репликой: «${phrase}»` : ""))
+            let second = await api.GetName(context.replyPlayers[0], "acc")
+            let user = await api.GetUserData(context.player.id)
+            await context.send(`👉🐽 | ${first} потрогал${(parseInt(user.sex) === 2) ? "" : "а"} палкой ${second}` + (phrase.length !== 0 ? `\n💬 С репликой: «${phrase}»` : ""))
         }
         catch (e) {}
     }
