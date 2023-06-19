@@ -59,6 +59,71 @@ class OutputManager
         })
     }
 
+    async GetCountryCarousel(context)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const countries = Data.countries.filter(key => {
+                    return key !== undefined
+                })
+                const pages = []
+                for(let i = 0; i < Math.ceil(countries.length/5); i++)
+                {
+                    pages.push(countries.slice((i * 5), (i * 5) + 5))
+                }
+                for(let i = 0; i < pages.length; i++)
+                {
+                    await context.send(`Фракции ${i + 1}-я страница:`, {
+                        template: `{
+                            "type": "carousel",
+                            "elements": [
+                                ${pages[i].map(key => {
+                                if(key)
+                                {
+                                    return JSON.stringify({
+                                        title: key.name,
+                                        description: key.description.slice(0,75),
+                                        photo_id: key.photoURL.replace("photo", ""),
+                                        action: {
+                                            type: "open_link",
+                                            link: "https://vk.com/public" + key.groupID
+                                        },
+                                        buttons: [
+                                            {
+                                                action: {
+                                                    type: "open_link",
+                                                    link: "https://vk.com/public" + key.groupID,
+                                                    label: "🏛 Перейти в сообщество"
+                                                }
+                                            },
+                                            {
+                                                action: {
+                                                    type: "text",
+                                                    label: "💬 Показать чаты",
+                                                    payload: JSON.stringify({
+                                                        type: "show_chat",
+                                                        countryID: key.id
+                                                    })
+                                                },
+                                            }
+                                        ]
+                                    })
+                                }
+                            })}
+                            ]
+                        }`})
+                    await this.Timeout(0.25)
+                }
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "OutputManager/WelcomeMessage", e)
+            }
+        })
+    }
+
     async WelcomeMessage(context)
     {
         return new Promise(async (resolve) => {
@@ -75,65 +140,24 @@ class OutputManager
                     "🤖 Сердце проекта – бот, который находится во всех чатах и позволяет взаимодействовать с игровыми функциями через команды в привязанных чатах или ЛС бота.\n"
                 let name = await api.GetUserData(context.player.id)
                 text = text.replace("%имя%", name.first_name)
+                await context.send(text, {keyboard: keyboard.build([[keyboard.countryListButton]]).inline()})
+                await context.send("📣 В нашем проекте существуют свои правила, их можно найти в группе или попросить бота показать выдержку из них через команду \"статья [номер статьи]\"\n\n❗ Так же в каждой фракций есть свой модератор, которые следят за чатами.")
+                text = "📎 Вот наши стражи порядка:\n\n"
+                for(const country of Data.countries)
+                {
+                    if(country)
+                    {
+                        text += country.GetName() + " - " +  (country.moderID ? await api.GetName(country.moderID) : "не назначен") + "\n"
+                    }
+                }
                 await context.send(text)
-                const countries = Data.countries.filter(key => {
-                    return key !== undefined
-                })
-                const pages = []
-                for(let i = 0; i < Math.ceil(countries.length/5); i++)
-                {
-                    pages.push(countries.slice((i * 5), (i * 5) + 5))
-                }
-                for(let i = 0; i < pages.length; i++)
-                {
-                    await context.send(`Фракции ${i + 1}-я страница:`, {
-                        template: `{
-                        "type": "carousel",
-                        "elements": [
-                            ${pages[i].map(key => {
-                                    if(key)
-                                    {
-                                        return JSON.stringify({
-                                            title: key.name,
-                                            description: key.description.slice(0,75),
-                                            photo_id: key.photoURL.replace("photo", ""),
-                                            action: {
-                                                type: "open_link",
-                                                link: "https://vk.com/public" + key.groupID
-                                            },
-                                            buttons: [
-                                                {
-                                                    action: {
-                                                        type: "open_link",
-                                                        link: "https://vk.com/public" + key.groupID,
-                                                        label: "🏛 Перейти в сообщество"
-                                                    }
-                                                },
-                                                {
-                                                    action: {
-                                                        type: "text",
-                                                        label: "💬 Показать чаты",
-                                                        payload: JSON.stringify({
-                                                            type: "show_chat",
-                                                            countryID: key.id
-                                                        })
-                                                    },
-                                                }
-                                            ]
-                                        })
-                                    }
-                                })}
-                            ]
-                        }`
-                    })
-                    await this.Timeout(0.25)
-                }
+                await context.send("⁉ Так же, если у вас есть вопросы о том, как пользоваться ботом - специально для этого у нас есть отдельная статья, в ней все описано подробно и с иллюстрациями\n" + Data.variables["articleLink"])
+                await context.send("✏ Вы можете изменить данные вашего персонажа по нажатию на кнопку ниже, введя команду \"Регистрация\" или перейдя в меню параметров", {keyboard: keyboard.build([[keyboard.registrationButton]]).inline()})
                 return resolve()
             }
             catch (e)
             {
-                console.log(e)
-                //await api.SendLogs(context, "OutputManager/WelcomeMessage", e)
+                await api.SendLogs(context, "OutputManager/WelcomeMessage", e)
             }
         })
     }

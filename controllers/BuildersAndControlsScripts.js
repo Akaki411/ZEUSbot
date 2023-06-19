@@ -1436,9 +1436,13 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                if(context.country.photoURL)
+                let country = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                if(country.photoURL)
                 {
-                    await context.send("ℹ Вот старое фото", {attachment: context.country.photoURL})
+                    await context.send("ℹ Вот старое фото", {attachment: country.photoURL})
                 }
                 else
                 {
@@ -1452,7 +1456,7 @@ class BuildersAndControlsScripts
                     await context.send("🚫 Отмена", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                await Country.update({photoURL: photo}, {where: {id: context.country.id}})
+                await Country.update({photoURL: photo}, {where: {id: country.id}})
                 context.country.photoURL = photo
                 await context.send("✅ Фото Фракции изменено.", {keyboard: keyboard.build(current_keyboard)})
             }
@@ -5927,8 +5931,8 @@ class BuildersAndControlsScripts
                     }
                 }
                 await api.SendMessage(country.leaderID, `⚠ Администрация удалила вашу фракцию ${country.GetName()}`)
-                await Country.destroy({where: country.id})
-                await CountryResources.destroy({where: country.id})
+                await Country.destroy({where: {id: country.id}})
+                await CountryResources.destroy({where: {id: country.id}})
                 await CityRoads.destroy({where: {fromID: Data.cities.filter(key => {return key.countryID === country.id}).map(key => {return key.id})}})
                 await City.destroy({where: {id: Data.cities.filter(key => {return key.countryID === country.id}).map(key => {return key.id})}})
                 await CityResources.destroy({where: {id: Data.cities.filter(key => {return key.countryID === country.id}).map(key => {return key.id})}})
@@ -7890,6 +7894,44 @@ class BuildersAndControlsScripts
                 await api.SendMessage(player.dataValues.id, `💀 Ваш персонаж был убит, всё ваше имущество ${will ? "переходит по завещанию" : "передается в государственное владение"}`)
                 if(Data.users[info.dataValues.marriedID]) delete Data.users[info.dataValues.marriedID]
                 await context.send("✅ Персонаж игрока убит")
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/KillPlayer", e)
+            }
+        })
+    }
+
+    async ChangeCountryModer(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                if(country.moderID)
+                {
+                    let kb = [
+                        [keyboard.secondaryButton(["Назначить", "set"]), keyboard.secondaryButton(["Убрать", "remove"])]
+                    ]
+                    let action = await InputManager.ChooseButton(context, "Выберите действие", kb)
+                    if(action === "remove")
+                    {
+                        country.moderID = null
+                        await Country.update({moderID: null}, {where: {id: country.id}})
+                        await context.send("✅ У фракции больше нет модератора", {keyboard: keyboard.build(current_keyboard)})
+                        return resolve()
+                    }
+                }
+                let player = await InputManager.InputUser(context, "Выберите нового модератора", current_keyboard)
+                if(!player) return resolve()
+                country.moderID = player.dataValues.id
+                await Country.update({moderID: player.dataValues.id}, {where: {id: country.id}})
+                await api.SendMessage(player.dataValues.id, `Вы были назначены модератором фракции ${country.GetName()}`)
+                await context.send("✅ Модератор назначен")
                 return resolve()
             }
             catch (e)

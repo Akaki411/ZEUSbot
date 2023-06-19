@@ -1051,10 +1051,10 @@ class SceneController
     GetAdminCountriesMenuKeyboard = () =>
     {
         return [
-            [keyboard.createCountryButton, keyboard.removeCountryButton],
+            [keyboard.createCountryButton, keyboard.removeCountryButton, keyboard.photoButton,],
             [keyboard.appointLeaderCountryButton, keyboard.tagsButton, keyboard.addTheChatButton],
             [keyboard.warningsButton, keyboard.activeButton, keyboard.testButton],
-            [keyboard.backButton]
+            [keyboard.backButton, keyboard.changeModerButton]
         ]
     }
 
@@ -1223,7 +1223,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|active|test/))
+            if(context.messagePayload?.choice?.match(/back|photo|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|active|test/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1263,6 +1263,14 @@ class SceneController
                 if(context.messagePayload.choice.match(/test/))
                 {
                     await Builders.TestCountry(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/photo/))
+                {
+                    await Builders.ChangeCountryPhoto(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_moder/))
+                {
+                    await Builders.ChangeCountryModer(context, current_keyboard)
                 }
             }
             else
@@ -1413,8 +1421,8 @@ class SceneController
     {
         let kb = [
             [keyboard.transferPowerButton],
-            [keyboard.nameButton, keyboard.descriptionButton, keyboard.governmentFormButton],
-            [keyboard.publicButton, keyboard.photoButton, keyboard.welcomePictureButton],
+            [keyboard.nameButton, keyboard.descriptionButton],
+            [keyboard.publicButton, keyboard.welcomePictureButton, keyboard.governmentFormButton],
             [keyboard.backButton, keyboard.countryInfoButton, keyboard.countryParliamentButton]
         ]
         if(Data.countries[context.player.countryID].notifications) kb[0].push(keyboard.notificationsOffButton)
@@ -1850,10 +1858,6 @@ class SceneController
                 if (context.messagePayload.choice.match(/public/))
                 {
                     await Builders.ChangeCountryGroup(context, current_keyboard)
-                }
-                if (context.messagePayload.choice.match(/photo/))
-                {
-                    await Builders.ChangeCountryPhoto(context, current_keyboard)
                 }
                 if (context.messagePayload.choice.match(/government_form/))
                 {

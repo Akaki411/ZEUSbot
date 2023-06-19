@@ -109,6 +109,22 @@ class KeyboardButtons
         }
     })
 
+    registrationButton = Keyboard.textButton({
+        label: '📝 Регистрация',
+        color: Keyboard.POSITIVE_COLOR,
+        payload: {
+            type: 'reg'
+        }
+    })
+
+    countryListButton = Keyboard.textButton({
+        label: '🌍 Список фракций',
+        color: Keyboard.POSITIVE_COLOR,
+        payload: {
+            type: 'country_list'
+        }
+    })
+
     menuButton = Keyboard.textButton({
         label: '🧭 Меню',
         color: Keyboard.SECONDARY_COLOR,
@@ -1318,6 +1334,14 @@ class KeyboardButtons
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'kill'
+        }
+    })
+
+    changeModerButton = Keyboard.textButton({
+        label: '💫 Сменить модератора',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_moder'
         }
     })
 

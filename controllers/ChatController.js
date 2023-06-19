@@ -487,6 +487,16 @@ class ChatController
                 await this.ShowChat(context)
                 return true
             }
+            if(context.messagePayload.type === "reg")
+            {
+                await this.Registration(context)
+                return true
+            }
+            if(context.messagePayload.type === "country_list")
+            {
+                await OutputManager.GetCountryCarousel(context)
+                return true
+            }
             return false
         }
         catch (e)
@@ -2129,7 +2139,7 @@ class ChatController
     {
         try
         {
-            if(context.player.nationality.match(/славян|донбас/i))
+            if(context.player.nationality.match(/славян|донбас|донец/i))
             {
                 if(context.command.match(/ислам/) && !context.player.nationality.match(/имарат/i))
                 {
@@ -2903,6 +2913,11 @@ class ChatController
     {
         try
         {
+            if(context.replyPlayers.length !== 0 && NameLibrary.RoleEstimator(context.player.role) >= 4)
+            {
+                await this.GiveCitizenship()
+                return
+            }
             let temp = null
             let country = null
             let time = new Date()
@@ -2976,6 +2991,86 @@ class ChatController
                 timeout: setTimeout(async () => {
                     await api.SendMessage(context.player.id, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[country].GetName(context.player.platform === "IOS")}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
                     delete Data.timeouts["get_citizenship_" + context.player.id]
+                }, 86400000)
+            }
+            await context.send("✅ Заявка отправлена")
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/GetCitizenship", e)
+        }
+    }
+
+    async GiveCitizenship(context)
+    {
+        try
+        {
+            let temp = null
+            let country = null
+            let time = new Date()
+            let player = Data.users[context.replyPlayers[0]]
+            if(!player)
+            {
+                await context.send("⚠ Игрока нет в кэше")
+                return
+            }
+            for(const key of Data.countries)
+            {
+                if(key?.tags)
+                {
+                    temp = new RegExp(key.tags)
+                    if(context.command.match(temp))
+                    {
+                        country = key
+                        break
+                    }
+                }
+            }
+            if(!country)
+            {
+                await context.send("⚠ Фракция не найдена")
+                return
+            }
+            if(Data.timeouts["get_citizenship_" + player.id])
+            {
+                delete Data.timeouts["get_citizenship_" + player.id]
+            }
+            if(country.id === player.citizenship)
+            {
+                await context.send("⚠ Игрок уже является гражданином этой фракции.")
+                return
+            }
+            await api.api.messages.send({
+                user_id: country.leaderID,
+                random_id: Math.round(Math.random() * 100000),
+                message: `🪪 Игрок ${player.GetName()} подал на гражданство в вашу фракцию: \n\n${player.GetInfo()}`,
+                keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: player.id, parameter: country.id})]]).inline().oneTime()
+            })
+            let officials = Data.officials[country.id]
+            if(officials)
+            {
+                for(const official of Object.keys(officials))
+                {
+                    if(officials[official].canBeDelegate)
+                    {
+                        await api.api.messages.send({
+                            user_id: official,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `🪪 Игрок ${player.GetName()} подал на гражданство в вашу фракцию: \n\n${player.GetInfo()}`,
+                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: player.id, parameter: country.id})]]).inline().oneTime()
+                        })
+                    }
+                }
+            }
+            time.setHours(time.getHours() + 24)
+            Data.timeouts["get_citizenship_" + player.id] = {
+                type: "user_timeout",
+                subtype: "get_citizenship",
+                userId: player.id,
+                time: time,
+                countryID: country,
+                timeout: setTimeout(async () => {
+                    delete Data.timeouts["get_citizenship_" + player.id]
                 }, 86400000)
             }
             await context.send("✅ Заявка отправлена")

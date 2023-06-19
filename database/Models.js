@@ -121,7 +121,8 @@ const Country = sequelize.define("country", {
     religion: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     aristocracy: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     military: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
-    merchants: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
+    merchants: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    moderID: {type: DataTypes.INTEGER, allowNull: true}
 })
 const CountryResources = sequelize.define("country-resources", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
