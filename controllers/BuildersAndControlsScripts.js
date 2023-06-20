@@ -5356,7 +5356,8 @@ class BuildersAndControlsScripts
                 await Warning.create({
                     userID: user,
                     reason: reason,
-                    explanation: explanation
+                    explanation: explanation,
+                    moderID: context.player.id
                 })
                 await Player.update({isBanned: true}, {where: {id: user}})
                 if(Data.users[user]) Data.users[user].isBanned = true
