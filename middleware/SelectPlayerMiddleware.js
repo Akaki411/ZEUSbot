@@ -25,8 +25,7 @@ module.exports = (context, next) =>
                 context.replyPlayers.push(context.forwards[i].senderId)
             }
         }
-        context.command = context.command?.replace(/\[.*?] /g, "")
-        context.command = context.command?.replace(/ \[.*?]/g, "")
+        context.command = context.command?.replace(/ ?\[.*?] ?/g, "")
         return next()
     }
     catch (e)

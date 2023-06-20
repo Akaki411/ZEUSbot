@@ -307,6 +307,7 @@ class BuildersAndControlsScripts
                 await Country.update({leaderID: user.dataValues.id}, {where: {id: country.id}})
                 Data.countries[country.id].leaderID = user.dataValues.id
                 await PlayerStatus.update({citizenship: country.id},{where: {id: user.dataValues.id}})
+                await OfficialInfo.destroy({where: {id: user.dataValues.id}})
                 const oldLeader = await Player.findOne({where: {id: country.leaderID}, attributes: ["status"]})
                 if(oldLeader?.dataValues.status !== "worker")
                 {
@@ -2625,6 +2626,7 @@ class BuildersAndControlsScripts
                 }
                 await Player.update({status: state}, {where: {id: context.player.id}})
                 await Player.update({status: "leader"}, {where: {id: user.dataValues.id}})
+                await OfficialInfo.destroy({where: {id: user.dataValues.id}})
                 context.country.leaderID = user.dataValues.id
                 if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].status = "leader"
                 await Country.update({leaderID: user.dataValues.id}, {where: {id: context.country.id}})

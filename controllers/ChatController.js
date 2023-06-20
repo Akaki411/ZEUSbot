@@ -23,16 +23,16 @@ class ChatController
     {
         try
         {
-            // Обработка кнопок
-            if(context.messagePayload)
-            {
-                return await this.ChatButtonHandler(context)
-            }
-
             if(context.command?.match(/^начать$/) && context.peerType === "user")
             {
                 await OutputManager.WelcomeMessage(context)
                 return true
+            }
+
+            // Обработка кнопок
+            if(context.messagePayload)
+            {
+                return await this.ChatButtonHandler(context)
             }
 
             // Игроки+
@@ -529,7 +529,8 @@ class ChatController
         try
         {
             if(context.replyPlayers.length === 0) return
-            let phrase = context.text.replace(/^тыкнуть ?\n?|^тык ?\n?/i, "")
+            let phrase = context.text.replace(/ ?\[.*?] ?/i, "")
+            phrase = phrase?.replace(/^тыкнуть ?\n?|^тык ?\n?/i, "")
             let first = await api.GetName(context.player.id)
             let second = await api.GetName(context.replyPlayers[0], "acc")
             let user = await api.GetUserData(context.player.id)
@@ -543,11 +544,15 @@ class ChatController
         try
         {
             if(context.replyPlayers.length === 0) return
-            if(context.command.match(Commands.dick))
+            let phrase = context.text.replace(/ ?\[.*?] ?/i, "")
+            phrase = phrase?.replace(/^пожать /i, "")
+            if(phrase.match(/^хуй|^писюн|^пись?ку|^член|^пенис/))
             {
+                phrase = phrase.replace(/^хуй ?|^писюн ?|^пись?ку ?|^член ?|^пенис ?/i, "")
                 let first = await api.GetName(context.player.id)
                 let second = await api.GetName(context.replyPlayers[0], "dat")
-                await context.send(`🫱🍆 | ${first} пожал писюн ${second}`)
+                let user = await api.GetUserData(context.player.id)
+                await context.send(`🫱🍆 | ${first} пожал${(parseInt(user.sex) === 2) ? "" : "а"} писюн ${second}${phrase.length !== 0 ? `\n💬 С репликой: «${phrase}»` : ""}`)
             }
         }
         catch (e) {}
