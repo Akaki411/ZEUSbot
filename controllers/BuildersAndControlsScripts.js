@@ -1992,27 +1992,9 @@ class BuildersAndControlsScripts
                     await context.send(`⚠ В бюджете не хватает ресурсов`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                let city = await City.findOne({where: {leaderID: leader.dataValues.id}})
-                while(city)
-                {
-                    leader = await InputManager.InputUser(context, `⚠ Игрок *id${leader.dataValues.id}(${leader.dataValues.nick})уже является главой города ${city.dataValues.name}`, current_keyboard)
-                    if(!leader) return resolve()
-                    if(leader.dataValues.status === "worker")
-                    {
-                        await context.send("⚠ Назначать игроков со статусом ⚙ Работник на должность градоначальника запрещено", {keyboard: keyboard.build(current_keyboard)})
-                        return resolve()
-                    }
-                    leaderInfo = await PlayerStatus.findOne({where: {id: leader.dataValues.id}})
-                    if(leaderInfo.dataValues.citizenship !== context.country.id)
-                    {
-                        await context.send(`⚠ Игрок *id${leader.dataValues.id}(${leader.dataValues.nick}) не является гражданином фракции ${context.country.GetName(context.player.platform === "IOS")}\`, {keyboard: keyboard.build(current_keyboard)}`, {keyboard: keyboard.build(current_keyboard)})
-                        return resolve()
-                    }
-                    city = await City.findOne({where: {leaderID: leader.dataValues.id}})
-                }
                 let name = await InputManager.InputString(context, "2️⃣ Введите название нового города (от 2 до 35 символов)", current_keyboard, 2, 35)
                 if(!name) return resolve()
-                city = await City.findOne({where: {name: name}})
+                let city = await City.findOne({where: {name: name}})
                 while(city)
                 {
                     name = await InputManager.InputString(context, "⚠ Город с таким названием уже существует, повторите ввод.", current_keyboard, 2, 100)
@@ -5912,25 +5894,36 @@ class BuildersAndControlsScripts
                 for (const user of users)
                 {
                     user.set({location: newPlace.capitalID, countryID: newPlace.id})
+                    if(user.dataValues.registration)
+                    {
+                        if(Data.cities[user.dataValues.registration].countryID === country.id)
+                        {
+                            user.set({registration: null})
+                        }
+                    }
+                    if(user.dataValues.citizenship === country.id)
+                    {
+                        user.set({citizenship: null})
+                        await Player.update({status: "stateless"}, {where: {id: user.dataValues.id}})
+                    }
                     await user.save()
                     if(user.dataValues.notifications)
                     {
                         await api.SendMessage(user.dataValues.id, "⚠ Администраторы удалили фракцию в которой вы находились, вы перенесены в столицу фракции " + newPlace.GetName())
                     }
                 }
-                await PlayerStatus.update({status: "stateless"}, {where: {id: country.leaderID}})
+                await Player.update({status: "stateless"}, {where: {id: country.leaderID}})
                 if(Data.users[country.leaderID]) Data.users[country.leaderID].status = "stateless"
-                await api.SendMessage(country.leaderID, "⚠ Администраторы удалили вашу фракцию, теперь вы апатрид")
                 if(Data.officials[country.id])
                 {
                     for(const id of Object.keys(Data.officials[country.id]))
                     {
                         await PlayerStatus.update({status: "stateless"}, {where: {id: id}})
                         if(Data.users[id]) Data.users[id].status = "stateless"
-                        await api.SendMessage(id, "⚠ Администраторы удалили вашу фракцию, теперь вы апатрид")
+                        await api.SendMessage(id, `⚠ Администраторы удалили вашу фракцию ${country.GetName()}, теперь вы апатрид`)
                     }
                 }
-                await api.SendMessage(country.leaderID, `⚠ Администрация удалила вашу фракцию ${country.GetName()}`)
+                await api.SendMessage(country.leaderID, `⚠ Администрация удалила вашу фракцию ${country.GetName()}, теперь вы апатрид`)
                 await Country.destroy({where: {id: country.id}})
                 await CountryResources.destroy({where: {id: country.id}})
                 await CityRoads.destroy({where: {fromID: Data.cities.filter(key => {return key.countryID === country.id}).map(key => {return key.id})}})

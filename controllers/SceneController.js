@@ -6,7 +6,6 @@ const Builders = require("./BuildersAndControlsScripts")
 const api = require("../middleware/API")
 const sequelize = require("../database/DataBase")
 const ChatController = require("./ChatController")
-const {relax} = require("../variables/Commands");
 
 class SceneController
 {
