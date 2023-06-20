@@ -7913,6 +7913,7 @@ class BuildersAndControlsScripts
                     let action = await InputManager.ChooseButton(context, "Выберите действие", kb)
                     if(action === "remove")
                     {
+                        await api.SendMessage(country.moderID, `✅ Вы были сняты с должности модератора фракции ${country.GetName()}`)
                         country.moderID = null
                         await Country.update({moderID: null}, {where: {id: country.id}})
                         await context.send("✅ У фракции больше нет модератора", {keyboard: keyboard.build(current_keyboard)})
@@ -7923,8 +7924,8 @@ class BuildersAndControlsScripts
                 if(!player) return resolve()
                 country.moderID = player.dataValues.id
                 await Country.update({moderID: player.dataValues.id}, {where: {id: country.id}})
-                await api.SendMessage(player.dataValues.id, `Вы были назначены модератором фракции ${country.GetName()}`)
-                await context.send("✅ Модератор назначен")
+                await api.SendMessage(player.dataValues.id, `✅ Вы были назначены модератором фракции ${country.GetName()}`)
+                await context.send("✅ Модератор назначен", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)

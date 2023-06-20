@@ -1222,7 +1222,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|photo|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|active|test/))
+            if(context.messagePayload?.choice?.match(/back|photo|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|active|test|change_moder/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
