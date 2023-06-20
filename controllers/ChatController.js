@@ -548,7 +548,7 @@ class ChatController
             phrase = phrase?.replace(/^пожать /i, "")
             if(phrase.match(/^хуй|^писюн|^пись?ку|^член|^пенис/))
             {
-                phrase = phrase.replace(/^хуй ?|^писюн ?|^пись?ку ?|^член ?|^пенис ?/i, "")
+                phrase = phrase.replace(/^хуй ?\n?|^писюн ?\n?|^пись?ку ?\n?|^член ?\n?|^пенис ?\n?/i, "")
                 let first = await api.GetName(context.player.id)
                 let second = await api.GetName(context.replyPlayers[0], "dat")
                 let user = await api.GetUserData(context.player.id)
@@ -3676,25 +3676,7 @@ class ChatController
                     request += `👑 Правител${country[0].isParliament ? "и:\n" : "ь - "}${country[0].isParliament ? ((user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "") + getLeaders(country[0].id)) : (user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен")}\n\n`
                 }
             }
-            let msg = await context.send(request, {disable_mentions: true})
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            await context.send(request, {disable_mentions: true})
         }
         catch (e)
         {
@@ -3800,25 +3782,7 @@ class ChatController
                         request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
                     }
                 }
-                let msg = await context.send(request)
-                setTimeout(async () => {
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: context.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: context.peerId
-                        })
-                    }catch (e) {}
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: msg.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: msg.peerId
-                        })
-                    }catch (e) {}
-                }, 60000)
+                await context.send(request)
             }
             else
             {
@@ -3826,25 +3790,7 @@ class ChatController
                 request +=  `${country.chatID ? `⚒ Актив за сегодня: ${country.active} сообщений` : "⚠ Чат не добавлен"}\n`
                 request += `💪 Рейтинг активности: ${country.rating}\n`
                 request += `🔴 Получено варнов: ${country.warnings}`
-                let msg = await context.send(request)
-                setTimeout(async () => {
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: context.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: context.peerId
-                        })
-                    }catch (e) {}
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: msg.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: msg.peerId
-                        })
-                    }catch (e) {}
-                }, 60000)
+                await context.send(request)
             }
         }
         catch (e)
@@ -3903,25 +3849,7 @@ class ChatController
                         request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
                     }
                 }
-                let msg = await context.send(request)
-                setTimeout(async () => {
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: context.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: context.peerId
-                        })
-                    }catch (e) {}
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: msg.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: msg.peerId
-                        })
-                    }catch (e) {}
-                }, 60000)
+                await context.send(request)
             }
             else
             {
@@ -3929,25 +3857,7 @@ class ChatController
                 request += `${country.chatID ? `⚒ Актив за неделю: ${Data.countriesWeekActive[country.id] + country.active} сообщений` : "⚠ Чат не добавлен"}\n`
                 request += `💪 Рейтинг активности: ${country.rating}\n`
                 request += `🔴 Получено варнов: ${country.warnings}`
-                let msg = await context.send(request)
-                setTimeout(async () => {
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: context.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: context.peerId
-                        })
-                    }catch (e) {}
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: msg.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: msg.peerId
-                        })
-                    }catch (e) {}
-                }, 60000)
+                await context.send(request)
             }
         }
         catch (e)
