@@ -19,6 +19,7 @@ const path = require("path")
 const axios = require("axios")
 const APIKeysGenerator = require("../models/ApiKeysGenerator")
 const CrossStates = require("./CrossStates")
+const StopList = require("../files/StopList.json");
 
 class BuildersAndControlsScripts
 {
@@ -5011,7 +5012,7 @@ class BuildersAndControlsScripts
                         {
                             unsended.push(i)
                         }
-                        if(warnCount >= 3)
+                        if(warnCount >= 3 && !StopList.includes(i))
                         {
                             const warnings = await Warning.findAll({where: {id: i}, attributes: ["proofImage"]})
                             const photos = warnings.map(key => {return key.dataValues.proofImage}).join(",")
@@ -5187,7 +5188,7 @@ class BuildersAndControlsScripts
                         message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
                         attachment: proof
                     })
-                    if(warnCount >= 3)
+                    if(warnCount >= 3 && !StopList.includes(user.dataValues.id))
                     {
                         const warnings = await Warning.findAll({where: {id: user.dataValues.id}, attributes: ["proofImage"]})
                         const photos = warnings.map(key => {return key.dataValues.proofImage}).join(",")
@@ -5349,6 +5350,11 @@ class BuildersAndControlsScripts
             try
             {
                 const user = parseInt(data.users)
+                if(StopList.includes(user))
+                {
+                    await context.reply("⚠ Осуждаю")
+                    return resolve(false)
+                }
                 const reason = await InputManager.InputString(context, "1️⃣ Введите краткую причину (для самого игрока)", current_keyboard)
                 if(!reason) return resolve(false)
                 const explanation = await InputManager.InputString(context, "2️⃣ Введите полную причину (для админов)", current_keyboard)
@@ -5390,6 +5396,11 @@ class BuildersAndControlsScripts
             {
                 const user = await InputManager.InputUser(context, "1️⃣ Выберите игрока")
                 if(!user) return resolve()
+                if(StopList.includes(user.dataValues.id))
+                {
+                    await context.send("⚠ Осуждаю", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
                 if(NameLibrary.RoleEstimator(user.dataValues.role) >= NameLibrary.RoleEstimator(context.player.role))
                 {
                     await context.send(`⚠ Роль игрока *id${user.dataValues.id}(${user.dataValues.nick}) находится на вашем уровне или выше, вы не можете его забанить`, {keyboard: keyboard.build(current_keyboard)})

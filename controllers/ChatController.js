@@ -16,6 +16,7 @@ const Rules = require("../variables/Rules")
 const APIKeysGenerator = require("../models/ApiKeysGenerator")
 const CrossStates = require("./CrossStates")
 const BotReactions = require("./Reactions")
+const StopList = require("../files/StopList.json")
 
 class ChatController
 {
@@ -563,6 +564,10 @@ class ChatController
         try
         {
             if (NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                return
+            }
+            if(StopList.includes(context.replyPlayers[0]))
             {
                 return
             }
@@ -1973,6 +1978,11 @@ class ChatController
                 await context.send("⚠ Выберите игрока")
                 return
             }
+            if(StopList.includes(context.replyPlayers[0]))
+            {
+                await context.reply("⚠ Осуждаю")
+                return
+            }
             let player = await Player.findOne({where: {id: context.replyPlayers[0]}, attributes: ["role"]})
             if(player)
             {
@@ -2717,7 +2727,7 @@ class ChatController
                 await context.send("⚠ Дублирование не включено")
                 return
             }
-            if(context.player.id !== user && Data.repeat[user] !== context.player.id)
+            if(context.player.id !== user && Data.repeat[user].moder !== context.player.id)
             {
                 await context.send("⚠ Дублирование может снять только сам дублируемый или тот кто его наложил")
                 return
@@ -3187,6 +3197,10 @@ class ChatController
         try
         {
             if (NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                return
+            }
+            if(StopList.includes(context.replyPlayers[0]))
             {
                 return
             }
@@ -5049,6 +5063,11 @@ class ChatController
             if(NameLibrary.RoleEstimator(context.player.role) < 3)
             {
                 await context.send("⚠ У вас нет прав на эту команду")
+                return
+            }
+            if(StopList.includes(context.replyPlayers[0]))
+            {
+                await context.reply("⚠ Осуждаю")
                 return
             }
             if(context.replyPlayers?.length === 0)

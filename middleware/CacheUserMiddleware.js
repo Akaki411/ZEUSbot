@@ -6,7 +6,6 @@ const commands = require("../variables/Commands");
 const SceneManager = require("../controllers/SceneController")
 const api = require("./API")
 const Nations = require("../variables/Nations")
-const StopList = require("../files/StopList.json")
 
 const RoleEstimator = (role) =>
 {
@@ -129,7 +128,6 @@ module.exports = async (context, next) =>
             {
                 if(peerId < 0) return
                 const user = await api.GetUserData(peerId)
-                if(!user || StopList.includes(peerId)) return
                 const nations = Object.keys(Nations).map(key => {return Nations[key]})
                 let country = null
                 for(const c of Data.countries)
