@@ -5413,7 +5413,8 @@ class BuildersAndControlsScripts
                 await Warning.create({
                     userID: user.dataValues.id,
                     reason: reason,
-                    explanation: explanation
+                    explanation: explanation,
+                    moderID: context.player.id
                 })
                 await Player.update({isBanned: true}, {where: {id: user.dataValues.id}})
                 if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].isBanned = true
@@ -5421,7 +5422,8 @@ class BuildersAndControlsScripts
                 await Ban.create({
                     userID: user.dataValues.id,
                     reason: reason,
-                    explanation: explanation
+                    explanation: explanation,
+                    moderID: context.player.id
                 })
                 await api.BanUser(user.dataValues.id)
                 await Warning.update({banned: true}, {where: {userID: user.dataValues.id}})
@@ -5461,11 +5463,6 @@ class BuildersAndControlsScripts
                 }
                 const user = await InputManager.InputUser(context, "1️⃣ Кому вы хотите накрутить алмазы?", current_keyboard)
                 if(!user) return resolve()
-                if(user.dataValues.status === "worker")
-                {
-                    context.send("🚫 Накрутка алмазов работникам запрещена", {keyboard: keyboard.build(current_keyboard)})
-                    return resolve()
-                }
                 let count = await InputManager.InputInteger(context, "2️⃣ Введите количество", current_keyboard)
                 if(count === null) return resolve()
                 const accept = await InputManager.InputBoolean(context, `3️⃣ Подтвердите перевод:\nКому: *id${user.dataValues.id}(${user.dataValues.nick})\nРесурс: 💎 Алмазы\nКоличество: ${count} шт\n\nВерно?`, current_keyboard)
