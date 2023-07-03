@@ -222,22 +222,6 @@ class BuildersAndControlsScripts
                 let role = await InputManager.KeyboardBuilder(context, `✅ Выбран игрок *id${user.dataValues.id}(${user.dataValues.nick})\n2️⃣ Выберите новую роль.`, giveRoleKB, current_keyboard)
                 if(!role) return resolve()
                 const status = role.match(/player|moder/) ? await Data.GetUserStatus(user.dataValues.id) : "worker"
-                if(role === "project_head")
-                {
-                    const oldPH = await Player.findOne({where: {role: "project_head"}})
-                    if(oldPH)
-                    {
-                        oldPH.set({role: "player"})
-                        await oldPH.save()
-                        if(Data.users[oldPH.dataValues.id])
-                        {
-                            Data.users[oldPH.dataValues.id].status = await Data.GetUserStatus(oldPH.dataValues.id)
-                            Data.users[oldPH.dataValues.id].role = role
-                            Data.users[oldPH.dataValues.id].state = tools.StayInStartScreen
-                        }
-                        await api.SendMessage(oldPH.dataValues.id, "⚠ Вы были сняты с должности 🤴 Глава проекта")
-                    }
-                }
                 user.set({role: role, status: status})
                 await user.save()
                 if(Data.users[user.dataValues.id])

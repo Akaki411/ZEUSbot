@@ -280,6 +280,27 @@ const Events = sequelize.define("events", {
     description: {type: DataTypes.TEXT, allowNull: false},
     date: {type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.fn('now')}
 })
+const VKChats = sequelize.define("vk-chats", {
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
+    botMode: {type: DataTypes.INTEGER, allowNull: true},
+    muteList: {type: DataTypes.TEXT, allowNull: false, defaultValue: "[]"},
+    antiMuteList: {type: DataTypes.TEXT, allowNull: false, defaultValue: "[]"},
+    deleteMessages: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true},
+    rolePlay: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+})
+const TGChats = sequelize.define("tg-chats", {
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
+    botMode: {type: DataTypes.INTEGER, allowNull: true},
+    muteList: {type: DataTypes.TEXT, allowNull: false, defaultValue: "[]"},
+    deleteMessages: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true}
+})
+const Actions = sequelize.define("actions", {
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true, autoIncrement: true},
+    userID: {type: DataTypes.INTEGER, allowNull: false},
+    type: {type: DataTypes.STRING, allowNull: false},
+    contentID: {type: DataTypes.INTEGER, allowNull: true},
+    resource: {type: DataTypes.STRING, allowNull: false}
+})
 
 
 module.exports = {
@@ -311,5 +332,8 @@ module.exports = {
     LastWills,
     Chats,
     Messages,
-    Events
+    Events,
+    VKChats,
+    TGChats,
+    Actions
 }

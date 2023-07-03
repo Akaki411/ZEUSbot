@@ -1,8 +1,13 @@
-const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings, PlayerStatus} = require("../database/Models")
+const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings, PlayerStatus,
+    VKChats
+} = require("../database/Models")
 const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
+const VKChat = require('../models/VKChat')
+const TGChat = require('../models/TGChat')
+const ChatGPTModes = require("../variables/BotCallModes");
 
 class CacheData
 {
@@ -15,7 +20,11 @@ class CacheData
         this.gameMasters = {}        //ГМы
         this.moderators = {}         //Модераторы
 
+        this.lastReload = new Date()
+
         this.users = {}              //Кэш пользователей
+        this.VKChats = {}
+        this.TGChats = {}
         this.cities = []             //Список городов
         this.countries = []          //Список государств
         this.buildings = {}          // и т.д., я устал писать, слишком много пробелов
@@ -29,7 +38,6 @@ class CacheData
         this.countryChats = {}
         this.countriesWeekActive = {}
         this.countriesWeekPassiveScore = {}
-        this.repeat = {}
 
         this.countryResourcesStats = {}
 
@@ -203,6 +211,72 @@ class CacheData
             }
         }
         return request
+    }
+
+    async LoadVKChats()
+    {
+        return new Promise(async (resolve) =>
+        {
+            this.VKChats = {}
+            const chats = await VKChats.findAll()
+            for(const chat of chats)
+            {
+                this.VKChats[chat.dataValues.id] = new VKChat(chat)
+                if(chat.dataValues.botMode)
+                {
+                    for(const mode of Object.keys(ChatGPTModes))
+                    {
+                        if(ChatGPTModes[mode].id === parseInt(chat.dataValues.botMode))
+                        {
+                            this.botCallModes[chat.dataValues.id] = ChatGPTModes[mode]
+                            break
+                        }
+                    }
+                }
+            }
+            return resolve()
+        })
+    }
+
+    async SaveVKChat(id)
+    {
+        return new Promise(async (resolve) =>
+        {
+            try
+            {
+                let muteList = []
+                let antiMuteList = []
+                for(const i of Object.keys(this.VKChats[id].muteList))
+                {
+                    muteList.push({
+                        id: i,
+                        moderID: this.VKChats[id].muteList[i].moderID,
+                        endTime: this.VKChats[id].muteList[i].endTime
+                    })
+                }
+                for(const i of Object.keys(this.VKChats[id].antiMuteList))
+                {
+                    antiMuteList.push({
+                        id: i,
+                        moderID: this.VKChats[id].antiMuteList[i].moderID,
+                        name: this.VKChats[id].antiMuteList[i].name
+                    })
+                }
+                await VKChats.update
+                (
+                    {
+                        botMode: this.botCallModes[id] ? this.botCallModes[id].id : null,
+                        muteList: JSON.stringify(muteList),
+                        antiMuteList: JSON.stringify(antiMuteList)
+                    },
+                    {
+                        where: {id: id}
+                    }
+                )
+            }
+            catch (e) {}
+            return resolve()
+        })
     }
 
     async LoadWorkers ()

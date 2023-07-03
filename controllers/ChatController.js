@@ -4,7 +4,7 @@ const keyboard = require("../variables/Keyboards")
 const api = require("../middleware/API")
 const Data = require("../models/CacheData")
 const {Player, PlayerStatus, PlayerInfo, Country, CountryRoads, CityRoads, PlayerResources, Warning, OfficialInfo,
-    Transactions, CountryTaxes, Chats
+    Transactions, CountryTaxes, Chats, VKChats
 } = require("../database/Models")
 const Samples = require("../variables/Samples")
 const sequelize = require("../database/DataBase")
@@ -217,8 +217,24 @@ class ChatController
                 await this.DrinkBeer(context)
                 return true
             }
+            if(context.command?.match(/^!очистка$/))
+            {
+                await this.Cleaning(context)
+                return true
+            }
+            if(context.command?.match(/^бот статус$/))
+            {
+                await context.send(`⏳ Последняя перезагрузка была ${NameLibrary.ParseDateTime(Data.lastReload)}`)
+                return true
+            }
+
 
             //РП команды (игрок+)
+            if(context.command?.match(/^!рп$/))
+            {
+                await this.RP(context)
+                return true
+            }
             if(context.command?.match(/^пожать /))
             {
                 await this.Shake(context)
@@ -259,6 +275,11 @@ class ChatController
             if(context.command?.match(Commands.delete) && context.peerType === "chat")
             {
                 await this.DeleteMessage(context)
+                return true
+            }
+            if(context.command?.match(Commands.globalMute))
+            {
+                await this.GlobalMute(context)
                 return true
             }
             if(context.command?.match(Commands.mute))
@@ -444,7 +465,7 @@ class ChatController
                 let sample = Data.samples[context.player.id][Math.round(Math.random() * (Data.samples[context.player.id].length - 1))]
                 await context.send(sample.sample, {attachment: sample.attachment})
             }
-            try{if(Data.repeat[context.player.id]) await context.send(context.text, {attachment: context.attachments?.length > 0 ? context.attachments.map((key) => {return key.toString()}).join(",") : null})} catch (e) {}
+            if(context.chat.antiMuteList[context.player.id]) await this.RepeatMessage(context)
             if(context.attachments[0]?.type === "audio") await this.MusicAnalysis(context)
         }
         catch (e)
@@ -504,6 +525,110 @@ class ChatController
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
         }
+    }
+
+    async RP(context)
+    {
+        let temp = null
+        let country = null
+        for(let i = 0; i < Data.countries.length; i++)
+        {
+            if(Data.countries[i])
+            {
+                if(Data.countries[i].chatID)
+                {
+                    temp = Data.countries[i].chatID.split("|")
+                    for(const chat of temp)
+                    {
+                        if (parseInt(chat) === context.peerId)
+                        {
+                            country = Data.countries[i]
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        let leader = (country?.leaderID === context.player.id) || (context.official?.countryID === country?.id && context.official?.canAppointOfficial)
+        if(!leader && NameLibrary.RoleEstimator(context.player.role) < 1)
+        {
+            return
+        }
+        context.chat.RP = !context.chat.RP
+        await Data.SaveVKChat(context.chat.id)
+        await context.send(`✅ РП режим ${context.chat.RP ? "включен" : "выключен"}`)
+    }
+
+    async Cleaning(context)
+    {
+        let temp = null
+        let country = null
+        for(let i = 0; i < Data.countries.length; i++)
+        {
+            if(Data.countries[i])
+            {
+                if(Data.countries[i].chatID)
+                {
+                    temp = Data.countries[i].chatID.split("|")
+                    for(const chat of temp)
+                    {
+                        if (parseInt(chat) === context.peerId)
+                        {
+                            country = Data.countries[i]
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        let leader = (country?.leaderID === context.player.id) || (context.official?.countryID === country?.id && context.official?.canAppointOfficial)
+        if(!leader && NameLibrary.RoleEstimator(context.player.role) < 1)
+        {
+            return
+        }
+        context.chat.clean = !context.chat.clean
+        await Data.SaveVKChat(context.chat.id)
+        await context.send(`✅ Режим очистки чата ${context.chat.clean ? "включен" : "выключен"}`)
+    }
+
+    async RepeatMessage(context)
+    {
+        try
+        {
+            let attachment = []
+            for(const element of context.attachments)
+            {
+                if(element.type === "sticker")
+                {
+                    if(context.replyMessage)
+                    {
+                        await api.api.messages.send({
+                            peer_id: context.peerId,
+                            random_id: Math.round(Math.random() * 100000),
+                            sticker_id: element.id,
+                            forward: `{"conversation_message_ids":${context.replyMessage.conversationMessageId},"peer_id":${context.peerId},"is_reply":true}`
+                        })
+                    }
+                    else
+                    {
+                        await api.SendSticker(context.peerId, element.id)
+                    }
+                    return
+                }
+                attachment.push(element.toString())
+            }
+            if(context.replyMessage)
+            {
+                await context.send(context.chat.antiMuteList[context.player.id].name + ":\n" + context.text, {
+                    attachment: attachment,
+                    forward: `{"conversation_message_ids":${context.replyMessage.conversationMessageId},"peer_id":${context.peerId},"is_reply":true}`
+                })
+            }
+            else
+            {
+                await context.send(context.chat.antiMuteList[context.player.id].name + ":\n" + context.text, {attachment: attachment})
+            }
+        } catch (e) {}
     }
 
     async ShowChat(context)
@@ -594,24 +719,27 @@ class ChatController
             if(context.player.lastBeerCup - time > 0)
             {
                 let msg = await context.send(`${context.player.nick}, повтори через ${NameLibrary.ParseFutureTime(context.player.lastBeerCup)} Выпито всего - ${context.player.beer.toFixed(1)} л. 🍺`)
-                setTimeout(async () => {
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: context.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: context.peerId
-                        })
-                    }catch (e) {}
-                    try
-                    {
-                        await api.api.messages.delete({
-                            conversation_message_ids: msg.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: msg.peerId
-                        })
-                    }catch (e) {}
-                }, 20000)
+                if(context.chat.clean)
+                {
+                    setTimeout(async () => {
+                        try
+                        {
+                            await api.api.messages.delete({
+                                conversation_message_ids: context.conversationMessageId,
+                                delete_for_all: 1,
+                                peer_id: context.peerId
+                            })
+                        }catch (e) {}
+                        try
+                        {
+                            await api.api.messages.delete({
+                                conversation_message_ids: msg.conversationMessageId,
+                                delete_for_all: 1,
+                                peer_id: msg.peerId
+                            })
+                        }catch (e) {}
+                    }, 20000)
+                }
                 return
             }
             time.setHours(time.getHours() + 1)
@@ -620,24 +748,27 @@ class ChatController
             context.player.lastBeerCup = time
             await Player.update({beer: context.player.beer}, {where: {id: context.player.id}})
             let msg = await context.send(`${context.player.nick}, ты выпил${context.player.gender ? "" : "а"} ${drinking.toFixed(1)} л. пива. Выпито всего - ${context.player.beer.toFixed(1)} л. 🍺\nСледующая попытка через час`)
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {}
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {}
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -803,24 +934,27 @@ class ChatController
                 request += "💰 Купечество - " + country.merchants + "\n"
             }
             let msg = await context.send(request, {attachment: photos.join(",")})
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {
+                    }
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {
+                    }
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -852,7 +986,7 @@ class ChatController
                     }
                 }
             }
-            let leader = country.leaderID === context.player.id || (context.official?.countryID === country.id && context.official?.canAppointOfficial)
+            let leader = (country?.leaderID === context.player.id) || (context.official?.countryID === country?.id && context.official?.canAppointOfficial)
             if(!leader && NameLibrary.RoleEstimator(context.player.role) < 1)
             {
                 return
@@ -890,6 +1024,7 @@ class ChatController
             else
             {
                 Data.botCallModes[context.peerId] = temp
+                await Data.SaveVKChat(context.chat.id)
                 await context.send("✅ Установлен режим ответов " + temp.name)
             }
         }
@@ -901,9 +1036,9 @@ class ChatController
         try
         {
             if(!Data.botCallModes[context.peerId]) return
-            if(context.command.length < 10) return
-            if(context.command.length < 20 && context.command.match(Commands.censorship)) return
-            if(context.command.match(/ахах/)) return
+            if(context.command?.length < 10) return
+            if(context.command?.length < 20 && context.command.match(Commands.censorship)) return
+            if(context.command?.match(/ахах/)) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
             if(Data.botCallModes[context.peerId].stopWords)
@@ -1354,6 +1489,11 @@ class ChatController
                         conversation_message_ids: msg.conversationMessageId,
                         delete_for_all: 1,
                         peer_id: msg.peerId
+                    })
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
                     })
                 }
                 catch (e) {}
@@ -1995,6 +2135,51 @@ class ChatController
             let time = context.command.match(/\d+/)
             time = parseInt( time ? time[0] : 10)
             time = Math.min(time, 1440)
+            const now = new Date()
+            now.setMinutes(now.getMinutes() + time)
+            context.chat.muteList[context.replyPlayers[0]] = {
+                moderID: context.player.id,
+                endTime: now
+            }
+            await Data.SaveVKChat(context.chat.id)
+            await context.send(`✅ Игрок ближайшие ${time} минут не будет разговаривать`)
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "ChatController/GlobalMute", e)
+        }
+    }
+
+    async GlobalMute(context)
+    {
+        try
+        {
+            if(NameLibrary.RoleEstimator(context.player.role) < 4)
+            {
+                return
+            }
+            if(context.replyPlayers.length === 0)
+            {
+                await context.send("⚠ Выберите игрока")
+                return
+            }
+            if(StopList.includes(context.replyPlayers[0]))
+            {
+                await context.reply("⚠ Осуждаю")
+                return
+            }
+            let player = await Player.findOne({where: {id: context.replyPlayers[0]}, attributes: ["role"]})
+            if(player)
+            {
+                if(NameLibrary.RoleEstimator(context.player.role) <= NameLibrary.RoleEstimator(player.dataValues.role))
+                {
+                    await context.send("⚠ Вы не можете замутить старшего или равного по званию")
+                    return
+                }
+            }
+            let time = context.command.match(/\d+/)
+            time = parseInt( time ? time[0] : 10)
+            time = Math.min(time, 1440)
             if(context.command.match(/гс|аудио|голосовые/))
             {
                 if(Data.voiceMute[context.replyPlayers[0]])
@@ -2593,24 +2778,27 @@ class ChatController
                 }
             }
             let msg = await context.send(request, {disable_mentions: true})
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {
+                    }
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {
+                    }
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -2635,24 +2823,27 @@ class ChatController
                     [keyboard.greenButton({name: "😼 Стикеры", type: "ratings", action: "stickermans"}), keyboard.greenButton({name: "🎶 Меломаны", type: "ratings", action: "music_lovers"})]
                 ]).inline()
             })
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {
+                    }
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {
+                    }
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -2677,7 +2868,7 @@ class ChatController
             {
                 user = context.player.id
             }
-            if(Data.repeat[user])
+            if(context.chat.antiMuteList[user])
             {
                 await context.send("⚠ Дублирование уже включено")
                 return
@@ -2696,11 +2887,12 @@ class ChatController
                     return
                 }
             }
-            let name = await api.GetUserData(user)
-            Data.repeat[user] = {
-                moder: context.player.id,
-                name: `${name.first_name} ${name.last_name}`
+            const name = await api.GetUserData(context.player.id)
+            context.chat.antiMuteList[user] = {
+                moderID: context.player.id,
+                name: name.first_name + " " + name.last_name
             }
+            await Data.SaveVKChat(context.chat.id)
             await context.send("✅ Дублирование включено")
         }
         catch (e)
@@ -2722,17 +2914,18 @@ class ChatController
             {
                 user = context.player.id
             }
-            if(!Data.repeat[user])
+            if(!context.chat.antiMuteList[user])
             {
                 await context.send("⚠ Дублирование не включено")
                 return
             }
-            if(context.player.id !== user && Data.repeat[user].moder !== context.player.id)
+            if(context.player.id !== user && context.chat.antiMuteList[user].moder !== context.player.id)
             {
                 await context.send("⚠ Дублирование может снять только сам дублируемый или тот кто его наложил")
                 return
             }
-            delete Data.repeat[user]
+            delete context.chat.antiMuteList[user]
+            await Data.SaveVKChat(context.chat.id)
             await context.send("✅ Дублирование выключено")
         }
         catch (e)
@@ -2892,31 +3085,35 @@ class ChatController
                     return
                 }
                 const msg = await context.send(`*id${context.replyPlayers[0]}(Инвентарь):\n\n💰 Монеты - ${resources.dataValues.money}\n🪨 Камень - ${resources.dataValues.stone}\n🌾 Зерно - ${resources.dataValues.wheat}\n🪵 Дерево - ${resources.dataValues.wood}\n🌑 Железо - ${resources.dataValues.iron}\n🥉 Бронза - ${resources.dataValues.copper}\n🥈 Серебро - ${resources.dataValues.silver}\n💎 Алмазы - ${resources.dataValues.diamond}`)
+                if(context.chat.clean)
+                {
+                    setTimeout(async () => {
+                        try {
+                            await api.api.messages.delete({
+                                conversation_message_ids: msg.conversationMessageId,
+                                delete_for_all: 1,
+                                peer_id: msg.peerId
+                            })
+                        } catch (e) {
+                        }
+                    }, 60000)
+                }
+                return
+            }
+            const msg = await context.send(context.player.GetResources())
+            if(context.chat.clean)
+            {
                 setTimeout(async () => {
-                    try
-                    {
+                    try {
                         await api.api.messages.delete({
                             conversation_message_ids: msg.conversationMessageId,
                             delete_for_all: 1,
                             peer_id: msg.peerId
                         })
+                    } catch (e) {
                     }
-                    catch (e) {}
                 }, 60000)
-                return
             }
-            const msg = await context.send(context.player.GetResources())
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }
-                catch (e) {}
-            }, 60000)
         }
         catch (e)
         {
@@ -3290,24 +3487,26 @@ class ChatController
                 "🎶 Музыки сегодня: " + activity.todayAudios + "\n" +
                 "🤬 Матов сегодня: " + activity.todaySwords
             let msg = await context.send(request)
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean) {
+                setTimeout(async () => {
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {
+                    }
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {
+                    }
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -3609,24 +3808,27 @@ class ChatController
             kb = kb.concat(renderKbString(countryKB, keyboard.lightButton))
             kb = kb.concat(renderKbString(cityKB, keyboard.greyButton))
             let msg = await context.send(request, {attachment: Data.variables.roadMap, keyboard: keyboard.build(kb).inline()})
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {
+                    }
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {
+                    }
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -4056,6 +4258,12 @@ class ChatController
                 await Data.ResetBuildings()
                 request += "♻ Кеш построек очищен\n\n"
             }
+            if(context.command.match(/чат/) && context.peerType === "chat")
+            {
+                await VKChats.destroy({where: {id: context.chat.id}})
+                delete Data.VKChats[context.chat.id]
+                request += "♻ Кеш чата очищен\n\n"
+            }
             if(context.replyPlayers.length !== 0)
             {
                 users = context.replyPlayers
@@ -4079,7 +4287,6 @@ class ChatController
                         delete Data.users[user]
                         if(Data.samples[user]) delete Data.samples[user]
                         if(Data.requests[user]) delete Data.requests[user]
-                        if(Data.repeat[user]) delete Data.repeat[user]
                         if(Data.censorship[user])
                         {
                             clearTimeout(Data.censorship[context.replyPlayers[0]].timeout)
@@ -4145,6 +4352,11 @@ class ChatController
                 await Data.LoadBuildings()
                 request += "♻ Постройки перезагружены\n\n"
             }
+            if(context.command.match(/чат/))
+            {
+                await Data.LoadVKChats()
+                request += "♻ Чаты перезагружены\n\n"
+            }
             if(context.command.match(/чиновник/))
             {
                 await Data.LoadOfficials()
@@ -4174,24 +4386,27 @@ class ChatController
             country.resources.match(/copper/) && kb.push([keyboard.lightButton({name: "🥉 Добыть бронзы ⛏", type: "extract", action: "copper"})])
             country.resources.match(/silver/) && kb.push([keyboard.lightButton({name: "🥈 Добыть серебра ⛏", type: "extract", action: "silver"})])
             let msg = await context.send(`🚧 Здравствуй, *id${context.player.id}(путник). Вижу, работать хочешь? Что-ж, есть для тебя пару занятий...`, {keyboard: keyboard.build(kb).inline()})
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {
+                    }
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {
+                    }
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -4218,24 +4433,27 @@ class ChatController
             {
                 msg = await context.send(`💪 Ваш уровень энергии восстановлен до ${result.fatigue}%`)
             }
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {
+                    }
+                    try {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    } catch (e) {
+                    }
+                }, 60000)
+            }
         }
         catch (e)
         {
@@ -4351,7 +4569,6 @@ class ChatController
                         count = context.player[resource]
                     }
                     if(count === 0) continue
-                    objIN[resource] = objIN[resource] ? objIN[resource] - Math.abs(count) : -Math.abs(count)
                     objOUT[resource] = objOUT[resource] ? objOUT[resource] + Math.abs(count) : Math.abs(count)
                 }
                 else
@@ -4426,7 +4643,9 @@ class ChatController
             {
                 if(Math.abs(objOUT[res]) !== 0)
                 {
-                    request += `${NameLibrary.GetResourceName(res)} - ✅ Передано ${Math.abs(objOUT[res])}\n`
+                    objOUT[res] = Math.abs(Math.min(objOUT[res], context.player[res]))
+                    objIN[res] = -objOUT[res]
+                    request += `${NameLibrary.GetResourceName(res)} - ✅ Передано ${objOUT[res]}\n`
                 }
             }
             if(Object.keys(objOUT).length !== 0)
@@ -4932,24 +5151,27 @@ class ChatController
             country.resources.match(/silver/) && kb[2].push(keyboard.lightButton({name: "🥈 Добыть серебра ⛏", type: "extract", action: "silver"}))
             const photo = Data.cities[context.player.location].photoURL || country.photoURL
             const msg = await context.send(`🧭 *id${context.player.id}(Вы) находитесь в ${Data.cities[context.player.location].isCapital ? "столице" : ""} фракции ${country.GetName(context.player.platform === "IOS")}, в городе ${Data.cities[context.player.location].name}\n\n${Data.cities[context.player.location].description}`, {attachment: photo, keyboard: keyboard.build(kb).inline()})
-            setTimeout(async () => {
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: context.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: context.peerId
-                    })
-                }catch (e) {}
-                try
-                {
-                    await api.api.messages.delete({
-                        conversation_message_ids: msg.conversationMessageId,
-                        delete_for_all: 1,
-                        peer_id: msg.peerId
-                    })
-                }catch (e) {}
-            }, 60000)
+            if(context.chat.clean)
+            {
+                setTimeout(async () => {
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    }catch (e) {}
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: msg.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: msg.peerId
+                        })
+                    }catch (e) {}
+                }, 60000)
+            }
         }
         catch (e)
         {

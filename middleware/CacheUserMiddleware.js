@@ -1,6 +1,7 @@
-const {Player, PlayerStatus, PlayerInfo, PlayerResources, Ban, LastWills} = require("../database/Models");
+const {Player, PlayerStatus, PlayerInfo, PlayerResources, Ban, LastWills, VKChats} = require("../database/Models");
 const Data = require("../models/CacheData");
 const User = require("../models/User");
+const VKChat = require("../models/VKChat")
 const keyboard = require("../variables/Keyboards");
 const commands = require("../variables/Commands");
 const SceneManager = require("../controllers/SceneController")
@@ -37,6 +38,16 @@ module.exports = async (context, next) =>
         const peerId = context.peerType === "chat" ? context.senderId : context.peerId
         if(context.peerType === "chat")
         {
+            if(!Data.VKChats[context.peerId])
+            {
+                let chat = await VKChats.findOne({where: {id: context.peerId}})
+                if(!chat)
+                {
+                    chat = await VKChats.create({id: context.peerId})
+                }
+                Data.VKChats[context.peerId] = new VKChat(chat)
+            }
+            context.chat = Data.VKChats[context.peerId]
             if(Data.countryChats[context.peerId] && peerId > 0 && !Data.activeIgnore[peerId])
             {
                 Data.countries[Data.countryChats[context.peerId]].active++
@@ -53,6 +64,43 @@ module.exports = async (context, next) =>
                 }
                 catch (e) {}
                 return
+            }
+            if(context.chat.muteList[peerId])
+            {
+                const time = new Date()
+                if(context.chat.muteList[context.player.id].endTime - time > 0)
+                {
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    }
+                    catch (e) {}
+                    return
+                }
+                else
+                {
+                    delete Data.VKChats[context.chat.id].muteList[context.player.id]
+                    await Data.SaveVKChat(context.chat.id)
+                }
+            }
+            if(context.chat.RP)
+            {
+                if(!context.command.match(/^\(|^\*|^!|^\/|^-|^#|^\?|^\\/))
+                {
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    }
+                    catch (e) {}
+                }
             }
             if(Data.censorship[peerId])
             {

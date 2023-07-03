@@ -1,5 +1,6 @@
 require('dotenv').config()
 const {VK} = require('vk-io')
+const TelegramBot = require('node-telegram-bot-api');
 const {QuestionManager} = require('vk-io-question')
 
 const database = require('./database/DataBase')
@@ -10,16 +11,19 @@ const CacheUserMiddleware = require('./middleware/CacheUserMiddleware')
 const CacheUserCallbackMiddleware = require('./middleware/CacheUserCallbackMiddleware')
 const CountStatsMiddleware = require('./middleware/CountStatsMiddleware')
 const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
+const CacheTGUserMiddleware = require('./middleware/CacheTGUserMiddleware')
 const SceneController = require("./controllers/SceneController")
+const BonusController = require("./controllers/BonusController")
 
-const bot = new VK({token: process.env.VK_BOT_TOKEN})
+const VKbot = new VK({token: process.env.VK_BOT_TOKEN})
+const TGbot = new TelegramBot(process.env.TG_BOT_TOKEN, {polling: true});
 const questionManager = new QuestionManager()
 
-bot.updates.on('message_new', questionManager.middleware)
-bot.updates.on('message_new', CacheUserMiddleware)
-bot.updates.on('message_new', SelectPlayerMiddleware)
-bot.updates.on('message_new', CountStatsMiddleware)
-bot.updates.on('message_event', CacheUserCallbackMiddleware)
+VKbot.updates.on('message_new', questionManager.middleware)
+VKbot.updates.on('message_new', CacheUserMiddleware)
+VKbot.updates.on('message_new', SelectPlayerMiddleware)
+VKbot.updates.on('message_new', CountStatsMiddleware)
+VKbot.updates.on('message_event', CacheUserCallbackMiddleware)
 
 // Памятка для кодеров:
 // Архитектура бота построена на реализации паттерна state, у каждого игрока есть сцена, на которой он сейчас находится.
@@ -51,8 +55,11 @@ const start = async () => {
         await Data.LoadBuildings().then(() => {
             console.log("Список построек загружен")
         })
-        await Data.LoadOfficials().then(async () => {
+        await Data.LoadOfficials().then(() => {
             console.log("Чиновники загружены")
+        })
+        await Data.LoadVKChats().then(() => {
+            console.log("Чаты ВК загружены")
         })
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
@@ -61,7 +68,7 @@ const start = async () => {
                 Walking: SceneController.WaitingWalkMenu
             })
         })
-        bot.updates.on('message_new', async(context) =>
+        VKbot.updates.on('message_new', async(context) =>
         {
             if(!Data.ignore[context.player.id])
             {
@@ -70,12 +77,22 @@ const start = async () => {
                 context.peerType === "chat" && await ChatController.CommandHandler(context)
             }
         })
-        bot.updates.on('message_event', (context) =>
+        VKbot.updates.on('message_event', (context) =>
         {
             CallbackEventController.Handler(context)
         })
+        VKbot.updates.on('like_add', async (context) =>
+        {
+            await BonusController.NewLike(context)
+        })
 
-        bot.updates.start().then(() => console.log("Бот запущен"))
+        VKbot.updates.start().then(() => console.log("ВК бот запущен"))
+
+        TGbot.on('message', (context, type) =>
+        {
+            context.api = TGbot
+            CacheTGUserMiddleware(context, type)
+        })
     }
     catch (e)
     {
@@ -83,4 +100,6 @@ const start = async () => {
     }
 }
 
-start()
+start().then(() => {
+    console.log("ТГ бот запущен")
+})
