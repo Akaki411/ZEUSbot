@@ -130,9 +130,17 @@ class CountryObject
         return `Фракция: @public${this.groupID}(${this.name}):\n\n👑Правитель: ${leader ? `*id${leader?.dataValues.id}(${leader?.dataValues.nick})` : "Не назначен"}\n🪪Описание: ${this.description}\n👨‍👩‍👧‍👦Население: ${population}\n🏙Количество городов: ${cityCount}\n💲Налог для граждан: ${this.citizenTax}%\n💲Налог для приезжих: ${this.nonCitizenTax}%\n💵Въездная пошлина: 🪙${this.entranceFee} монет`
     }
 
-    GetName(IOS)
+    GetName(IOS, app)
     {
-        return IOS ? this.name : `@public${this.groupID}(${this.name})`
+        app = app || "VK"
+        if(app === "VK")
+        {
+            return IOS ? this.name : `@public${this.groupID}(${this.name})`
+        }
+        else
+        {
+            return `[${this.name}](https://vk.com/club${this.groupID})`
+        }
     }
 }
 

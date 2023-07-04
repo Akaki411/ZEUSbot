@@ -88,10 +88,13 @@ const start = async () => {
 
         VKbot.updates.start().then(() => console.log("ВК бот запущен"))
 
-        TGbot.on('message', (context, type) =>
+        TGbot.on('message', async (context, type) =>
         {
             context.api = TGbot
-            CacheTGUserMiddleware(context, type)
+            context.send = async (text, params) => {
+                await TGbot.sendMessage(context.chat.id, text, params)
+            }
+            await CacheTGUserMiddleware(context, type)
         })
     }
     catch (e)

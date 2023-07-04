@@ -1,6 +1,7 @@
 const Data = require('../models/CacheData')
+const TGChatController = require("../controllers/TGChatController")
 
-module.exports = (context, type) =>
+module.exports = async (context, type) =>
 {
     let command = context.text || context.caption
     const replyPlayers = []
@@ -35,7 +36,7 @@ module.exports = (context, type) =>
     context.replyPlayers = replyPlayers
     if(context.chat.id < 0)
     {
-        //позже будет
+        await TGChatController.Handler(context, type)
     }
     else
     {
