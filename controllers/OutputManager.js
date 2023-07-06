@@ -206,7 +206,7 @@ class OutputManager
                 {
                     if(Data.countries[activeCountries[i][1]])
                     {
-                        request += `${Data.countries[activeCountries[i][1]].name}\n`
+                        request += `${params.app === "VK" ? Data.countries[activeCountries[i][1]].GetName(params.platform === "IOS") : Data.countries[activeCountries[i][1]].name}\n`
                         request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
                         request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
                         request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`

@@ -383,7 +383,11 @@ class ChatController
                 await this.GlobalKick(context)
                 return true
             }
-
+            if(context.command?.match(/!объявление /))
+            {
+                await this.GlobalMailing(context)
+                return true
+            }
 
             //Тех-поддержка+
             if(context.command?.match(/^перезагрузить|^релоад|^релод|^reload/))
@@ -699,6 +703,28 @@ class ChatController
                 let second = await api.GetName(context.replyPlayers[0], "dat")
                 let user = await api.GetUserData(context.player.id)
                 await context.send(`🫱🍆 | ${first} пожал${(parseInt(user.sex) === 2) ? "" : "а"} писюн ${second}${phrase.length !== 0 ? `\n💬 С репликой: «${phrase}»` : ""}`)
+            }
+        }
+        catch (e) {}
+    }
+
+    async GlobalMailing(context)
+    {
+        try
+        {
+            if (NameLibrary.RoleEstimator(context.player.role) < 3)
+            {
+                return
+            }
+            let text = context.text.replace(/!объявление /, "")
+            if(text.length > 0)
+            {
+                await api.GlobalMailing(text, context.attachments.map((x)=>{return x.toString()}).join(','))
+                await context.send("✅ Отправлено")
+            }
+            else
+            {
+                await context.send("⚠ Я не могу отправить пустое сообщение")
             }
         }
         catch (e) {}

@@ -4,6 +4,8 @@ const {DataTypes} = require('sequelize')
 //Характеристики игрока
 const Player = sequelize.define("player", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
+    TGID: {type: DataTypes.INTEGER, unique: true, allowNull: true},
+    TGShortName: {type: DataTypes.STRING, unique: true, allowNull: true},
     nick: {type: DataTypes.STRING, unique: false, allowNull: false},
     gender: {type: DataTypes.BOOLEAN, allowNull: false},
     isBanned: {type: DataTypes.BOOLEAN, defaultValue: false},
@@ -111,6 +113,7 @@ const Country = sequelize.define("country", {
     isUnderSanctions: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
     notifications: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true},
     chatID: {type: DataTypes.STRING, allowNull: true, defaultValue: ""},
+    TGchatID: {type: DataTypes.STRING, allowNull: true, defaultValue: ""},
     warnings: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     rating: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     tags: {type: DataTypes.STRING, allowNull: true},

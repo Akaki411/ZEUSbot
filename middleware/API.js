@@ -969,6 +969,30 @@ class VK_API
         catch (e) {}
     }
 
+    async GlobalMailing(message, attachments)
+    {
+        return new Promise(async (resolve) => {
+            let flag = true
+            for(let i = 1; flag; i++)
+            {
+                try
+                {
+                    await this.api.messages.send({
+                        peer_id: 2000000000 + i,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: message,
+                        attachment: attachments
+                    })
+                }
+                catch (e)
+                {
+                    flag = e.code !== 917
+                }
+            }
+            return resolve()
+        })
+    }
+
     async SendAccessKey(reason)
     {
         if(!Data.owner) return

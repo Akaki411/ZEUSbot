@@ -89,7 +89,7 @@ module.exports = async (context, next) =>
             }
             if(context.chat.RP)
             {
-                if(!context.command.match(/^\(|^\*|^!|^\/|^-|^#|^\?|^\\/))
+                if(!context.command?.match(/^\(|^\*|^!|^\/|^-|^#|^\?|^\\/) || !context.command)
                 {
                     try
                     {

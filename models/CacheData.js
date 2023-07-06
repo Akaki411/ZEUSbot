@@ -36,8 +36,10 @@ class CacheData
         this.stickermans = {}
         this.musicLovers = {}
         this.countryChats = {}
+        this.TGcountryChats = {}
         this.countriesWeekActive = {}
         this.countriesWeekPassiveScore = {}
+        this.TGcodes = {}
 
         this.countryResourcesStats = {}
 
@@ -338,6 +340,14 @@ class CacheData
                             this.countryChats[chat] = key.dataValues.id
                         }
                     }
+                    if(key.dataValues.TGchatID)
+                    {
+                        temp = key.dataValues.chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            this.TGcountryChats[chat] = key.dataValues.id
+                        }
+                    }
                 }
             }
             fs.access("./files/active.json", (error) => {
@@ -417,7 +427,15 @@ class CacheData
                         temp = key.dataValues.chatID.split("|")
                         for(const chat of temp)
                         {
-                            this.countryChats[chat] = this.countries[key.dataValues.id]
+                            this.countryChats[chat] = key.dataValues.id
+                        }
+                    }
+                    if(key.dataValues.TGchatID)
+                    {
+                        temp = key.dataValues.TGchatID.split("|")
+                        for(const chat of temp)
+                        {
+                            this.TGcountryChats[chat] = this.countries[key.dataValues.id]
                         }
                     }
                 }

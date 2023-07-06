@@ -1,8 +1,14 @@
 const Data = require('../models/CacheData')
 const TGChatController = require("../controllers/TGChatController")
+const TGSceneController = require("../controllers/TGSceneController")
 
 module.exports = async (context, type) =>
 {
+    console.log(context)
+    if(Data.countryChats[context.peerId])
+    {
+        Data.countries[Data.TGcountryChats[context.peerId]].active++
+    }
     let command = context.text || context.caption
     const replyPlayers = []
     const mentions = []
@@ -40,6 +46,6 @@ module.exports = async (context, type) =>
     }
     else
     {
-
+        await TGSceneController.MainScene(context, type)
     }
 }

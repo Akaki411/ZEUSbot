@@ -14,6 +14,8 @@ class User
         this.status = user.dataValues.status
         this.platform = user.dataValues.platform
         this.avatar = user.dataValues.avatar
+        this.TGID = user.dataValues.TGID
+        this.avatar = user.dataValues.avatar
         this.beer = parseFloat(user.dataValues.beer)
         this.location = status.dataValues.location
         this.countryID = status.dataValues.countryID
@@ -141,12 +143,11 @@ class User
 
     CantTransact()
     {
-        return this.isRelaxing || this.HasEffect("block_transfer") || this.isFreezed || Data.countries[this.countryID].isUnderSanctions || Data.cities[this.location].isUnderSanctions
+        return this.HasEffect("block_transfer") || this.isFreezed || Data.countries[this.countryID].isUnderSanctions || Data.cities[this.location].isUnderSanctions
     }
 
     WhyCantTransact()
     {
-        if(this.isRelaxing) return "💤 Вы находитесь в режиме отдыха 💤"
         if(this.HasEffect("block_transfer")) return "На вас наложен эффект ⛔ Блокировка счета"
         if(this.isFreezed) return "☃ Вы заморожены ☃"
         if(Data.countries[this.countryID].isUnderSanctions) return "‼ Фракция, гражданином которой вы являетесь попала под санкции"

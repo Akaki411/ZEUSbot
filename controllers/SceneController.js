@@ -2443,6 +2443,7 @@ class SceneController
             [keyboard.backButton]
         ]
         context.player.notifications ? kb[0].push(keyboard.notificationsOffButton) : kb[0].push(keyboard.notificationsOnButton)
+
         return kb
     }
 
