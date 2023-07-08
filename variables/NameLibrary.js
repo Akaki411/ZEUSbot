@@ -220,21 +220,6 @@ class NameLibrary
         return newPrice
     }
 
-    GetTransactionType(type)
-    {
-        switch (type)
-        {
-            case "ptp":
-                return "Перевод игроку"
-            case "ptct":
-                return "Перевод городу"
-            case "ptctr":
-                return "Перевод фракции"
-            default:
-                return "Не отмеченный тип"
-        }
-    }
-
     GetUnitType(type)
     {
         switch (type)

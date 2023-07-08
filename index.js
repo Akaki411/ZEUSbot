@@ -72,6 +72,7 @@ const start = async () => {
         {
             if(!Data.ignore[context.player.id])
             {
+                context.TGapi = TGbot
                 context.scenes = SceneController
                 context.peerType === "user" && await context.player.state(context)
                 context.peerType === "chat" && await ChatController.CommandHandler(context)

@@ -7,6 +7,7 @@ class VKChat
         this.antiMuteList = this.AntiMuteListToObject(JSON.parse(chat.dataValues.antiMuteList))
         this.clean = chat.dataValues.deleteMessages
         this.RP = chat.dataValues.rolePlay
+        this.hide = chat.dataValues.hide
     }
 
     MuteListToObject(array)

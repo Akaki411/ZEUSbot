@@ -7929,6 +7929,28 @@ class BuildersAndControlsScripts
             }
         })
     }
+
+    async GetTGCode(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(context.player.TGID)
+                {
+                    await context.send("⚠ У вас уже есть привязанный аккаунт", {keyboard: keyboard.build(current_keyboard(context))})
+                    return resolve()
+                }
+                const code = NameLibrary.GetRandomNumb(10000000, 99999999)
+                Data.TGcodes[code] = context.player.id
+                await context.send(`✅ Для того чтобы вам привязать свой телеграмм аккаунт к вашему профилю в боте, вам надо ввести код в ЛС телеграм боту.\n\nВот ваш код: ${code}\n\nПерейдите по адресу ${Data.variables["TGbotLink"]} и отправьте боту свой код.`, {keyboard: keyboard.build(current_keyboard(context))})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/KillPlayer", e)
+            }
+        })
+    }
 }
 
 module.exports = new BuildersAndControlsScripts()

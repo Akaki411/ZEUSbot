@@ -25,8 +25,8 @@ class CacheData
         this.users = {}              //Кэш пользователей
         this.VKChats = {}
         this.TGChats = {}
-        this.cities = []             //Список городов
-        this.countries = []          //Список государств
+        this.cities = []             //Кэш городов
+        this.countries = []          //Кэш государств
         this.buildings = {}          // и т.д., я устал писать, слишком много пробелов
         this.officials = {}
         this.variables = null
@@ -39,6 +39,8 @@ class CacheData
         this.TGcountryChats = {}
         this.countriesWeekActive = {}
         this.countriesWeekPassiveScore = {}
+        this.chatListen = {}
+        this.userListen = {}
         this.TGcodes = {}
 
         this.countryResourcesStats = {}
@@ -56,20 +58,26 @@ class CacheData
         this.timeouts = {}
         this.onLoad = () => {}
 
-        this.accessKey = this.GenerateString(8)
+        this.accessKey = ""
+        this.ChangeCode()
         this.StartLoop()
+    }
+
+    ChangeCode()
+    {
+        this.accessKey = this.GenerateString(8)
     }
 
     StartLoop()
     {
         setInterval(() => {
-            this.accessKey = this.GenerateString(8)
+            this.ChangeCode()
         }, 21600000)
     }
 
     GenerateString(length)
     {
-        const lib = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        const lib = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
         let request = ""
         for(let i = 0; i < length; i++)
         {
@@ -269,7 +277,10 @@ class CacheData
                     {
                         botMode: this.botCallModes[id] ? this.botCallModes[id].id : null,
                         muteList: JSON.stringify(muteList),
-                        antiMuteList: JSON.stringify(antiMuteList)
+                        antiMuteList: JSON.stringify(antiMuteList),
+                        deleteMessages: this.VKChats[id] ? this.VKChats[id].clean : true,
+                        rolePlay: this.VKChats[id] ? this.VKChats[id].RP : false,
+                        hide: this.VKChats[id] ? this.VKChats[id].hide : false
                     },
                     {
                         where: {id: id}

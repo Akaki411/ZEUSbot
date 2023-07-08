@@ -2443,7 +2443,7 @@ class SceneController
             [keyboard.backButton]
         ]
         context.player.notifications ? kb[0].push(keyboard.notificationsOffButton) : kb[0].push(keyboard.notificationsOnButton)
-
+        !context.player.TGID && kb[2].push(keyboard.TGCodeButton)
         return kb
     }
 
@@ -2582,7 +2582,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             let current_keyboard = this.GetParamsMenuKeyboard(context)
-            if (context.messagePayload?.choice?.match(/back|notifications_on|notifications_off|info|admins|postbox|account/))
+            if (context.messagePayload?.choice?.match(/back|notifications_on|notifications_off|info|admins|postbox|account|tg_code/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -2590,6 +2590,10 @@ class SceneController
                         keyboard: keyboard.build(this.GetMenuKeyboard())
                     })
                     context.player.state = this.Menu
+                }
+                if (context.messagePayload.choice.match(/tg_code/))
+                {
+                    await Builders.GetTGCode(context, this.GetParamsMenuKeyboard)
                 }
                 if (context.messagePayload.choice.match(/notifications_on/))
                 {

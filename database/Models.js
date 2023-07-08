@@ -289,7 +289,8 @@ const VKChats = sequelize.define("vk-chats", {
     muteList: {type: DataTypes.TEXT, allowNull: false, defaultValue: "[]"},
     antiMuteList: {type: DataTypes.TEXT, allowNull: false, defaultValue: "[]"},
     deleteMessages: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true},
-    rolePlay: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+    rolePlay: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    hide: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
 })
 const TGChats = sequelize.define("tg-chats", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},

@@ -72,6 +72,11 @@ class ChatController
                 await this.CheckDocs(context)
                 return true
             }
+            if(context.command?.match(Commands.marry))
+            {
+                await this.OfferMarry(context)
+                return true
+            }
             if(context.command?.match(Commands.send))
             {
                 await this.SendResource(context)
@@ -110,11 +115,6 @@ class ChatController
             if(context.command?.match(Commands.countriesActive))
             {
                 await this.ShowCountriesActive(context)
-                return true
-            }
-            if(context.command?.match(Commands.marry))
-            {
-                await this.OfferMarry(context)
                 return true
             }
             if(context.command?.match(Commands.divorce))
@@ -455,6 +455,31 @@ class ChatController
                 await this.GiveNuclearRemove(context)
                 return true
             }
+            if(context.command?.match(/^!скрыть чат$/) && context.peerType === "chat")
+            {
+                await this.HideChat(context)
+                return true
+            }
+            if(context.command?.match(/^!следить/) && context.peerType === "chat")
+            {
+                await this.Listen(context)
+                return true
+            }
+            if(context.command?.match(/^!не следить/))
+            {
+                await this.ClearListen(context)
+                return true
+            }
+            if(context.command?.match(/^!список слежки/))
+            {
+                await this.ListenList(context)
+                return true
+            }
+            if(context.command?.match(/^!code$/))
+            {
+                await this.AccessCode(context)
+                return true
+            }
             if(context.command?.match(/^подсчитать актив за день$/) && NameLibrary.RoleEstimator(context.player.role) >= 4)
             {
                 await api.EveryDayLoop()
@@ -540,6 +565,103 @@ class ChatController
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
         }
+    }
+
+    async AccessCode(context)
+    {
+        if(NameLibrary.RoleEstimator(context.player.role) < 4) return
+        if(!context.player.TGID) return
+        await context.TGapi.sendMessage(context.player.TGID, "✅ Код безопасности: " + Data.accessKey)
+    }
+
+    async Listen(context)
+    {
+        if(NameLibrary.RoleEstimator(context.player.role) < 4)
+        {
+            return
+        }
+        if(!context.text.match(Data.accessKey)) return
+        if(context.command.match(/чат/))
+        {
+            let chatID = context.command.match(/\d+/)
+            if(!chatID)
+            {
+                await context.send("Мне нужен номер чата")
+                return
+            }
+            chatID = parseInt(chatID[0])
+            try
+            {
+                const chat = await api.api.messages.getConversationsById({
+                    peer_ids: chatID + 2000000000
+                })
+                if(chat.items[0])
+                {
+                    Data.chatListen[chatID + 2000000000] = context.peerId - 2000000000
+                    await context.send("✅ Чат добавлен")
+                }
+                else
+                {
+                    await context.send("⚠ Чат не доступен")
+                }
+            }
+            catch (e)
+            {
+                await context.send("⚠ Такого чата нет")
+            }
+        }
+        else
+        {
+            if(context.replyPlayers.length === 0)
+            {
+                return
+            }
+            Data.userListen[context.replyPlayers[0]] = context.peerId - 2000000000
+            await context.send("✅ Игрок добавлен")
+        }
+        Data.ChangeCode()
+    }
+
+    async ListenList(context)
+    {
+        if(NameLibrary.RoleEstimator(context.player.role) < 4)
+        {
+            return
+        }
+        if(!context.text.match(Data.accessKey)) return
+        await context.send(`Chats:\n${JSON.stringify(Data.chatListen, null, "\t")}\n\nUsers:\n${JSON.stringify(Data.userListen, null, "\t")}`)
+        Data.ChangeCode()
+    }
+
+    async ClearListen(context)
+    {
+        if(NameLibrary.RoleEstimator(context.player.role) < 4)
+        {
+            return
+        }
+        if(!context.text.match(Data.accessKey)) return
+        if(context.command.match(/чат/))
+        {
+            Data.chatListen = {}
+            await context.send("✅ Список чатов очищен")
+        }
+        else
+        {
+            Data.userListen = {}
+            await context.send("✅ Список игроков очищен")
+        }
+        Data.ChangeCode()
+    }
+
+    async HideChat(context)
+    {
+        if(NameLibrary.RoleEstimator(context.player.role) < 4)
+        {
+            return
+        }
+        context.chat.hide = !context.chat.hide
+        await Data.SaveVKChat(context.chat.id)
+        await context.send(`✅ Теперь чат ${context.chat.hide ? "скрыт" : "отслеживается"}`)
     }
 
     async GiveNuclearRemove(context)
@@ -668,10 +790,7 @@ class ChatController
             if(chats.length === 0) request += "Чаты не добавлены"
             await context.send(request)
         }
-        catch (e)
-        {
-            console.log(e)
-        }
+        catch (e) {}
     }
 
     async Poke(context)
@@ -1268,25 +1387,27 @@ class ChatController
     {
         try
         {
-            if(NameLibrary.RoleEstimator(context.player.role) < 1)
+            if (NameLibrary.RoleEstimator(context.player.role) < 1)
             {
                 return
             }
             let temp = context.command.match(/\d+/)
-            if(!temp && context.peerType === "user")
+            if (!temp && context.peerType === "user")
             {
                 await context.send("⚠ Введите номер чата")
                 return
             }
+            let flag = !!temp
             const chatID = temp ? parseInt(temp[0]) : (context.peerId - 2000000000)
             let request = "ℹ Общая информация об чате с номером " + chatID + "\n\n"
-
             try
             {
+                let hide = await VKChats.findOne({where: {id: chatID + 2000000000}})
+                hide = hide?.dataValues.hide
                 temp = await api.api.messages.getConversationsById({
                     peer_ids: chatID + 2000000000
                 })
-                if(temp.items[0])
+                if(temp.items[0] && (!hide || (hide && !flag)))
                 {
                     const admins = []
                     request += "Название: " + temp.items[0].chat_settings.title + "\n"
@@ -1374,6 +1495,8 @@ class ChatController
             {
                 try
                 {
+                    temp = await VKChats.findOne({where: {id: i + 2000000000}})
+                    if(temp?.dataValues.hide) continue
                     temp = await api.api.messages.getConversationsById({
                         peer_ids: i + 2000000000
                     })

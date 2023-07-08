@@ -15,6 +15,7 @@ class User
         this.platform = user.dataValues.platform
         this.avatar = user.dataValues.avatar
         this.TGID = user.dataValues.TGID
+        this.TGShortName = user.dataValues.TGShortName
         this.avatar = user.dataValues.avatar
         this.beer = parseFloat(user.dataValues.beer)
         this.location = status.dataValues.location

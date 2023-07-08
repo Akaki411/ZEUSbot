@@ -1345,6 +1345,14 @@ class KeyboardButtons
         }
     })
 
+    TGCodeButton = Keyboard.textButton({
+        label: '🐩 Привязать телеграмм',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'tg_code'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null
