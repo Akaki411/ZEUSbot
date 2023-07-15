@@ -17,6 +17,7 @@ class User
         this.TGID = user.dataValues.TGID
         this.TGShortName = user.dataValues.TGShortName
         this.avatar = user.dataValues.avatar
+        this.createdAt = user.dataValues.createdAt
         this.beer = parseFloat(user.dataValues.beer)
         this.location = status.dataValues.location
         this.countryID = status.dataValues.countryID
@@ -125,16 +126,30 @@ class User
         return this.id > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`
     }
 
-    GetResources()
+    GetResources(app)
     {
-        return (this.id > 0 ? `*id${this.id}(Ваш)` : `*public${Math.abs(this.id)}(Ваш)`) + ` инвентарь:\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
+        if(app === "TG")
+        {
+            return `[Ваш](https://vk.com/id${this.id}) инвентарь:\n\n💰 Монеты \\- ${this.money > 0 ? this.money : "\\" + this.money}\n🪨 Камень \\- ${this.stone > 0 ? this.stone : "\\" + this.stone}\n🌾 Зерно \\- ${this.wheat > 0 ? this.wheat : "\\" + this.wheat}\n🪵 Дерево \\- ${this.wood > 0 ? this.wood : "\\" + this.wood}\n🌑 Железо \\- ${this.iron > 0 ? this.iron : "\\" + this.iron}\n🥉 Бронза \\- ${this.copper > 0 ? this.copper : "\\" + this.copper}\n🥈 Серебро \\- ${this.silver > 0 ? this.silver : "\\" + this.silver}\n💎 Алмазы \\- ${this.diamond > 0 ? this.diamond : "\\" + this.diamond}`
+        }
+        else
+        {
+            return (this.id > 0 ? `*id${this.id}(Ваш)` : `*public${Math.abs(this.id)}(Ваш)`) + ` инвентарь:\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
+        }
     }
 
-    GetInfo()
+    GetInfo(TG)
     {
         try
         {
-            return `👤 ${parseInt(this.id) > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${this.beer.toFixed(1)} л.\n💭 Описание: ${this.description}`
+            if(TG)
+            {
+                return `👤 [${this.nick}](https://vk.com/id${this.id}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `[💘Жена](https://vk.com/id${this.marriedID})` : `[💘Муж](https://vk.com/id${this.marriedID})`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.countries[this.citizenship].name : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${Math.floor(this.beer)}\\.${this.beer % 1} л\\.\n💭 Описание: ${this.description}`
+            }
+            else
+            {
+                return `👤 ${parseInt(this.id) > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${this.beer.toFixed(1)} л.\n💭 Описание: ${this.description}`
+            }
         }
         catch (e)
         {

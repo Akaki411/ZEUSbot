@@ -1,5 +1,5 @@
 const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings, PlayerStatus,
-    VKChats
+    VKChats, TGChats
 } = require("../database/Models")
 const fs = require("fs")
 const Building = require("../models/Building")
@@ -23,6 +23,7 @@ class CacheData
         this.lastReload = new Date()
 
         this.users = {}              //Кэш пользователей
+        this.TGusers = {}
         this.VKChats = {}
         this.TGChats = {}
         this.cities = []             //Кэш городов
@@ -248,6 +249,20 @@ class CacheData
         })
     }
 
+    async LoadTGChats()
+    {
+        return new Promise(async (resolve) =>
+        {
+            this.TGChats = {}
+            const chats = await TGChats.findAll()
+            for(const chat of chats)
+            {
+                this.TGChats[chat.dataValues.peerID] = new TGChat(chat)
+            }
+            return resolve()
+        })
+    }
+
     async SaveVKChat(id)
     {
         return new Promise(async (resolve) =>
@@ -292,6 +307,37 @@ class CacheData
         })
     }
 
+    async SaveTGChat(id)
+    {
+        return new Promise(async (resolve) =>
+        {
+            try
+            {
+                let muteList = []
+                for(const i of Object.keys(this.TGChats[id].muteList))
+                {
+                    muteList.push({
+                        id: i,
+                        moderID: this.TGChats[id].muteList[i].moderID,
+                        endTime: this.TGChats[id].muteList[i].endTime
+                    })
+                }
+                await TGChats.update
+                (
+                    {
+                        muteList: JSON.stringify(muteList),
+                        deleteMessages: this.VKChats[id] ? this.VKChats[id].clean : true
+                    },
+                    {
+                        where: {peerID: id}
+                    }
+                )
+            }
+            catch (e) {}
+            return resolve()
+        })
+    }
+
     async LoadWorkers ()
     {
         //Очистка
@@ -328,10 +374,41 @@ class CacheData
         })
     }
 
+    async ReloadChats()
+    {
+        this.countryChats = {}
+        this.TGcountryChats = {}
+        return new Promise(async (resolve) => {
+            let temp = null
+            for(const key of this.countries)
+            {
+                if(key)
+                {
+                    if(key.chatID)
+                    {
+                        temp = key.chatID.split("|")
+                        for(const chat of temp)
+                        {
+                            this.countryChats[chat] = key.id
+                        }
+                    }
+                    if(key.TGchatID)
+                    {
+                        temp = key.TGchatID.split("|")
+                        for(const chat of temp)
+                        {
+                            this.TGcountryChats[chat] = key.id
+                        }
+                    }
+                }
+            }
+            return resolve()
+        })
+    }
+
     async LoadCountries()
     {
         this.countries = []
-        this.countryChats = {}
         this.countryResourcesStats = {}
         this.countriesWeekActive = {}
         return new Promise(async (resolve) => {
@@ -343,22 +420,6 @@ class CacheData
                 {
                     let res = await CountryResources.findOne({where: {id: key.dataValues.id}})
                     this.countries[key.dataValues.id] = new CountryObject(key, res)
-                    if(key.dataValues.chatID)
-                    {
-                        temp = key.dataValues.chatID.split("|")
-                        for(const chat of temp)
-                        {
-                            this.countryChats[chat] = key.dataValues.id
-                        }
-                    }
-                    if(key.dataValues.TGchatID)
-                    {
-                        temp = key.dataValues.chatID.split("|")
-                        for(const chat of temp)
-                        {
-                            this.TGcountryChats[chat] = key.dataValues.id
-                        }
-                    }
                 }
             }
             fs.access("./files/active.json", (error) => {

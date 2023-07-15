@@ -9,11 +9,13 @@ const ChatController = require("./controllers/ChatController")
 const CallbackEventController = require("./controllers/CallbackEventController")
 const CacheUserMiddleware = require('./middleware/CacheUserMiddleware')
 const CacheUserCallbackMiddleware = require('./middleware/CacheUserCallbackMiddleware')
+const CacheUserCallbackTGMiddleware = require('./middleware/CacheUserCallbackTGMiddleware')
 const CountStatsMiddleware = require('./middleware/CountStatsMiddleware')
 const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
 const CacheTGUserMiddleware = require('./middleware/CacheTGUserMiddleware')
 const SceneController = require("./controllers/SceneController")
 const BonusController = require("./controllers/BonusController")
+
 
 const VKbot = new VK({token: process.env.VK_BOT_TOKEN})
 const TGbot = new TelegramBot(process.env.TG_BOT_TOKEN, {polling: true});
@@ -61,6 +63,12 @@ const start = async () => {
         await Data.LoadVKChats().then(() => {
             console.log("Чаты ВК загружены")
         })
+        await Data.LoadTGChats().then(() => {
+            console.log("Чаты ТГ загружены")
+        })
+        await Data.ReloadChats().then(() => {
+            console.log("Подсчет сообщений включен")
+        })
         await Data.LoadVariables().then(async () => {
             console.log("Переменные загружены")
             await Data.onLoad({
@@ -89,13 +97,23 @@ const start = async () => {
 
         VKbot.updates.start().then(() => console.log("ВК бот запущен"))
 
-        TGbot.on('message', async (context, type) =>
+        TGbot.on('message', async (context) =>
         {
             context.api = TGbot
+            context.scenes = SceneController
             context.send = async (text, params) => {
                 await TGbot.sendMessage(context.chat.id, text, params)
             }
-            await CacheTGUserMiddleware(context, type)
+            await CacheTGUserMiddleware(context)
+        })
+        TGbot.on('callback_query', async (context) =>
+        {
+            context.api = TGbot
+            context.scenes = SceneController
+            context.send = async (text, options) => {
+                await TGbot.sendMessage(context.message.chat.id, text, options)
+            }
+            await CacheUserCallbackTGMiddleware(context)
         })
     }
     catch (e)

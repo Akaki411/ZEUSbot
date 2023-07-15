@@ -3265,24 +3265,6 @@ class ChatController
                     return
                 }
                 const msg = await context.send(`*id${context.replyPlayers[0]}(Инвентарь):\n\n💰 Монеты - ${resources.dataValues.money}\n🪨 Камень - ${resources.dataValues.stone}\n🌾 Зерно - ${resources.dataValues.wheat}\n🪵 Дерево - ${resources.dataValues.wood}\n🌑 Железо - ${resources.dataValues.iron}\n🥉 Бронза - ${resources.dataValues.copper}\n🥈 Серебро - ${resources.dataValues.silver}\n💎 Алмазы - ${resources.dataValues.diamond}`)
-                if(context.chat?.clean)
-                {
-                    setTimeout(async () => {
-                        try {
-                            await api.api.messages.delete({
-                                conversation_message_ids: msg.conversationMessageId,
-                                delete_for_all: 1,
-                                peer_id: msg.peerId
-                            })
-                        } catch (e) {
-                        }
-                    }, 60000)
-                }
-                return
-            }
-            const msg = await context.send(context.player.GetResources())
-            if(context.chat?.clean)
-            {
                 setTimeout(async () => {
                     try {
                         await api.api.messages.delete({
@@ -3293,7 +3275,19 @@ class ChatController
                     } catch (e) {
                     }
                 }, 60000)
+                return
             }
+            const msg = await context.send(context.player.GetResources())
+            setTimeout(async () => {
+                try {
+                    await api.api.messages.delete({
+                        conversation_message_ids: msg.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: msg.peerId
+                    })
+                } catch (e) {
+                }
+            }, 60000)
         }
         catch (e)
         {
@@ -3313,6 +3307,8 @@ class ChatController
             let temp = null
             let country = null
             let time = new Date()
+            const reg = new Date(context.player.createdAt)
+            reg.setDate(reg.getDate() + 7)
             for(const key of Data.countries)
             {
                 if(key?.tags)
@@ -3325,7 +3321,7 @@ class ChatController
                     }
                 }
             }
-            if(context.player.lastCitizenship - time > 0)
+            if(context.player.lastCitizenship - time > 0 && reg - time < 0)
             {
                 await context.send("⚠ Менять гражданство можно только раз в неделю")
                 return
@@ -4115,78 +4111,12 @@ class ChatController
         {
             if(context.command.match(/неделя/))
             {
-                await this.ShowCountriesWeekActive(context, context.command.replace(/неделя/, ""))
+                let {request} = await OutputManager.GetWeekActiveMessage({command: context.command, app: "VK", platform: context.player.platform})
+                await context.send(request)
             }
             else
             {
                 let {request} = await OutputManager.GetDayActiveMessage({command: context.command, app: "VK", platform: context.player.platform})
-                await context.send(request)
-            }
-        }
-        catch (e)
-        {
-            await api.SendLogs(context, "ChatController/RoadMap", e)
-        }
-    }
-
-    async ShowCountriesWeekActive(context, response)
-    {
-        try
-        {
-            let temp, country, request = ""
-            for(const key of Data.countries)
-            {
-                if(key?.tags)
-                {
-                    temp = new RegExp(key.tags)
-                    if(response.match(temp))
-                    {
-                        country = key
-                        break
-                    }
-                }
-            }
-            if(!country)
-            {
-                let request = "🔰 Актив фракций за неделю:\n\n"
-                let activeCountries = []
-                for(let i = 0; i < Data.countries.length; i++)
-                {
-                    if(Data.countries[i])
-                    {
-                        activeCountries.push([Data.countriesWeekActive[Data.countries[i].id] + Data.countries[i].active, i])
-                    }
-                }
-                for (let j = activeCountries.length - 1; j > 0; j--)
-                {
-                    for (let i = 0; i < j; i++)
-                    {
-                        if (activeCountries[i][0] < activeCountries[i + 1][0])
-                        {
-                            let temp = activeCountries[i];
-                            activeCountries[i] = activeCountries[i + 1];
-                            activeCountries[i + 1] = temp;
-                        }
-                    }
-                }
-                for(let i = 0; i < activeCountries.length; i++)
-                {
-                    if(Data.countries[activeCountries[i][1]])
-                    {
-                        request += `${Data.countries[activeCountries[i][1]].GetName(context.player.platform === "IOS")}\n`
-                        request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за неделю: ${Data.countriesWeekActive[Data.countries[[activeCountries[i][1]]].id] + Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
-                        request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
-                        request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
-                    }
-                }
-                await context.send(request)
-            }
-            else
-            {
-                request += `${country.GetName(context.player.platform === "IOS")}\n`
-                request += `${country.chatID ? `⚒ Актив за неделю: ${Data.countriesWeekActive[country.id] + country.active} сообщений` : "⚠ Чат не добавлен"}\n`
-                request += `💪 Рейтинг активности: ${country.rating}\n`
-                request += `🔴 Получено варнов: ${country.warnings}`
                 await context.send(request)
             }
         }
@@ -4281,6 +4211,7 @@ class ChatController
             temp = temp.filter(chat => {return parseInt(chat) !== context.peerId})
             country.chatID = (temp.length === 0 ? null : temp.join("|"))
             await Country.update({chatID: country.chatID}, {where: {id: country.id}})
+            await Data.ReloadChats()
             await context.send(`✅ Чат ${context.peerId} больше не принадлежит фракции ${country.GetName(context.player.platform === "IOS")}`)
         }
         catch (e)
@@ -4339,6 +4270,7 @@ class ChatController
             temp.push(context.peerId)
             country.chatID = temp.join("|")
             await Country.update({chatID: country.chatID}, {where: {id: country.id}})
+            await Data.ReloadChats()
             await context.send(`✅ Чат ${context.peerId} теперь принадлежит фракции ${country.GetName(context.player.platform === "IOS")}`)
         }
         catch (e)

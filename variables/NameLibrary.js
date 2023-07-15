@@ -115,8 +115,12 @@ class NameLibrary
                 return 1
             case "GM":
                 return 2
+            case "MGM":
+                return 3
             case "admin":
                 return 3
+            case "Madmin":
+                return 4
             case "support":
                 return 4
             case "project_head":
@@ -288,16 +292,21 @@ class NameLibrary
                 return "🪄 Модератор"
             case "GM":
                 return "🕹 Гейм-мастер"
+            case "MGM":
+                return "🔝🕹 Старший гейм-мастер"
             case "admin":
                 return "🐓 Администратор"
+            case "Madmin":
+                return "🔝🐓 Старший администратор"
             case "support":
                 return "🔧 Тех-поддержка"
             case "project_head":
                 return "🤴 Глава проекта"
             case "owner":
                 return "🔝 Владелец"
+            default:
+                return "Не указано"
         }
-        return "Не указано"
     }
 
     GetStatusName(status)

@@ -68,7 +68,7 @@ module.exports = async (context, next) =>
             if(context.chat.muteList[peerId])
             {
                 const time = new Date()
-                if(context.chat.muteList[context.player.id].endTime - time > 0)
+                if(context.chat.muteList[peerId]?.endTime - time > 0)
                 {
                     try
                     {
@@ -139,9 +139,7 @@ module.exports = async (context, next) =>
                         forward: `{"conversation_message_ids":${context.conversationMessageId},"peer_id":${context.peerId}}`
                     })
                 }
-                catch (e) {
-                    console.log(e)
-                }
+                catch (e) {}
             }
         }
         if(Data.users[peerId] && !Data.users[peerId]?.isBanned)

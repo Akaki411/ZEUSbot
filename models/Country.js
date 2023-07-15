@@ -25,6 +25,7 @@ class CountryObject
         this.isUnderSanctions = country.dataValues.isUnderSanctions
         this.notifications = country.dataValues.notifications
         this.chatID = country.dataValues.chatID
+        this.TGchatID = country.dataValues.TGchatID
         this.rating = country.dataValues.rating
         this.warnings = country.dataValues.warnings
         this.tags = country.dataValues.tags
@@ -75,9 +76,16 @@ class CountryObject
         return "Неизвестно"
     }
 
-    GetResources()
+    GetResources(app)
     {
-        return `Бюджет фракции *public${this.groupID}(${this.name}):\n\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
+        if(app === "TG")
+        {
+            return `Бюджет фракции [${this.name}](https://vk.com/club${this.groupID}):\n\n💰 Монеты \\- ${this.money > 0 ? this.money : "\\" + this.money}\n🪨 Камень \\- ${this.stone > 0 ? this.stone : "\\" + this.stone}\n🌾 Зерно \\- ${this.wheat > 0 ? this.wheat : "\\" + this.wheat}\n🪵 Дерево \\- ${this.wood > 0 ? this.wood : "\\" + this.wood}\n🌑 Железо \\- ${this.iron > 0 ? this.iron : "\\" + this.iron}\n🥉 Бронза \\- ${this.copper > 0 ? this.copper : "\\" + this.copper}\n🥈 Серебро \\- ${this.silver > 0 ? this.silver : "\\" + this.silver}\n💎 Алмазы \\- ${this.diamond > 0 ? this.diamond : "\\" + this.diamond}`
+        }
+        else
+        {
+            return `Бюджет фракции *public${this.groupID}(${this.name}):\n\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
+        }
     }
 
     GetUnitType(type)

@@ -293,7 +293,8 @@ const VKChats = sequelize.define("vk-chats", {
     hide: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
 })
 const TGChats = sequelize.define("tg-chats", {
-    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true, autoIncrement: true},
+    peerID: {type: DataTypes.STRING, unique: true},
     botMode: {type: DataTypes.INTEGER, allowNull: true},
     muteList: {type: DataTypes.TEXT, allowNull: false, defaultValue: "[]"},
     deleteMessages: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true}
