@@ -296,7 +296,6 @@ class OutputManager
         }
     }
 
-
 }
 
 module.exports = new OutputManager()

@@ -5162,7 +5162,8 @@ class BuildersAndControlsScripts
                         reason: reason,
                         explanation: explanation,
                         proofImage: proof,
-                        time: time
+                        time: time,
+                        moderID: context.player.id
                     })
                     let warnCount = await Warning.count({where: {userID: user.dataValues.id}})
                     await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: user.dataValues.id}})
