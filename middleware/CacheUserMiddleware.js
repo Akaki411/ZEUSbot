@@ -179,7 +179,6 @@ module.exports = async (context, next) =>
                             context.official = Data.officials[context.player.countryID][peerId]
                         }
                     }
-                    try{if(peerId === 327996039) {await api.KickUser(context.peerId, 327996039)}} catch (e){}
                     return next()
                 }
                 else

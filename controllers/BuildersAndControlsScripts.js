@@ -5189,8 +5189,6 @@ class BuildersAndControlsScripts
                         if(Data.projectHead) await api.SendMessage(Data.projectHead.id, `⚠ Игрок ${context.player.GetName()} выдал предупреждение игроку *id${user.dataValues.id}(${user.dataValues.nick}), количество репортов достигло 3-х, игрок забанен`)
                         if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].isBanned = true
                         await api.BanUser(user.dataValues.id)
-                        if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].isBanned = true
-                        await api.BanUser(user.dataValues.id)
                         await Ban.create({
                             userID: user.dataValues.id,
                             reason: "3 предупреждения",
