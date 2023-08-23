@@ -725,7 +725,7 @@ class CacheData
             {
                 this.cities[id][key] = resources.dataValues[key] + res[key]
             }
-            obj[key] = resources.dataValues[key] + res[key]
+            obj[key] = Math.max(resources.dataValues[key] + res[key], 0)
         }
         await CityResources.update(obj, {where: {id: id}})
     }
@@ -752,7 +752,7 @@ class CacheData
                     this.countryResourcesStats[id]["out"][key] -= res[key]
                 }
             }
-            obj[key] = resources.dataValues[key] + res[key]
+            obj[key] = Math.max(resources.dataValues[key] + res[key], 0)
         }
         await CountryResources.update(obj, {where: {id: id}})
     }
@@ -768,7 +768,7 @@ class CacheData
             {
                 this.users[id][key] = resources.dataValues[key] + res[key]
             }
-            obj[key] = resources.dataValues[key] + res[key]
+            obj[key] = Math.max(resources.dataValues[key] + res[key], 0)
         }
         await PlayerResources.update(obj, {where: {id: id}})
     }

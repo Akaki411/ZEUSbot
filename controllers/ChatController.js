@@ -3377,7 +3377,7 @@ class ChatController
                 time: time,
                 countryID: country.id,
                 timeout: setTimeout(async () => {
-                    await api.SendMessage(context.player.id, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[country].GetName(context.player.platform === "IOS")}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                    await api.SendMessage(context.player.id, `ℹ Вы подали заявку на получение гражданства в фракции ${country.GetName(context.player.platform === "IOS")}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
                     delete Data.timeouts["get_citizenship_" + context.player.id]
                 }, 86400000)
             }

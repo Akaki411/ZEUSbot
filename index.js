@@ -109,9 +109,9 @@ const StartVKBot = async () =>
     return new Promise((resolve) => {
         try
         {
-            VKbot.updates.on('message_new', async(context) =>
+            VKbot.updates.on('message', async(context) =>
             {
-                if(!Data.ignore[context.player.id])
+                if(context.senderId > 0)
                 {
                     context.TGapi = TGbot
                     context.scenes = SceneController
@@ -127,6 +127,22 @@ const StartVKBot = async () =>
             {
                 await BonusController.NewLike(context)
             })
+            VKbot.updates.on('like_remove', async (context) =>
+            {
+                await BonusController.LikeRemove(context)
+            })
+            VKbot.updates.on('group_leave', async (context) =>
+            {
+                await BonusController.Unsubscribe(context)
+            })
+            VKbot.updates.on('group_join', async (context) =>
+            {
+                await BonusController.Subscribe(context)
+            })
+            VKbot.updates.on('wall_repost', async (context) =>
+            {
+                await BonusController.Repost(context)
+            })
             VKbot.updates.start().then(() => {
                 console.log("ВК бот запущен")
                 return resolve()
@@ -138,7 +154,6 @@ const StartVKBot = async () =>
             return resolve()
         }
     })
-
 }
 
 const StartTGBot = async () => {
