@@ -45,10 +45,11 @@ class BonusController
             if(context.objectType === "post")
             {
                 const res = this.GetRandomResource()
-                await Actions.findOrCreate({
+                const action = await Actions.findOrCreate({
                     where: {userID: context.likerId, type: "like", contentID: context.objectId},
                     defaults: {userID: context.likerId, type: "like", contentID: context.objectId, resource: res}
                 })
+                if(!action[1]) return
                 await Data.AddPlayerResources(context.likerId, this.Course.like[res])
                 await api.SendNotification(context.likerId, "🎉 Спасибо за лайк, вот тебе подарок:\n" + NameLibrary.GetPrice(this.Course.like[res]))
             }
