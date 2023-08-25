@@ -24,9 +24,9 @@ class SceneController
         if(Data.countries[context.player.countryID]?.leaderID === context.player.id || NameLibrary.RoleEstimator(context.player.role) > 2 || context.official)
         {
             if(!kb[1]) kb[1] = []
-            let isOfficial = context.official && NameLibrary.RoleEstimator(context.player.role) <= 3
-            kb[1].push(isOfficial ? keyboard.officialMenuButton : keyboard.leaderMenuButton)
-            if(NameLibrary.RoleEstimator(context.player.role) > 3) kb[1].push(keyboard.officialMenuButton)
+            let isLeader = Data.countries[context.player.countryID]?.leaderID === context.player.id && NameLibrary.RoleEstimator(context.player.role) <= 3
+            kb[1].push(isLeader ? keyboard.leaderMenuButton : keyboard.officialMenuButton)
+            if(NameLibrary.RoleEstimator(context.player.role) > 3) kb[1].push(keyboard.leaderMenuButton)
         }
         if(NameLibrary.RoleEstimator(context.player.role) === 2)
         {

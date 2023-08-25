@@ -741,15 +741,10 @@ class CallbackEventController
                 let request = `✅ Администрация проекта приняла решение обжаловать вам жалобу от ${NameLibrary.ParseDateTime(warning.dataValues.createdAt)}`
                 if(user.dataValues.isBanned && warnCount < 3)
                 {
-                    await Player.update({warningScore: warnCount, isBanned: false}, {where: {id: user.dataValues.id}})
+                    await Player.update({isBanned: false}, {where: {id: user.dataValues.id}})
                     await Ban.destroy({where: {userID: user.dataValues.id}})
                     if(Data.users[user.dataValues.id]) delete Data.users[user.dataValues.id]
                     request += "\n\n✅ Теперь у вас менее 3-х предупреждений, поэтому вы получаете разбан в проекте"
-                }
-                else
-                {
-                    await Player.update({warningScore: warnCount}, {where: {id: user.dataValues.id}})
-                    if(Data.users[user.dataValues.id]) Data.users[user.dataValues.id].warningScore = warnCount
                 }
                 await api.SendMessage(user.dataValues.id, request)
                 if(Data.owner)
@@ -832,7 +827,7 @@ class CallbackEventController
                 const user = await Player.findOne({where: {id: ban.dataValues.userID}})
                 await Ban.destroy({where: {id: banID}})
                 await Warning.destroy({where: {userID: ban.dataValues.userID}})
-                await Player.update({warningScore: 0, isBanned: false}, {where: {id: user.dataValues.id}})
+                await Player.update({isBanned: false}, {where: {id: user.dataValues.id}})
                 if(Data.users[user.dataValues.id]) delete Data.users[user.dataValues.id]
                 await api.SendMessage(user.dataValues.id, `✅ Администрация проекта приняла решение обжаловать ваш бан от ${NameLibrary.ParseDateTime(ban.dataValues.createdAt)}\n\n✅ Теперь вы можете свободно пользоваться ботом и писать в чатах`)
                 if(Data.owner)

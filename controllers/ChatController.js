@@ -3614,50 +3614,38 @@ class ChatController
                 todayStickers: 0,
                 todaySwords: 0
             }
-            if(context.replyPlayers?.length !== 0)
+            const subject = context.replyPlayers[0] ? context.replyPlayers[0] : context.player.id
+            if(Data.users[subject])
             {
-                if(Data.users[context.replyPlayers[0]])
-                {
-                    if(Data.activity[context.replyPlayers[0]]) activity.todayMessages = Data.activity[context.replyPlayers[0]]
-                    if(Data.musicLovers[context.replyPlayers[0]]) activity.todayAudios = Data.musicLovers[context.replyPlayers[0]]
-                    if(Data.stickermans[context.replyPlayers[0]]) activity.todayStickers = Data.stickermans[context.replyPlayers[0]]
-                    if(Data.uncultured[context.replyPlayers[0]]) activity.todaySwords = Data.uncultured[context.replyPlayers[0]]
-                    activity.allMessages = Data.users[context.replyPlayers[0]].msgs + activity.todayMessages
-                    activity.allAudios = Data.users[context.replyPlayers[0]].audios + activity.todayAudios
-                    activity.allStickers = Data.users[context.replyPlayers[0]].stickers + activity.todayStickers
-                    activity.allSwords = Data.users[context.replyPlayers[0]].swords + activity.todaySwords
-                }
-                else
-                {
-                    const user = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
-                    if(!user)
-                    {
-                        await context.send("⚠ Игрок не зарегистрирован")
-                        return
-                    }
-                    activity.allMessages = user.dataValues.msgs
-                    activity.allAudios = user.dataValues.audios
-                    activity.allStickers = user.dataValues.stickers
-                    activity.allSwords = user.dataValues.swords
-                }
+                if(Data.activity[subject]) activity.todayMessages = Data.activity[subject]
+                if(Data.musicLovers[subject]) activity.todayAudios = Data.musicLovers[subject]
+                if(Data.stickermans[subject]) activity.todayStickers = Data.stickermans[subject]
+                if(Data.uncultured[subject]) activity.todaySwords = Data.uncultured[subject]
+                activity.allMessages = Data.users[subject].msgs + activity.todayMessages
+                activity.allAudios = Data.users[subject].audios + activity.todayAudios
+                activity.allStickers = Data.users[subject].stickers + activity.todayStickers
+                activity.allSwords = Data.users[subject].swords + activity.todaySwords
             }
             else
             {
-                if(Data.activity[context.player.id]) activity.todayMessages = Data.activity[context.player.id]
-                if(Data.musicLovers[context.player.id]) activity.todayAudios = Data.musicLovers[context.player.id]
-                if(Data.stickermans[context.player.id]) activity.todayStickers = Data.stickermans[context.player.id]
-                if(Data.uncultured[context.player.id]) activity.todaySwords = Data.uncultured[context.player.id]
-                activity.allMessages = context.player.msgs + activity.todayMessages
-                activity.allAudios = context.player.audios + activity.todayAudios
-                activity.allStickers = context.player.stickers + activity.todayStickers
-                activity.allSwords = context.player.swords + activity.todaySwords
+                const user = await PlayerInfo.findOne({where: {id: subject}})
+                if(!user)
+                {
+                    await context.send("⚠ Игрок не зарегистрирован")
+                    return
+                }
+                activity.allMessages = user.dataValues.msgs
+                activity.allAudios = user.dataValues.audios
+                activity.allStickers = user.dataValues.stickers
+                activity.allSwords = user.dataValues.swords
             }
+            const warnCount = await Warning.count({where: {userID: subject}})
             let request = "↖ Статистика:\n\n" +
                 "💬 Всего сообщений: " + activity.allMessages + "\n" +
                 "💩 Всего стикеров: " + activity.allStickers + "\n" +
                 "🎶 Всего музыки: " + activity.allAudios + "\n" +
                 "🤬 Всего матов: " + activity.allSwords + "\n" +
-                "⚠ Всего предупреждений: " + context.player.warningScore + "\n\n" +
+                "⚠ Всего предупреждений: " + warnCount + "\n\n" +
                 "💬 Сообщений сегодня: " + activity.todayMessages + "\n" +
                 "💩 Стикеров сегодня: " + activity.todayStickers + "\n" +
                 "🎶 Музыки сегодня: " + activity.todayAudios + "\n" +

@@ -4,7 +4,9 @@ const NameLibrary = require('../variables/NameLibrary')
 const Data = require("../models/CacheData");
 const api = require("../middleware/API");
 const keyboard = require("../variables/Keyboards");
-const {Player, PlayerInfo, PlayerStatus, CountryTaxes, Transactions, CountryRoads, CityRoads, Country, PlayerResources} = require("../database/Models");
+const {Player, PlayerInfo, PlayerStatus, CountryTaxes, Transactions, CountryRoads, CityRoads, Country, PlayerResources,
+    Warning
+} = require("../database/Models");
 const CrossStates = require("./CrossStates");
 const sequelize = require("../database/DataBase");
 const Rules = require("../variables/Rules");
@@ -2471,6 +2473,15 @@ class TGChatController
             {
                 return
             }
+            let subject = context.replyPlayers[0] ? context.replyPlayers[0] : context.player.TGID
+            const player = await Player.findOne({where: {TGID: subject}, attributes: ["id"]})
+            if(!player)
+            {
+                await context.send("⚠ Игрок не привязан")
+                return
+            }
+            subject = player.dataValues.id
+
             let activity = {
                 allMessages: 0,
                 allAudios: 0,
@@ -2481,50 +2492,32 @@ class TGChatController
                 todayStickers: 0,
                 todaySwords: 0
             }
-            if(context.replyPlayers?.length !== 0)
+            if(Data.users[subject])
             {
-                if(Data.users[Data.TGusers[context.replyPlayers[0]]])
-                {
-                    if(Data.activity[Data.TGusers[context.replyPlayers[0]]]) activity.todayMessages = Data.activity[Data.TGusers[context.replyPlayers[0]]]
-                    if(Data.musicLovers[Data.TGusers[context.replyPlayers[0]]]) activity.todayAudios = Data.musicLovers[Data.TGusers[context.replyPlayers[0]]]
-                    if(Data.stickermans[Data.TGusers[context.replyPlayers[0]]]) activity.todayStickers = Data.stickermans[Data.TGusers[context.replyPlayers[0]]]
-                    if(Data.uncultured[Data.TGusers[context.replyPlayers[0]]]) activity.todaySwords = Data.uncultured[Data.TGusers[context.replyPlayers[0]]]
-                    activity.allMessages = Data.users[Data.TGusers[context.replyPlayers[0]]].msgs + activity.todayMessages
-                    activity.allAudios = Data.users[Data.TGusers[context.replyPlayers[0]]].audios + activity.todayAudios
-                    activity.allStickers = Data.users[Data.TGusers[context.replyPlayers[0]]].stickers + activity.todayStickers
-                    activity.allSwords = Data.users[Data.TGusers[context.replyPlayers[0]]].swords + activity.todaySwords
-                }
-                else
-                {
-                    const user = await PlayerInfo.findOne({where: {TGID: context.replyPlayers[0]}})
-                    if(!user)
-                    {
-                        await context.send("⚠ Игрок не зарегистрирован")
-                        return
-                    }
-                    activity.allMessages = user.dataValues.msgs
-                    activity.allAudios = user.dataValues.audios
-                    activity.allStickers = user.dataValues.stickers
-                    activity.allSwords = user.dataValues.swords
-                }
+                if(Data.activity[subject]) activity.todayMessages = Data.activity[subject]
+                if(Data.musicLovers[subject]) activity.todayAudios = Data.musicLovers[subject]
+                if(Data.stickermans[subject]) activity.todayStickers = Data.stickermans[subject]
+                if(Data.uncultured[subject]) activity.todaySwords = Data.uncultured[subject]
+                activity.allMessages = Data.users[subject].msgs + activity.todayMessages
+                activity.allAudios = Data.users[subject].audios + activity.todayAudios
+                activity.allStickers = Data.users[subject].stickers + activity.todayStickers
+                activity.allSwords = Data.users[subject].swords + activity.todaySwords
             }
             else
             {
-                if(Data.activity[Data.TGusers[context.player.id]]) activity.todayMessages = Data.activity[Data.TGusers[context.player.id]]
-                if(Data.musicLovers[Data.TGusers[context.player.id]]) activity.todayAudios = Data.musicLovers[Data.TGusers[context.player.id]]
-                if(Data.stickermans[Data.TGusers[context.player.id]]) activity.todayStickers = Data.stickermans[Data.TGusers[context.player.id]]
-                if(Data.uncultured[Data.TGusers[context.player.id]]) activity.todaySwords = Data.uncultured[Data.TGusers[context.player.id]]
-                activity.allMessages = context.player.msgs + activity.todayMessages
-                activity.allAudios = context.player.audios + activity.todayAudios
-                activity.allStickers = context.player.stickers + activity.todayStickers
-                activity.allSwords = context.player.swords + activity.todaySwords
+                const user = await PlayerInfo.findOne({where: {id: subject}})
+                activity.allMessages = user.dataValues.msgs
+                activity.allAudios = user.dataValues.audios
+                activity.allStickers = user.dataValues.stickers
+                activity.allSwords = user.dataValues.swords
             }
+            const warnCount = await Warning.count({where: {userID: subject}})
             let request = "↖ Статистика:\n\n" +
                 "💬 Всего сообщений: " + activity.allMessages + "\n" +
                 "💩 Всего стикеров: " + activity.allStickers + "\n" +
                 "🎶 Всего музыки: " + activity.allAudios + "\n" +
                 "🤬 Всего матов: " + activity.allSwords + "\n" +
-                "⚠ Всего предупреждений: " + context.player.warningScore + "\n\n" +
+                "⚠ Всего предупреждений: " + warnCount + "\n\n" +
                 "💬 Сообщений сегодня: " + activity.todayMessages + "\n" +
                 "💩 Стикеров сегодня: " + activity.todayStickers + "\n" +
                 "🎶 Музыки сегодня: " + activity.todayAudios + "\n" +

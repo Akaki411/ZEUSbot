@@ -69,93 +69,78 @@ class CrossStates
         }
     }
 
-    async NewWarning(context, proofs)
+    async NewWarning(userId, time, reason, explanation, proofs, moderId)
     {
-        await Warning.create({
-            userID: proofs.userID,
-            reason: proofs.reason,
-            explanation: proofs.explanation,
-            proofImage: proofs.photoProof,
-            time: proofs.time,
-            moderID: context.player.id
-        })
-        let warnCount = await Warning.count({where: {userID: proofs.userID}})
-        await Player.update({warningScore: warnCount, isBanned: warnCount >= 3}, {where: {id: proofs.userID}})
-        await api.api.messages.send({
-            user_id: proofs.userID,
-            random_id: Math.round(Math.random() * 100000),
-            message: `⚠ Вам выдано предупреждение, срок его действия ${proofs.time} дней, причина:\n\n${proofs.reason}`,
-            attachment: proofs.photoProof
-        })
-        let notification = `⚠ Модератор ${context.player.GetName()} выдал предупреждение игроку *id${proofs.userID}(${proofs.nick})`
-        if(warnCount >= 3 && !StopList.includes(proofs.userID))
+        try
         {
-            const warnings = await Warning.findAll({where: {id: proofs.userID}, attributes: ["proofImage"]})
-            const photos = warnings.map(key => {return key.dataValues.proofImage}).join(",")
+            const names = await api.GetTags([userId, moderId])
+            let send = true
+
+            await Warning.create({
+                userID: userId,
+                reason: reason,
+                explanation: explanation,
+                proofImage: proofs,
+                time: time,
+                moderID: moderId
+            })
+            let warnCount = await Warning.count({where: {userID: userId}})
+            await Player.update({isBanned: warnCount >= 3}, {where: {id: userId}})
             try
             {
                 await api.api.messages.send({
                     user_id: proofs.userID,
                     random_id: Math.round(Math.random() * 100000),
-                    message: `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте, блокировка будет действовать до истечения срока одного из предупреждений.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`,
-                    attachment: photos
+                    message: `⚠ Вам выдано предупреждение, срок его действия ${time} дней, причина:\n\n${reason}`,
+                    attachment: proofs
                 })
-            } catch (e) {}
-            notification += `, количество репортов достигло 3-х, игрок забанен`
-            if(Data.users[proofs.userID]) Data.users[proofs.userID].isBanned = true
-            await api.BanUser(proofs.userID)
-            await Ban.create({
-                userID: proofs.userID,
-                reason: "3 предупреждения",
-                explanation: "Игрок заблокирован потому что имеет 3 предупреждения",
-                moderID: context.player.id,
-                proofImage: photos
-            })
+            }
+            catch (e) { send = false }
+
+            let notification = `⚠ Модератор ${names[moderId] ? names[moderId] : `@id${moderId}`} выдал предупреждение игроку ${names[userId] ? names[userId] : `@id${userId}`} сроком ${time} дней.\n\nПричина: ${reason}\nОписание:${explanation}`
+            if(warnCount >= 3 && !StopList.includes(userId))
+            {
+                const warnings = await Warning.findAll({where: {id: userId}, attributes: ["proofImage"]})
+                const photos = warnings.map(key => {return key.dataValues.proofImage}).join(",")
+                try
+                {
+                    await api.api.messages.send({
+                        user_id: userId,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `⚠⚠⚠ Вы получили бан.\n\nКоличество ваших предупреждений равно 3, ваш аккаунт получает блокировку в проекте, блокировка будет действовать до истечения срока одного из предупреждений.\n\nЕсли вы не согласны с блокировкой, то свяжитесь с админами:\n${Data.GiveAdminList()}`,
+                        attachment: photos
+                    })
+                } catch (e) {}
+                notification += `\n\nКоличество репортов достигло 3-х, игрок забанен.`
+                if(Data.users[userId]) Data.users[userId].isBanned = true
+                await api.BanUser(userId)
+                await Ban.create({
+                    userID: userId,
+                    reason: "3 предупреждения",
+                    explanation: "3 предупреждения",
+                    moderID: moderId,
+                    proofImage: photos
+                })
+            }
+            const admins = await Player.findAll({where: {role: ["moder", "admin", "Madmin", "support", "project_head", "owner"]}})
+            for(const i of admins)
+            {
+                try
+                {
+                    await api.api.messages.send({
+                        user_id: i.dataValues.id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: notification,
+                        attachment: proofs
+                    })
+                } catch (e) {}
+            }
+            return send
         }
-        if(Data.owner)
+        catch (e)
         {
-            await api.api.messages.send({
-                user_id: Data.owner.id,
-                random_id: Math.round(Math.random() * 100000),
-                message: notification,
-                attachment: proof
-            })
-        }
-        if(Data.projectHead)
-        {
-            await api.api.messages.send({
-                user_id: Data.projectHead.id,
-                random_id: Math.round(Math.random() * 100000),
-                message: notification,
-                attachment: proof
-            })
-        }
-        for(const id of Object.keys(Data.supports))
-        {
-            await api.api.messages.send({
-                user_id: id,
-                random_id: Math.round(Math.random() * 100000),
-                message: `⚠ Игрок ${context.player.GetName()} отправил репорт сроком ${time} дней на игрока *id${user.dataValues.id}(${user.dataValues.nick}\n\nПричина: ${reason}\nОписание: ${explanation}`,
-                attachment: proof
-            })
-        }
-        for(const id of Object.keys(Data.administrators))
-        {
-            await api.api.messages.send({
-                user_id: id,
-                random_id: Math.round(Math.random() * 100000),
-                message: `⚠ Игрок ${context.player.GetName()} отправил репорт сроком ${time} дней на игрока *id${user.dataValues.id}(${user.dataValues.nick}\n\nПричина: ${reason}\nОписание: ${explanation}`,
-                attachment: proof
-            })
-        }
-        for(const id of Object.keys(Data.moderators))
-        {
-            await api.api.messages.send({
-                user_id: id,
-                random_id: Math.round(Math.random() * 100000),
-                message: `⚠ Игрок ${context.player.GetName()} отправил репорт сроком ${time} дней на игрока *id${user.dataValues.id}(${user.dataValues.nick}\n\nПричина: ${reason}\nОписание: ${explanation}`,
-                attachment: proof
-            })
+            console.log(e)
+            return false
         }
     }
 }

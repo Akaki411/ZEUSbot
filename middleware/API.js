@@ -1019,6 +1019,14 @@ class VK_API
         catch (e) {}
     }
 
+    async GetTags(ids)
+    {
+        const users = await this.api.users.get({user_ids: ids.join(",")})
+        let names = {}
+        for(const i of users) names[i.id] = `@id${i.id}(${i.first_name} ${i.last_name})`
+        return names
+    }
+
     SendLogs = async (context, place, error) =>
     {
         try

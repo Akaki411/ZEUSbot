@@ -9,7 +9,6 @@ class User
         this.id = user.dataValues.id
         this.nick = user.dataValues.nick
         this.gender = user.dataValues.gender
-        this.warningScore = user.dataValues.warningScore
         this.role = user.dataValues.role
         this.status = user.dataValues.status
         this.platform = user.dataValues.platform

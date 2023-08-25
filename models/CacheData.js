@@ -1,5 +1,5 @@
 const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings, PlayerStatus,
-    VKChats, TGChats
+    VKChats, TGChats, Variables
 } = require("../database/Models")
 const fs = require("fs")
 const Building = require("../models/Building")
@@ -697,20 +697,67 @@ class CacheData
 
     async LoadVariables()
     {
-        return new Promise((resolve) => {
-            this.variables = require("../files/settings.json")
+        return new Promise(async (resolve) =>
+        {
+            this.variables = {}
+            const parseValue = (value, type) =>
+            {
+                switch (type)
+                {
+                    case "object":
+                        return JSON.parse(value)
+                    case "bool":
+                        return value === "true"
+                    case "int":
+                        return parseInt(value)
+                    case "float":
+                        return parseFloat(value)
+                    default:
+                        return value
+                }
+            }
+            const vars = await Variables.findAll({where: {isGlobal: true}})
+            for(const i of vars)
+            {
+                this.variables[i.dataValues.name] = parseValue(i.dataValues.json, i.dataValues.type)
+            }
             return resolve()
         })
     }
 
     async SaveVariables()
     {
-        return new Promise((resolve) => {
-            const serialize = JSON.stringify(this.variables, null, "\t")
-            fs.writeFile("./files/settings.json", serialize, (e) => {
-                if(e) console.log(e)
-                return resolve()
-            })
+        return new Promise(async (resolve) =>
+        {
+            const getType = (key) =>
+            {
+                switch (typeof this.variables[key])
+                {
+                    case "number":
+                        if(this.variables[key] % 1 === 0) return [this.variables[key].toString(), "int"]
+                        else return [this.variables[key].toString(), "float"]
+                    case "string":
+                        return [this.variables[key], "string"]
+                    case "boolean":
+                        return [this.variables[key], "bool"]
+                    default:
+                        return [JSON.stringify(this.variables[key]), typeof this.variables[key]]
+                }
+            }
+            for(const i of Object.keys(this.variables))
+            {
+                const variable = await Variables.findOne({where: {name: i}})
+                const values = getType(i)
+                if(variable)
+                {
+                    await Variables.update({json: values[0]}, {where: {name: i}})
+                }
+                else
+                {
+                    await Variables.create({name: i, type: values[1], json: values[0]})
+                }
+            }
+            return resolve()
         })
     }
 

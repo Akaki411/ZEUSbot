@@ -9,7 +9,6 @@ const Player = sequelize.define("player", {
     nick: {type: DataTypes.STRING, unique: false, allowNull: false},
     gender: {type: DataTypes.BOOLEAN, allowNull: false},
     isBanned: {type: DataTypes.BOOLEAN, defaultValue: false},
-    warningScore: {type: DataTypes.INTEGER, defaultValue: 0},
     role: {type: DataTypes.STRING, allowNull: false, defaultValue: "player"},
     status: {type: DataTypes.STRING, allowNull: false, defaultValue: "stateless"},
     platform: {type: DataTypes.STRING, allowNull: false, defaultValue: "ANDROID"},
@@ -306,6 +305,13 @@ const Actions = sequelize.define("actions", {
     contentID: {type: DataTypes.INTEGER, allowNull: true},
     resource: {type: DataTypes.STRING, allowNull: false}
 })
+const Variables = sequelize.define("variables", {
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true, autoIncrement: true},
+    name: {type: DataTypes.STRING, allowNull: false},
+    type: {type: DataTypes.STRING, allowNull: false, defaultValue: "string"},
+    json: {type: DataTypes.TEXT, allowNull: false},
+    isGlobal: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true}
+})
 
 
 module.exports = {
@@ -340,5 +346,6 @@ module.exports = {
     Events,
     VKChats,
     TGChats,
-    Actions
+    Actions,
+    Variables
 }
