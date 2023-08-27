@@ -5,13 +5,14 @@ const keyboard = require("../variables/Keyboards")
 const NameLibrary = require("../variables/NameLibrary");
 const Prices = require("../variables/Prices");
 const Scenes = require("./SceneController")
+const CrossStates = require("./CrossStates")
 class CallbackEventController
 {
     async Handler(context)
     {
         context.eventPayload?.command === "hide_message" && await this.HideMessage(context)
         context.eventPayload?.command === "merry" && await this.Merry(context)
-        context.eventPayload?.command  === "decline_merry" && await this.DeclineMerry(context)
+        context.eventPayload?.command === "decline_merry" && await this.DeclineMerry(context)
         context.eventPayload?.command === "give_citizenship" && await this.GiveCitizenship(context)
         context.eventPayload?.command === "decline_citizenship" && await this.DeclineCitizenship(context)
         context.eventPayload?.command === "give_registration" && await this.GiveRegistration(context)
@@ -346,6 +347,7 @@ class CallbackEventController
             {
                 clearTimeout(Data.timeouts["get_citizenship_" + secondUserID].timeout)
                 delete Data.timeouts["get_citizenship_" + secondUserID]
+                await CrossStates.RefuseCitizenship(secondUserID)
                 let time = new Date()
                 time.setDate(time.getDate() + 7)
                 await PlayerStatus.update({citizenship: countryID, lastCitizenship: time},{where: {id: secondUserID}})

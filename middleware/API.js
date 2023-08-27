@@ -42,7 +42,13 @@ class VK_API
         let toMidday = midday - now
         setTimeout(async () => {await this.StartMainLoop()}, toMidnight)
         setTimeout(async () => {await this.StartMiddayLoop()}, toMidday)
-        setInterval(async () => {await Data.SaveActive()}, 300000)
+        setInterval(async () => {await this.FiveMinLoop()}, 300000)
+    }
+
+    async FiveMinLoop()
+    {
+        await Data.SaveActive()
+        await this.SaveTimeouts()
     }
 
     async StartMainLoop()
@@ -364,304 +370,296 @@ class VK_API
                     timeout: date - now
                 }
             }
-            fs.access("./files/cache.json", async (error) => {
-                if(error)
+            let timeouts = await Data.LoadVariable("timeouts")
+            if(!timeouts)
+            {
+                await Data.UpdateVariable("timeouts", [])
+                timeouts = []
+            }
+            let player, playerInfo, playerRes, playerStats, time, future
+            for(const key of timeouts)
+            {
+                if(key.type === "user_activity")
                 {
-                    for (const key of Object.keys(Data.supports))
+                    if(key.subtype === "activity")
                     {
-                        !Data.variables["isTest"] && await this.SendMessage(Data.supports[key].id, "⚠ Бот был перезагружен, но после загрузки не был найден файл с кэшем, возможно перезапуск был связан с критической ошибкой.")
+                        Data.activity = key.data
                     }
-                    return resolve()
-                }
-                else
-                {
-                    const active = require("../files/cache.json")
-                    let player, playerInfo, playerRes, playerStats, time, future
-                    for(const key of active)
+                    if(key.subtype === "audios")
                     {
-                        if(key.type === "user_activity")
-                        {
-                            if(key.subtype === "activity")
-                            {
-                                Data.activity = key.data
-                            }
-                            if(key.subtype === "audios")
-                            {
-                                Data.musicLovers = key.data
-                            }
-                            if(key.subtype === "stickers")
-                            {
-                                Data.stickermans = key.data
-                            }
-                            if(key.subtype === "swords")
-                            {
-                                Data.uncultured = key.data
-                            }
-                        }
-                        if(key.type === "user_timeout")
-                        {
-                            if(!Data.users[key.userId])
-                            {
-                                player = await Player.findOne({where: {id: key.userId}})
-                                if(!player) continue
-                                playerInfo = await PlayerInfo.findOne({where: {id: key.userId}})
-                                playerRes = await PlayerResources.findOne({where: {id: key.userId}})
-                                playerStats = await PlayerStatus.findOne({where: {id: key.userId}})
-                                Data.users[parseInt(key.userId)] = new User(player, playerStats, playerInfo, playerRes)
-                                Data.users[parseInt(key.userId)].state = scenes.StartScreen
-                            }
-                            if(key.subtype === "sleep")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0)
-                                {
-                                    await this.SendMessage(key.userId, "☕ Ваши силы восстановлены")
-                                    continue
-                                }
-                                Data.users[key.userId].fatigue = 100 - Math.round(time.timeout / 216000)
-                                Data.users[key.userId].isRelaxing = true
-                                Data.timeouts["user_timeout_sleep_" + key.userId] = {
-                                    type: "user_timeout",
-                                    subtype: "sleep",
-                                    userId: key.userId,
-                                    time: time.date,
-                                    houseLevel: key.houseLevel,
-                                    timeout: setTimeout(async () => {
-                                        await this.SendMessage(key.userId, "☕ Ваши силы восстановлены")
-                                        Data.users[key.userId].fatigue = 100
-                                        Data.users[key.userId].isRelaxing = false
-                                        delete Data.timeouts["user_timeout_sleep_" + key.userId]
-                                    }, time.timeout)
-                                }
-                            }
-                            if(key.subtype === "walk")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0)
-                                {
-                                    await this.SendMessage(key.userId, "🏙 Вы пришли в город " + Data.cities[key.cityID].name + "\n" + Data.cities[key.cityID].description)
-                                    continue
-                                }
-                                Data.users[key.userId].state = scenes.Walking
-                                Data.timeouts["user_timeout_walk_" + key.userId] = {
-                                    type: "user_timeout",
-                                    subtype: "walk",
-                                    userId: key.userId,
-                                    cityID: key.cityID,
-                                    time: time.date,
-                                    timeout: setTimeout(async () => {
-                                        await this.SendMessage(key.userId, "🏙 Вы пришли в город " + Data.cities[key.cityID].name + "\n" + Data.cities[key.cityID].description)
-                                        Data.users[key.userId].location = key.cityID
-                                        await PlayerStatus.update(
-                                            {location: key.cityID},
-                                            {where: {id: key.userId}}
-                                        )
-                                        if(Data.cities[key.cityID].notifications)
-                                        {
-                                            await this.SendMessage(Data.cities[key.cityID].leaderID, `ℹ Игрок ${Data.users[key.userId].GetName()} зашел в город ${Data.cities[key.cityID].name}`)
-                                        }
-                                        let stayTime = new Date()
-                                        stayTime.setMinutes(stayTime.getMinutes() + 30)
-                                        Data.users[key.userId].stayInCityTime = stayTime
-                                        Data.users[key.userId].state = scenes.StartScreen
-                                        delete Data.timeouts["user_timeout_walk_" + key.userId]
-                                    }, time.timeout)
-                                }
-                            }
-                            if(key.subtype === "get_citizenship")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0)
-                                {
-                                    await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[key.countryID].GetName()}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
-                                    continue
-                                }
-                                Data.timeouts["get_citizenship_" + key.userId] = {
-                                    type: "user_timeout",
-                                    subtype: "get_citizenship",
-                                    userId: key.userId,
-                                    time: time,
-                                    countryID: key.countryID,
-                                    timeout: setTimeout(async () => {
-                                        await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[key.countryID].GetName()}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
-                                        delete Data.timeouts["get_citizenship_" + key.userId]
-                                    }, time.timeout)
-                                }
-                            }
-                            if(key.subtype === "get_registration")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0)
-                                {
-                                    await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение регистрации в городе ${Data.cities[key.cityID].name}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
-                                }
-                                Data.timeouts["get_registration_" + key.userId] = {
-                                    type: "user_timeout",
-                                    subtype: "get_registration",
-                                    userId: key.userId,
-                                    time: time,
-                                    cityID: key.cityID,
-                                    timeout: setTimeout(async () => {
-                                        await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение регистрации в городе ${Data.cities[key.cityID].name}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
-                                        delete Data.timeouts["get_registration_" + key.userId]
-                                    }, 86400000)
-                                }
-                            }
-                            if(key.subtype === "resources_ready")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0)
-                                {
-                                    await this.SendMessage(key.userId, `✅ Ваши постройки в городе ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                                    continue
-                                }
-                                future = new Date()
-                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
-                                let isProperty = false
-                                let keys = await Keys.findAll({where: {ownerID: key.userId}})
-                                if(keys.length === 0) continue
-                                for(let i = 0; i < Data.buildings[key.cityID]?.length; i++)
-                                {
-                                    if(Data.buildings[key.cityID][i].ownerType === "country" && Data.buildings[key.cityID][i].type.match(/wheat|stone|wood|iron|silver/))
-                                    {
-                                        isProperty = false
-                                        for(const key of keys)
-                                        {
-                                            if(key.dataValues.houseID === Data.buildings[key.cityID][i].id)
-                                            {
-                                                isProperty = true
-                                                break
-                                            }
-                                        }
-                                        if(!isProperty) continue
-                                        Data.buildings[key.cityID][i].lastActivityTime = future
-                                    }
-                                }
-                                Data.timeouts["user_timeout_resources_ready_" + key.userId] = {
-                                    type: "user_timeout",
-                                    subtype: "resources_ready",
-                                    userId: key.userId,
-                                    countryID: key.countryID,
-                                    time: key.date,
-                                    timeout: setTimeout(async () =>
-                                    {
-                                        await this.SendMessage(key.userId, `✅ Ваши постройки в городе ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                                        delete Data.timeouts["user_timeout_resources_ready_" + key.countryID]
-                                    }, time.timeout)
-                                }
-                            }
-                        }
-                        if(key.type === "city_timeout")
-                        {
-                            if(!Data.cities[key.cityID])
-                            {
-                                continue
-                            }
-                            if(key.subtype === "resources_ready")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0)
-                                {
-                                    await this.SendMessage(key.userId, `✅ Постройки города ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                                    continue
-                                }
-                                future = new Date()
-                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
-                                for(let k = 0; k < Data.cities.length; k++)
-                                {
-                                    for(let i = 0; i < Data.buildings[Data.cities[k]?.id]?.length; i++)
-                                    {
-                                        if(Data.buildings[Data.cities[k].id][i].ownerType === "city" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/))
-                                        {
-                                            Data.buildings[Data.cities[k].id][i].lastActivityTime = future
-                                        }
-                                    }
-                                }
-                                Data.timeouts["city_timeout_resources_ready_" + key.cityID] = {
-                                    type: "city_timeout",
-                                    subtype: "resources_ready",
-                                    userId: key.userId,
-                                    cityID: key.cityID,
-                                    time: key.date,
-                                    timeout: setTimeout(async () =>
-                                    {
-                                        await this.SendMessage(key.userId, `✅ Постройки города ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                                        delete Data.timeouts["city_timeout_resources_ready_" + key.cityID]
-                                    }, time.timeout)
-                                }
-                            }
-                        }
-                        if(key.type === "country_timeout")
-                        {
-                            if(!Data.countries[key.countryID])
-                            {
-                                continue
-                            }
-                            if(key.subtype === "resources_ready")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0)
-                                {
-                                    await this.SendMessage(key.userId, `✅ Постройки фракции ${Data.countries[key.countryID].GetName(false)} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                                    continue
-                                }
-                                future = new Date()
-                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
-                                for(let k = 0; k < Data.cities.length; k++)
-                                {
-                                    if(Data.cities[k]?.countryID === key.countryID)
-                                    {
-                                        for(let i = 0; i < Data.buildings[Data.cities[k]?.id]?.length; i++)
-                                        {
-                                            if(Data.buildings[Data.cities[k].id][i].ownerType === "country" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/))
-                                            {
-                                                Data.buildings[Data.cities[k].id][i].lastActivityTime = future
-                                            }
-                                        }
-                                    }
-                                }
-                                Data.timeouts["country_timeout_resources_ready_" + key.countryID] = {
-                                    type: "country_timeout",
-                                    subtype: "resources_ready",
-                                    userId: key.userId,
-                                    countryID: key.countryID,
-                                    time: key.date,
-                                    timeout: setTimeout(async () =>
-                                    {
-                                        await this.SendMessage(key.userId, `✅ Постройки фракции ${Data.countries[key.countryID].GetName(false)} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
-                                        delete Data.timeouts["country_timeout_resources_ready_" + key.countryID]
-                                    }, time.timeout)
-                                }
-                            }
-                            if(key.subtype === "city_tax")
-                            {
-                                time = getTime(key.time)
-                                if(time.timeout < 0) continue
-                                future = new Date()
-                                future.setMilliseconds(future.getMilliseconds() + time.timeout)
-                                Data.timeouts["country_get_tax_" + key.countryID] = {
-                                    type: "country_timeout",
-                                    subtype: "city_tax",
-                                    countryID: key.countryID,
-                                    time: key.date,
-                                    timeout: setTimeout(async () =>
-                                    {
-                                        delete Data.timeouts["country_get_tax_" + key.countryID]
-                                    }, time.timeout)
-                                }
-                            }
-                        }
+                        Data.musicLovers = key.data
                     }
-                    fs.unlink("./files/cache.json", (err) => {
-                        if (err) throw err
-                    })
-                    for (const key of Object.keys(Data.supports))
+                    if(key.subtype === "stickers")
                     {
-                        await this.SendMessage(Data.supports[key].id, "✅ Бот загружен, данные игроков восстановлены")
+                        Data.stickermans = key.data
+                    }
+                    if(key.subtype === "swords")
+                    {
+                        Data.uncultured = key.data
                     }
                 }
-                return resolve()
-            })
+                if(key.type === "user_timeout")
+                {
+                    if(!Data.users[key.userId])
+                    {
+                        player = await Player.findOne({where: {id: key.userId}})
+                        if(!player) continue
+                        playerInfo = await PlayerInfo.findOne({where: {id: key.userId}})
+                        playerRes = await PlayerResources.findOne({where: {id: key.userId}})
+                        playerStats = await PlayerStatus.findOne({where: {id: key.userId}})
+                        Data.users[parseInt(key.userId)] = new User(player, playerStats, playerInfo, playerRes)
+                        Data.users[parseInt(key.userId)].state = scenes.StartScreen
+                    }
+                    if(key.subtype === "sleep")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0)
+                        {
+                            await this.SendMessage(key.userId, "☕ Ваши силы восстановлены")
+                            continue
+                        }
+                        Data.users[key.userId].fatigue = 100 - Math.round(time.timeout / 216000)
+                        Data.users[key.userId].isRelaxing = true
+                        Data.timeouts["user_timeout_sleep_" + key.userId] = {
+                            type: "user_timeout",
+                            subtype: "sleep",
+                            userId: key.userId,
+                            time: time.date,
+                            houseLevel: key.houseLevel,
+                            timeout: setTimeout(async () => {
+                                await this.SendMessage(key.userId, "☕ Ваши силы восстановлены")
+                                Data.users[key.userId].fatigue = 100
+                                Data.users[key.userId].isRelaxing = false
+                                delete Data.timeouts["user_timeout_sleep_" + key.userId]
+                            }, time.timeout)
+                        }
+                    }
+                    if(key.subtype === "walk")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0)
+                        {
+                            await this.SendMessage(key.userId, "🏙 Вы пришли в город " + Data.cities[key.cityID].name + "\n" + Data.cities[key.cityID].description)
+                            continue
+                        }
+                        Data.users[key.userId].state = scenes.Walking
+                        Data.timeouts["user_timeout_walk_" + key.userId] = {
+                            type: "user_timeout",
+                            subtype: "walk",
+                            userId: key.userId,
+                            cityID: key.cityID,
+                            time: time.date,
+                            timeout: setTimeout(async () => {
+                                await this.SendMessage(key.userId, "🏙 Вы пришли в город " + Data.cities[key.cityID].name + "\n" + Data.cities[key.cityID].description)
+                                Data.users[key.userId].location = key.cityID
+                                await PlayerStatus.update(
+                                    {location: key.cityID},
+                                    {where: {id: key.userId}}
+                                )
+                                if(Data.cities[key.cityID].notifications)
+                                {
+                                    await this.SendMessage(Data.cities[key.cityID].leaderID, `ℹ Игрок ${Data.users[key.userId].GetName()} зашел в город ${Data.cities[key.cityID].name}`)
+                                }
+                                let stayTime = new Date()
+                                stayTime.setMinutes(stayTime.getMinutes() + 30)
+                                Data.users[key.userId].stayInCityTime = stayTime
+                                Data.users[key.userId].state = scenes.StartScreen
+                                delete Data.timeouts["user_timeout_walk_" + key.userId]
+                            }, time.timeout)
+                        }
+                    }
+                    if(key.subtype === "get_citizenship")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0)
+                        {
+                            await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[key.countryID].GetName()}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                            continue
+                        }
+                        Data.timeouts["get_citizenship_" + key.userId] = {
+                            type: "user_timeout",
+                            subtype: "get_citizenship",
+                            userId: key.userId,
+                            time: time,
+                            countryID: key.countryID,
+                            timeout: setTimeout(async () => {
+                                await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[key.countryID].GetName()}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                                delete Data.timeouts["get_citizenship_" + key.userId]
+                            }, time.timeout)
+                        }
+                    }
+                    if(key.subtype === "get_registration")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0)
+                        {
+                            await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение регистрации в городе ${Data.cities[key.cityID].name}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                        }
+                        Data.timeouts["get_registration_" + key.userId] = {
+                            type: "user_timeout",
+                            subtype: "get_registration",
+                            userId: key.userId,
+                            time: time,
+                            cityID: key.cityID,
+                            timeout: setTimeout(async () => {
+                                await this.SendMessage(key.userId, `ℹ Вы подали заявку на получение регистрации в городе ${Data.cities[key.cityID].name}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                                delete Data.timeouts["get_registration_" + key.userId]
+                            }, 86400000)
+                        }
+                    }
+                    if(key.subtype === "resources_ready")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0)
+                        {
+                            await this.SendMessage(key.userId, `✅ Ваши постройки в городе ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                            continue
+                        }
+                        future = new Date()
+                        future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                        let isProperty = false
+                        let keys = await Keys.findAll({where: {ownerID: key.userId}})
+                        if(keys.length === 0) continue
+                        for(let i = 0; i < Data.buildings[key.cityID]?.length; i++)
+                        {
+                            if(Data.buildings[key.cityID][i].ownerType === "country" && Data.buildings[key.cityID][i].type.match(/wheat|stone|wood|iron|silver/))
+                            {
+                                isProperty = false
+                                for(const key of keys)
+                                {
+                                    if(key.dataValues.houseID === Data.buildings[key.cityID][i].id)
+                                    {
+                                        isProperty = true
+                                        break
+                                    }
+                                }
+                                if(!isProperty) continue
+                                Data.buildings[key.cityID][i].lastActivityTime = future
+                            }
+                        }
+                        Data.timeouts["user_timeout_resources_ready_" + key.userId] = {
+                            type: "user_timeout",
+                            subtype: "resources_ready",
+                            userId: key.userId,
+                            countryID: key.countryID,
+                            time: key.date,
+                            timeout: setTimeout(async () =>
+                            {
+                                await this.SendMessage(key.userId, `✅ Ваши постройки в городе ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                delete Data.timeouts["user_timeout_resources_ready_" + key.countryID]
+                            }, time.timeout)
+                        }
+                    }
+                }
+                if(key.type === "city_timeout")
+                {
+                    if(!Data.cities[key.cityID])
+                    {
+                        continue
+                    }
+                    if(key.subtype === "resources_ready")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0)
+                        {
+                            await this.SendMessage(key.userId, `✅ Постройки города ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                            continue
+                        }
+                        future = new Date()
+                        future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                        for(let k = 0; k < Data.cities.length; k++)
+                        {
+                            for(let i = 0; i < Data.buildings[Data.cities[k]?.id]?.length; i++)
+                            {
+                                if(Data.buildings[Data.cities[k].id][i].ownerType === "city" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/))
+                                {
+                                    Data.buildings[Data.cities[k].id][i].lastActivityTime = future
+                                }
+                            }
+                        }
+                        Data.timeouts["city_timeout_resources_ready_" + key.cityID] = {
+                            type: "city_timeout",
+                            subtype: "resources_ready",
+                            userId: key.userId,
+                            cityID: key.cityID,
+                            time: key.date,
+                            timeout: setTimeout(async () =>
+                            {
+                                await this.SendMessage(key.userId, `✅ Постройки города ${Data.cities[key.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                delete Data.timeouts["city_timeout_resources_ready_" + key.cityID]
+                            }, time.timeout)
+                        }
+                    }
+                }
+                if(key.type === "country_timeout")
+                {
+                    if(!Data.countries[key.countryID])
+                    {
+                        continue
+                    }
+                    if(key.subtype === "resources_ready")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0)
+                        {
+                            await this.SendMessage(key.userId, `✅ Постройки фракции ${Data.countries[key.countryID].GetName(false)} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                            continue
+                        }
+                        future = new Date()
+                        future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                        for(let k = 0; k < Data.cities.length; k++)
+                        {
+                            if(Data.cities[k]?.countryID === key.countryID)
+                            {
+                                for(let i = 0; i < Data.buildings[Data.cities[k]?.id]?.length; i++)
+                                {
+                                    if(Data.buildings[Data.cities[k].id][i].ownerType === "country" && Data.buildings[Data.cities[k].id][i].type.match(/wheat|stone|wood|iron|silver/))
+                                    {
+                                        Data.buildings[Data.cities[k].id][i].lastActivityTime = future
+                                    }
+                                }
+                            }
+                        }
+                        Data.timeouts["country_timeout_resources_ready_" + key.countryID] = {
+                            type: "country_timeout",
+                            subtype: "resources_ready",
+                            userId: key.userId,
+                            countryID: key.countryID,
+                            time: key.date,
+                            timeout: setTimeout(async () =>
+                            {
+                                await this.SendMessage(key.userId, `✅ Постройки фракции ${Data.countries[key.countryID].GetName(false)} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
+                                delete Data.timeouts["country_timeout_resources_ready_" + key.countryID]
+                            }, time.timeout)
+                        }
+                    }
+                    if(key.subtype === "city_tax")
+                    {
+                        time = getTime(key.time)
+                        if(time.timeout < 0) continue
+                        future = new Date()
+                        future.setMilliseconds(future.getMilliseconds() + time.timeout)
+                        Data.timeouts["country_get_tax_" + key.countryID] = {
+                            type: "country_timeout",
+                            subtype: "city_tax",
+                            countryID: key.countryID,
+                            time: key.date,
+                            timeout: setTimeout(async () =>
+                            {
+                                delete Data.timeouts["country_get_tax_" + key.countryID]
+                            }, time.timeout)
+                        }
+                    }
+                }
+            }
+            if(!Data.variables["isTest"])
+            {
+                for (const key of Object.keys(Data.supports))
+                {
+                    await this.SendMessage(Data.supports[key].id, "✅ Бот загружен, данные восстановлены")
+                }
+            }
+            return resolve()
         })
     }
 
@@ -781,14 +779,7 @@ class VK_API
                     }
                 }
             }
-            const serialize = JSON.stringify(data, null, "\t")
-            fs.writeFile("./files/cache.json", serialize, (e) => {
-                if(e) console.log(e)
-            })
-            for (const key of Object.keys(Data.supports))
-            {
-                await this.SendMessage(Data.supports[key].id, "✅ Данные сохранены, бот готов к перезагрузке")
-            }
+            await Data.UpdateVariable("timeouts", data)
             return resolve()
         })
     }
@@ -902,7 +893,7 @@ class VK_API
         try
         {
             await this.api.messages.send({
-                user_id: id,
+                peer_id: id,
                 random_id: Math.round(Math.random() * 100000),
                 message: message
             })

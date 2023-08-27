@@ -11,6 +11,7 @@ module.exports = async (context) =>
     if(Data.TGcountryChats[context.chat.id])
     {
         Data.countries[Data.TGcountryChats[context.chat.id]].active++
+        Data.active++
     }
     if(Data.TGusers[context.from.id])
     {

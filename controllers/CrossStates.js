@@ -1,8 +1,8 @@
 const Data = require("../models/CacheData")
-const {Keys, Warning, Player, Ban} = require("../database/Models")
+const {Keys, Warning, Player, Ban, PlayerStatus} = require("../database/Models")
 const api = require("../middleware/API")
-const StopList = require("../files/StopList.json");
-const keyboard = require("../variables/Keyboards");
+const StopList = require("../files/StopList.json")
+const NameLibrary = require("../variables/NameLibrary")
 
 class CrossStates
 {
@@ -141,6 +141,78 @@ class CrossStates
         {
             console.log(e)
             return false
+        }
+    }
+
+    async RefuseCitizenship(id)
+    {
+        return new Promise(async resolve => {
+            const status = await PlayerStatus.findOne({where: {id: id}})
+            if(!status) return
+            if(!status.dataValues.citizenship) return
+            const player = await Player.findOne({where: {id: id}})
+            await api.SendMessage(Data.countries[status.dataValues.citizenship].leaderID, `ℹ Игрок @id${id}(${player.dataValues.id}) отказался от гражданства фракции ${Data.countries[status.dataValues.citizenship].GetName()}`)
+            if(Data.users[id])
+            {
+                Data.users[id].citizenship = null
+                Data.users[id].registration = null
+                if (Data.users[id].status !== "worker") Data.users[id].status = "stateless"
+            }
+            if(player.dataValues.status !== "worker") await Player.update({status: "stateless"}, {where: {id: id}})
+            status.set({citizenship: null, registration: null})
+            await status.save()
+            return resolve()
+        })
+    }
+
+    async AddUser(userId, newbieId, peerId)
+    {
+        try
+        {
+            const newbie = await Player.findOne({where: {id: newbieId}})
+            if(!newbie) return
+            if(!newbie.dataValues.isBanned) return
+            const banInfo = await Ban.findOne({where: {userID: newbieId}})
+            const user = await Player.findOne({where: {id: userId}})
+            if(!user) return
+            if(NameLibrary.RoleEstimator(user.dataValues.role) === 0)
+            {
+                await api.SendMessage(peerId, `🚫 Игрок забанен по причине: ${banInfo?.dataValues.reason}`)
+                await api.KickUser(peerId, newbieId)
+                await this.NewWarning(userId, 30, "Нарушение исполнения наказания", "Приглашение в чат игрока находящегося в бане", Data.variables["addBanUserToChatWarning"], process.env.GROUPID)
+            }
+            else
+            {
+                if(banInfo)
+                {
+                    await Ban.destroy({where: {id: banInfo.dataValues.id}})
+                    await Warning.destroy({where: {userID: newbie.dataValues.id}})
+                    await Player.update({isBanned: false}, {where: {id: newbie.dataValues.id}})
+                    if(Data.users[newbie.dataValues.id]) delete Data.users[newbie.dataValues.id]
+                    await api.SendMessage(peerId, `✅ Игрок находится в бане, но так как его добавил администратор - бан снимается`)
+                    const admins = await Player.findAll({where: {role: ["moder", "admin", "Madmin", "support", "project_head", "owner"]}})
+                    for(const i of admins)
+                    {
+                        try
+                        {
+                            await api.api.messages.send({
+                                user_id: i.dataValues.id,
+                                random_id: Math.round(Math.random() * 100000),
+                                message: `⚠ Админ *id${user.dataValues.id}(${user.dataValues.nick}) обжаловал бан игрока *id${newbie.dataValues.id}(${newbie.dataValues.nick})`
+                            })
+                        } catch (e) {}
+                    }
+                }
+                else
+                {
+                    await Player.update({isBanned: false}, {where: {id: newbie.dataValues.id}})
+                    if(Data.users[newbie.dataValues.id]) delete Data.users[newbie.dataValues.id]
+                }
+            }
+        }
+        catch (e)
+        {
+            console.log(e)
         }
     }
 }

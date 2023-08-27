@@ -80,7 +80,7 @@ const OfficialInfo = sequelize.define("official-info", {
     canUseResources: {type: DataTypes.BOOLEAN, defaultValue: false},
     canUseArmy: {type: DataTypes.BOOLEAN, defaultValue: false},
     canAppointOfficial: {type: DataTypes.BOOLEAN, defaultValue: false},
-    canAppointMayors: {type: DataTypes.BOOLEAN, defaultValue: false},
+    canAppointMayors: {type: DataTypes.BOOLEAN, defaultValue: false}
 })
 const LastWills = sequelize.define("last-wills", {
     userID: {type: DataTypes.INTEGER, unique: true, allowNull: false, primaryKey: true},
@@ -225,7 +225,8 @@ const Buildings = sequelize.define("buildings", {
     ownerID: {type: DataTypes.INTEGER, allowNull: false},
     ownerType: {type: DataTypes.STRING, allowNull: false, defaultValue: "user"},
     level: {type: DataTypes.INTEGER, allowNull: false},
-    freezing: {type: DataTypes.BOOLEAN, defaultValue: false}
+    freezing: {type: DataTypes.BOOLEAN, defaultValue: false},
+    workEndTime: {type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.fn("now")}
 })
 const BuildingAddon = sequelize.define("building-addons", {
     id: {type: DataTypes.INTEGER, primaryKey: true},

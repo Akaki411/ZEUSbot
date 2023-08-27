@@ -1,7 +1,6 @@
 const {Player, Country, City, CityResources, CountryResources, PlayerResources, OfficialInfo, Buildings, PlayerStatus,
     VKChats, TGChats, Variables
 } = require("../database/Models")
-const fs = require("fs")
 const Building = require("../models/Building")
 const CityObject = require("../models/City")
 const CountryObject = require("../models/Country")
@@ -32,6 +31,7 @@ class CacheData
         this.officials = {}
         this.variables = null
 
+        this.active = 0
         this.activity = {}
         this.uncultured = {}
         this.stickermans = {}
@@ -413,7 +413,6 @@ class CacheData
         this.countriesWeekActive = {}
         return new Promise(async (resolve) => {
             const countries = await Country.findAll()
-            let temp
             for (const key of countries)
             {
                 if(key)
@@ -422,52 +421,48 @@ class CacheData
                     this.countries[key.dataValues.id] = new CountryObject(key, res)
                 }
             }
-            fs.access("./files/active.json", (error) => {
-                if(error)
+            let active = await this.LoadVariable("countryActive")
+            if(!active)
+            {
+                await this.UpdateVariable("countryActive", {})
+                active = {}
+            }
+            this.active = active["total"] ? active["total"] : 0
+            for(const country of this.countries)
+            {
+                if(country)
                 {
-                    this.SaveActive()
-                }
-                else
-                {
-                    const active = require("../files/active.json")
-                    for(const country of this.countries)
+                    country.active = active[country.id] ? active[country.id] : 0
+                    this.countriesWeekActive[country.id] = active["week_" + country.id] ? active["week_" + country.id] : 0
+                    this.countriesWeekPassiveScore[country.id] = active.passiveScore ? active.passiveScore[country.id] ? active.passiveScore[country.id] : 0 : 0
+                    if(active.resourcesStats)
                     {
-                        if(country)
+                        if(active.resourcesStats[country.id])
                         {
-                            country.active = active[country.id] ? active[country.id] : 0
-                            this.countriesWeekActive[country.id] = active["week_" + country.id] ? active["week_" + country.id] : 0
-                            this.countriesWeekPassiveScore[country.id] = active.passiveScore ? active.passiveScore[country.id] ? active.passiveScore[country.id] : 0 : 0
-                            if(active.resourcesStats)
-                            {
-                                if(active.resourcesStats[country.id])
-                                {
-                                    this.countryResourcesStats[country.id] = {
-                                        in: {
-                                            money: active.resourcesStats[country.id]["in"]["money"] ? active.resourcesStats[country.id]["in"]["money"] : 0,
-                                            stone: active.resourcesStats[country.id]["in"]["stone"] ? active.resourcesStats[country.id]["in"]["stone"] : 0,
-                                            wood: active.resourcesStats[country.id]["in"]["wood"] ? active.resourcesStats[country.id]["in"]["wood"] : 0,
-                                            wheat: active.resourcesStats[country.id]["in"]["wheat"] ? active.resourcesStats[country.id]["in"]["wheat"] : 0,
-                                            iron: active.resourcesStats[country.id]["in"]["iron"] ? active.resourcesStats[country.id]["in"]["iron"] : 0,
-                                            silver: active.resourcesStats[country.id]["in"]["silver"] ? active.resourcesStats[country.id]["in"]["silver"] : 0,
-                                            diamond: active.resourcesStats[country.id]["in"]["diamond"] ? active.resourcesStats[country.id]["in"]["diamond"] : 0
-                                        },
-                                        out: {
-                                            money: active.resourcesStats[country.id]["out"]["money"] ? active.resourcesStats[country.id]["out"]["money"] : 0,
-                                            stone: active.resourcesStats[country.id]["out"]["stone"] ? active.resourcesStats[country.id]["out"]["stone"] : 0,
-                                            wood: active.resourcesStats[country.id]["out"]["wood"] ? active.resourcesStats[country.id]["out"]["wood"] : 0,
-                                            wheat: active.resourcesStats[country.id]["out"]["wheat"] ? active.resourcesStats[country.id]["out"]["wheat"] : 0,
-                                            iron: active.resourcesStats[country.id]["out"]["iron"] ? active.resourcesStats[country.id]["out"]["iron"] : 0,
-                                            silver: active.resourcesStats[country.id]["out"]["silver"] ? active.resourcesStats[country.id]["out"]["silver"] : 0,
-                                            diamond: active.resourcesStats[country.id]["out"]["diamond"] ? active.resourcesStats[country.id]["out"]["diamond"] : 0
-                                        }
-                                    }
+                            this.countryResourcesStats[country.id] = {
+                                in: {
+                                    money: active.resourcesStats[country.id]["in"]["money"] ? active.resourcesStats[country.id]["in"]["money"] : 0,
+                                    stone: active.resourcesStats[country.id]["in"]["stone"] ? active.resourcesStats[country.id]["in"]["stone"] : 0,
+                                    wood: active.resourcesStats[country.id]["in"]["wood"] ? active.resourcesStats[country.id]["in"]["wood"] : 0,
+                                    wheat: active.resourcesStats[country.id]["in"]["wheat"] ? active.resourcesStats[country.id]["in"]["wheat"] : 0,
+                                    iron: active.resourcesStats[country.id]["in"]["iron"] ? active.resourcesStats[country.id]["in"]["iron"] : 0,
+                                    silver: active.resourcesStats[country.id]["in"]["silver"] ? active.resourcesStats[country.id]["in"]["silver"] : 0,
+                                    diamond: active.resourcesStats[country.id]["in"]["diamond"] ? active.resourcesStats[country.id]["in"]["diamond"] : 0
+                                },
+                                out: {
+                                    money: active.resourcesStats[country.id]["out"]["money"] ? active.resourcesStats[country.id]["out"]["money"] : 0,
+                                    stone: active.resourcesStats[country.id]["out"]["stone"] ? active.resourcesStats[country.id]["out"]["stone"] : 0,
+                                    wood: active.resourcesStats[country.id]["out"]["wood"] ? active.resourcesStats[country.id]["out"]["wood"] : 0,
+                                    wheat: active.resourcesStats[country.id]["out"]["wheat"] ? active.resourcesStats[country.id]["out"]["wheat"] : 0,
+                                    iron: active.resourcesStats[country.id]["out"]["iron"] ? active.resourcesStats[country.id]["out"]["iron"] : 0,
+                                    silver: active.resourcesStats[country.id]["out"]["silver"] ? active.resourcesStats[country.id]["out"]["silver"] : 0,
+                                    diamond: active.resourcesStats[country.id]["out"]["diamond"] ? active.resourcesStats[country.id]["out"]["diamond"] : 0
                                 }
                             }
                         }
                     }
                 }
-                this.SaveActive()
-            })
+            }
             return resolve()
         })
     }
@@ -518,8 +513,10 @@ class CacheData
 
     async SaveActive()
     {
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) =>
+        {
             let active = {
+                total: this.active,
                 passiveScore: {},
                 resourcesStats: {}
             }
@@ -570,11 +567,8 @@ class CacheData
                     }
                 }
             }
-            const serialize = JSON.stringify(active, null, "\t")
-            fs.writeFile("./files/active.json", serialize, (e) => {
-                if(e) console.log(e)
-                return resolve()
-            })
+            await this.UpdateVariable("countryActive", active)
+            return resolve()
         })
     }
 
@@ -729,7 +723,7 @@ class CacheData
     {
         return new Promise(async (resolve) =>
         {
-            const getType = (key) =>
+            const getValue = (key) =>
             {
                 switch (typeof this.variables[key])
                 {
@@ -747,7 +741,7 @@ class CacheData
             for(const i of Object.keys(this.variables))
             {
                 const variable = await Variables.findOne({where: {name: i}})
-                const values = getType(i)
+                const values = getValue(i)
                 if(variable)
                 {
                     await Variables.update({json: values[0]}, {where: {name: i}})
@@ -759,6 +753,51 @@ class CacheData
             }
             return resolve()
         })
+    }
+
+    async UpdateVariable(name, value)
+    {
+        const getType = () =>
+        {
+            switch (typeof value)
+            {
+                case "number":
+                    if(value % 1 === 0) return [value.toString(), "int"]
+                    else return [value.toString(), "float"]
+                case "string":
+                    return [value, "string"]
+                case "boolean":
+                    return [value, "bool"]
+                default:
+                    return [JSON.stringify(value), typeof value]
+            }
+        }
+        const json = getType(value)
+        const variable = await Variables.findOrCreate({
+            where: {name: name},
+            defaults: {name: name, type: json[1], json: json[0], isGlobal: false}
+        })
+        variable[0].set({name: name, type: json[1], json: json[0]})
+        await variable[0].save()
+    }
+
+    async LoadVariable(name)
+    {
+        const variable = await Variables.findOne({where: {name: name}})
+        if(!variable) return null
+        switch (variable.dataValues.type)
+        {
+            case "object":
+                return JSON.parse(variable.dataValues.json)
+            case "bool":
+                return variable.dataValues.json === "true"
+            case "int":
+                return parseInt(variable.dataValues.json)
+            case "float":
+                return parseFloat(variable.dataValues.json)
+            default:
+                return variable.dataValues.json
+        }
     }
 
     async AddCityResources(id, res)

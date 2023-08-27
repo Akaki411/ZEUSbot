@@ -250,6 +250,7 @@ class OutputManager
             {
                 let request = "🔰 Актив фракций:\n\n"
                 let activeCountries = []
+                let totalActive = 0
                 for(let i = 0; i < Data.countries.length; i++)
                 {
                     if(Data.countries[i])
@@ -277,8 +278,11 @@ class OutputManager
                         request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
                         request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
                         request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                        totalActive += Data.countries[activeCountries[i][1]].active
                     }
                 }
+                request += `⚒ Общий актив фракций: ${totalActive}\n`
+                request += `⚒ Общий актив проекта: ${Data.active}`
                 return {request: request, short: false}
             }
             else

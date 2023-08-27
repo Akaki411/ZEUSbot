@@ -1041,7 +1041,6 @@ class SceneController
         return [
             [keyboard.uploadMapButton],
             [keyboard.logListButton, keyboard.uploadLogButton, keyboard.clearLogsButton],
-            [keyboard.clearUserCacheButton, keyboard.variablesButton],
             [keyboard.sqlButton, keyboard.DBAdminButton],
             [keyboard.backButton]
         ]
@@ -1179,17 +1178,9 @@ class SceneController
                 {
                     await Builders.ClearLogs(context, current_keyboard)
                 }
-                if(context.messagePayload?.choice?.match(/clear_user_cache/))
-                {
-                    await Builders.ClearUserCache(context, current_keyboard)
-                }
                 if(context.messagePayload?.choice?.match(/upload_map/))
                 {
                     await Builders.ChangeMap(context, current_keyboard)
-                }
-                if(context.messagePayload?.choice?.match(/variables/))
-                {
-                    await Builders.ChangeVariables(context, current_keyboard)
                 }
             }
             else if(context.command.match(/перезагруз|reload/))

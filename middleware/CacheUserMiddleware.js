@@ -48,9 +48,13 @@ module.exports = async (context, next) =>
                 Data.VKChats[context.peerId] = new VKChat(chat)
             }
             context.chat = Data.VKChats[context.peerId]
-            if(Data.countryChats[context.peerId] && peerId > 0 && !Data.activeIgnore[peerId])
+            if(peerId > 0 && !Data.activeIgnore[peerId])
             {
-                Data.countries[Data.countryChats[context.peerId]].active++
+                Data.active++
+                if(Data.countryChats[context.peerId])
+                {
+                    Data.countries[Data.countryChats[context.peerId]].active++
+                }
             }
             if(Data.mute[peerId] && (context.command !== "ресет" && RoleEstimator(Data.users[peerId]?.role) < 4))
             {

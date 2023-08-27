@@ -4,7 +4,7 @@
   "description": "Bot for RP ZEUS",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon index.js"
   },
   "author": "Akaki4",
   "license": "Commercial",
@@ -12,6 +12,7 @@
     "axios": "^1.4.0",
     "dotenv": "^16.0.3",
     "node-telegram-bot-api": "^0.61.0",
+    "nodemon": "^3.0.1",
     "pg": "^8.9.0",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.32.1",

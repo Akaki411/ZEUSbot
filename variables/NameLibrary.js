@@ -180,13 +180,13 @@ class NameLibrary
 
     GetGameTime(time)
     {
-        let now = new Date(time)
-        const year = (year) => {
-            return year > 0 ? `${year} год` : `${Math.abs(year)} год до Н.Э.`
-        }
-        let daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()
-        let day = Math.round((now.getDate() / daysInMonth) * 365)
-        return `${this.GetDateByDayOfYear(day)} ${year(Data.variables["year"])} (${this.ParseDateTime(time)})`
+        const date = new Date(time)
+        const now = new Date()
+        const diff = now.getMonth() - date.getMonth() + (12 * (now.getFullYear() - date.getFullYear()))
+        const year = (year) => {return year > 0 ? `${year} год` : `${Math.abs(year)} год до Н.Э.`}
+        let daysInMonth = new Date(date.getFullYear(), date.getMonth()+1, 0).getDate()
+        let day = Math.round((date.getDate() / daysInMonth) * 365)
+        return `${this.GetDateByDayOfYear(day)} ${year(Data.variables["year"] - diff)} (${this.ParseDateTime(time)})`
     }
 
     GetGameSeason()
@@ -204,9 +204,7 @@ class NameLibrary
             const seasonDuration = month / 4
             return seasons[Math.ceil(day / seasonDuration)]
         }
-        const year = (year) => {
-            return year > 0 ? `${year} год` : `${Math.abs(year)} год до Н.Э.`
-        }
+        const year = (year) => {return year > 0 ? `${year} год` : `${Math.abs(year)} год до Н.Э.`}
         return `${year(Data.variables["year"])}, ${season(daysInMonth, now.getDate())}`
     }
 
@@ -388,54 +386,6 @@ class NameLibrary
                 return "🥈 "
         }
         return ""
-    }
-
-    GetFarmRandom(type)
-    {
-        switch (type)
-        {
-            case "wheat_lvl1":
-                return this.GetRandomNumb(125, 375)
-            case "wheat_lvl2":
-                return this.GetRandomNumb(250, 750)
-            case "wheat_lvl3":
-                return this.GetRandomNumb(500, 1500)
-            case "wheat_lvl4":
-                return this.GetRandomNumb(1000, 3000)
-            case "stone_lvl1":
-                return this.GetRandomNumb(125, 250)
-            case "stone_lvl2":
-                return this.GetRandomNumb(250, 500)
-            case "stone_lvl3":
-                return this.GetRandomNumb(500, 1000)
-            case "stone_lvl4":
-                return this.GetRandomNumb(1000, 2000)
-            case "wood_lvl1":
-                return this.GetRandomNumb(125, 250)
-            case "wood_lvl2":
-                return this.GetRandomNumb(250, 500)
-            case "wood_lvl3":
-                return this.GetRandomNumb(500, 1000)
-            case "wood_lvl4":
-                return this.GetRandomNumb(1000, 2000)
-            case "iron_lvl1":
-                return this.GetRandomNumb(35, 90)
-            case "iron_lvl2":
-                return this.GetRandomNumb(65, 185)
-            case "iron_lvl3":
-                return this.GetRandomNumb(130, 370)
-            case "iron_lvl4":
-                return this.GetRandomNumb(260, 740)
-            case "silver_lvl1":
-                return this.GetRandomNumb(65, 185)
-            case "silver_lvl2":
-                return this.GetRandomNumb(125, 375)
-            case "silver_lvl3":
-                return this.GetRandomNumb(250, 750)
-            case "silver_lvl4":
-                return this.GetRandomNumb(500, 1500)
-        }
-        return 0
     }
 
     async GetPlayerNick(id)

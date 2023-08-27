@@ -15,6 +15,7 @@ const SelectPlayerMiddleware = require('./middleware/SelectPlayerMiddleware')
 const CacheTGUserMiddleware = require('./middleware/CacheTGUserMiddleware')
 const SceneController = require("./controllers/SceneController")
 const BonusController = require("./controllers/BonusController")
+const CrossStates = require("./controllers/CrossStates")
 
 
 const VKbot = new VK({token: process.env.VK_BOT_TOKEN})
@@ -111,6 +112,11 @@ const StartVKBot = async () =>
         {
             VKbot.updates.on('message', async(context) =>
             {
+                if(context.action?.type === "chat_invite_user")
+                {
+                    await CrossStates.AddUser(context.from_id, context.action.member_id, context.peer_id)
+                    return
+                }
                 if(context.senderId > 0)
                 {
                     context.TGapi = TGbot

@@ -227,6 +227,11 @@ class ChatController
                 await context.send(`⏳ Последняя перезагрузка была ${NameLibrary.ParseDateTime(Data.lastReload)}`)
                 return true
             }
+            if(context.command?.match(/^админы$/))
+            {
+                await this.CheckAdmins(context)
+                return true
+            }
 
 
             //РП команды (игрок+)
@@ -480,6 +485,11 @@ class ChatController
                 await this.AccessCode(context)
                 return true
             }
+            if(context.command?.match(/^сбросить кд/))
+            {
+                await this.ResetKD(context)
+                return true
+            }
             if(context.command?.match(/^подсчитать актив за день$/) && NameLibrary.RoleEstimator(context.player.role) >= 4)
             {
                 await api.EveryDayLoop()
@@ -565,6 +575,17 @@ class ChatController
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
         }
+    }
+
+    async ResetKD(context)
+    {
+        if(NameLibrary.RoleEstimator(context.player.role) < 4) return
+        if(context.replyPlayers.length === 0) return
+        const date = new Date()
+        date.setDate(date.getDate() - 1)
+        await PlayerStatus.update({lastCitizenship: date}, {where: {id: context.replyPlayers[0]}})
+        if(Data.users[context.replyPlayers[0]]) Data.users[context.replyPlayers[0]].lastCitizenship = date
+        await context.send("✅ КД гражданства скинуто")
     }
 
     async AccessCode(context)
@@ -703,6 +724,44 @@ class ChatController
         context.chat.RP = !context.chat.RP
         await Data.SaveVKChat(context.chat.id)
         await context.send(`✅ РП режим ${context.chat.RP ? "включен" : "выключен"}`)
+    }
+
+    async CheckAdmins(context)
+    {
+        let owner = await Player.findAll({where: {role: "owner"}})
+        owner = owner.length === 0 ? "Не назначен" : owner.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let PH = await Player.findAll({where: {role: "project_head"}})
+        PH = PH.length === 0 ? "Не назначен" : PH.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let supports = await Player.findAll({where: {role: "support"}})
+        supports = supports.length === 0 ? "Не назначен" : supports.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let Madmins = await Player.findAll({where: {role: "Madmin"}})
+        Madmins = Madmins.length === 0 ? "Не назначен" : Madmins.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let admins = await Player.findAll({where: {role: "admin"}})
+        admins = admins.length === 0 ? "Не назначен" : admins.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let MGMs = await Player.findAll({where: {role: "MGM"}})
+        MGMs = MGMs.length === 0 ? "Не назначен" : MGMs.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let GMs = await Player.findAll({where: {role: "GM"}})
+        GMs = GMs.length === 0 ? "Не назначен" : GMs.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let moders = await Player.findAll({where: {role: "moder"}})
+        moders = moders.length === 0 ? "Не назначен" : moders.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        let request = "Администрация проекта:"
+        request += "\n\n🔝 Владелец\n"
+        request += owner
+        request += "\n\n🤴 Глава проекта\n"
+        request += PH
+        request += "\n\n🔧 Тех-поддержка\n"
+        request += supports
+        request += "\n\n🔝🐓 Старший администратор\n"
+        request += Madmins
+        request += "\n\n🐓 Администратор\n"
+        request += admins
+        request += "\n\n🔝🕹 Старший гейм-мастер\n"
+        request += MGMs
+        request += "\n\n🕹 Гейм-мастер\n"
+        request += GMs
+        request += "\n\n🪄 Модератор\n"
+        request += moders
+        await context.send(request)
     }
 
     async Cleaning(context)
@@ -2490,18 +2549,7 @@ class ChatController
                 await context.send("⚠ У вас нет гражданства")
                 return
             }
-            const country = Data.countries[context.player.citizenship]
-            await PlayerStatus.update({citizenship: null, registration: null}, {where: {id: context.player.id}})
-            country.population = await PlayerStatus.count({where: {citizenship: country.id}})
-            await Country.update({population: country.population}, {where: {id: country.id}})
-            if(!context.player.status.match(/worker/))
-            {
-                Data.users[context.player.id].status = "stateless"
-                await Player.update({status: "stateless"}, {where: {id: context.player.id}})
-            }
-            context.player.citizenship = null
-            context.player.registration = null
-            await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} отказался от гражданства фракции ${country.GetName()}`)
+            await CrossStates.RefuseCitizenship(context.player.id)
             await context.send("ℹ Теперь вы апатрид.")
         }
         catch (e)
@@ -3299,11 +3347,6 @@ class ChatController
     {
         try
         {
-            if(context.replyPlayers.length !== 0 && NameLibrary.RoleEstimator(context.player.role) >= 4)
-            {
-                await this.GiveCitizenship()
-                return
-            }
             let temp = null
             let country = null
             let time = new Date()
@@ -3346,7 +3389,6 @@ class ChatController
                 await context.send("⚠ Вы уже являетесь гражданином этой фракции.")
                 return
             }
-
             await api.api.messages.send({
                 user_id: country.leaderID,
                 random_id: Math.round(Math.random() * 100000),
@@ -3379,86 +3421,6 @@ class ChatController
                 timeout: setTimeout(async () => {
                     await api.SendMessage(context.player.id, `ℹ Вы подали заявку на получение гражданства в фракции ${country.GetName(context.player.platform === "IOS")}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
                     delete Data.timeouts["get_citizenship_" + context.player.id]
-                }, 86400000)
-            }
-            await context.send("✅ Заявка отправлена")
-        }
-        catch (e)
-        {
-            await api.SendLogs(context, "ChatController/GetCitizenship", e)
-        }
-    }
-
-    async GiveCitizenship(context)
-    {
-        try
-        {
-            let temp = null
-            let country = null
-            let time = new Date()
-            let player = Data.users[context.replyPlayers[0]]
-            if(!player)
-            {
-                await context.send("⚠ Игрока нет в кэше")
-                return
-            }
-            for(const key of Data.countries)
-            {
-                if(key?.tags)
-                {
-                    temp = new RegExp(key.tags)
-                    if(context.command.match(temp))
-                    {
-                        country = key
-                        break
-                    }
-                }
-            }
-            if(!country)
-            {
-                await context.send("⚠ Фракция не найдена")
-                return
-            }
-            if(Data.timeouts["get_citizenship_" + player.id])
-            {
-                delete Data.timeouts["get_citizenship_" + player.id]
-            }
-            if(country.id === player.citizenship)
-            {
-                await context.send("⚠ Игрок уже является гражданином этой фракции.")
-                return
-            }
-            await api.api.messages.send({
-                user_id: country.leaderID,
-                random_id: Math.round(Math.random() * 100000),
-                message: `🪪 Игрок ${player.GetName()} подал на гражданство в вашу фракцию: \n\n${player.GetInfo()}`,
-                keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: player.id, parameter: country.id})]]).inline().oneTime()
-            })
-            let officials = Data.officials[country.id]
-            if(officials)
-            {
-                for(const official of Object.keys(officials))
-                {
-                    if(officials[official].canBeDelegate)
-                    {
-                        await api.api.messages.send({
-                            user_id: official,
-                            random_id: Math.round(Math.random() * 100000),
-                            message: `🪪 Игрок ${player.GetName()} подал на гражданство в вашу фракцию: \n\n${player.GetInfo()}`,
-                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: player.id, parameter: country.id})]]).inline().oneTime()
-                        })
-                    }
-                }
-            }
-            time.setHours(time.getHours() + 24)
-            Data.timeouts["get_citizenship_" + player.id] = {
-                type: "user_timeout",
-                subtype: "get_citizenship",
-                userId: player.id,
-                time: time,
-                countryID: country,
-                timeout: setTimeout(async () => {
-                    delete Data.timeouts["get_citizenship_" + player.id]
                 }, 86400000)
             }
             await context.send("✅ Заявка отправлена")

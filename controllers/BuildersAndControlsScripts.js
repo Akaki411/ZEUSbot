@@ -73,6 +73,17 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
+                const showTags = (array) =>
+                {
+                    if(array.length === 0) return "Тегов нет"
+                    let request = `Теги:\n\n`
+                    for(const tag of array)
+                    {
+                        request += "- " + tag + "\n"
+                    }
+                    return request
+                }
+
                 let name = await InputManager.InputString(context, "1️⃣ Введите название фракции (от 2 до 35 символов):", current_keyboard, 2, 35)
                 if (!name) return resolve()
                 let country = await Country.count({where: {name: name}})
@@ -112,6 +123,21 @@ class BuildersAndControlsScripts
                 }
                 let groupId = await InputManager.InputGroup(context, `7️⃣ Укажите группу этой фракции.`, current_keyboard)
                 if(!groupId) return resolve()
+
+                await context.send("8️⃣ Теперь надо указать теги фракции, они нужны для указания требуемой фракции в чат-командах. Вводите не слова целиком, а, желательно, их корни.", {keyboard: keyboard.build(current_keyboard)})
+                let tags = []
+                let newTag = ""
+                do
+                {
+                    await context.send(showTags(tags))
+                    newTag = await InputManager.InputString(context, "Введите новый тег", current_keyboard)
+                    if(newTag)
+                    {
+                        tags.push(newTag)
+                    }
+                }
+                while(newTag)
+                if(tags.length === 0) return resolve()
 
                 let resourcesKeyboard = [
                     ["🌾 Зерно", "wheat", false],
@@ -164,7 +190,8 @@ class BuildersAndControlsScripts
                     resources: resources,
                     capital: capitalName,
                     capitalID: city.dataValues.id,
-                    tested: true
+                    tested: true,
+                    tags: tags.join("|")
                 })
                 await CountryResources.create({id: country.dataValues.id})
                 await PlayerStatus.update({
@@ -216,7 +243,9 @@ class BuildersAndControlsScripts
                     ["🧒 Модератор", "moder"],
                     ["🧑 Гейм-мастер", "GM"]
                 ]
-                context.player.role.match(/owner|project_head|support/) && giveRoleKB.push(["👨‍🦳 Администратор", "admin"])
+                context.player.role.match(/owner|project_head|support|MGM|Madmin/) && giveRoleKB.push(["👨‍🦳 Админ", "admin"])
+                context.player.role.match(/owner|project_head|support|Madmin/) && giveRoleKB.push(["🔝🕹 Старший гейм-мастер", "MGM"])
+                context.player.role.match(/owner|project_head|support/) && giveRoleKB.push(["🔝🐓 Старший админ", "Madmin"])
                 context.player.role.match(/owner|project_head|support/) && giveRoleKB.push(["🔧 Тех-поддержка", "support"])
                 context.player.role.match(/owner/) && giveRoleKB.push(["🤴 Глава проекта", "project_head"])
                 let role = await InputManager.KeyboardBuilder(context, `✅ Выбран игрок *id${user.dataValues.id}(${user.dataValues.nick})\n2️⃣ Выберите новую роль.`, giveRoleKB, current_keyboard)
@@ -939,10 +968,10 @@ class BuildersAndControlsScripts
                 }
                 for(let i = 0; i < Data.buildings[context.cityID].length; i++)
                 {
-                    request += (i+1) + ": " + NameLibrary.GetBuildingType(Data.buildings[context.cityID][i].type) + " \"" + Data.buildings[context.cityID][i].name + "\" " + Data.buildings[context.cityID][i].level + " ур\n"
+                    request += (i+1) + ": " + Data.buildings[context.cityID][i].GetType() + " \"" + Data.buildings[context.cityID][i].name + "\" " + Data.buildings[context.cityID][i].level + " ур\n"
                     if(Data.buildings[context.player.location][i].type !== "building_of_house")
                     {
-                        buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.cityID][i].type) + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
+                        buildingButtons.push([Data.buildings[context.cityID][i].GetEmoji + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
                     }
                 }
                 if(buildingButtons.length === 0)
@@ -969,7 +998,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.buildings[context.cityID][i]?.ownerType === "user" && Data.buildings[context.cityID][i]?.id === buildingID)
                     {
-                        await api.SendMessage(Data.buildings[context.cityID][i].ownerID, `⚠ Глава города ${Data.cities[context.cityID].name} распорядился снести вашу постройку ${NameLibrary.GetBuildingType(Data.buildings[context.cityID][i].type)} \"${Data.buildings[context.cityID][i].name}\"`)
+                        await api.SendMessage(Data.buildings[context.cityID][i].ownerID, `⚠ Глава города ${Data.cities[context.cityID].name} распорядился снести вашу постройку ${Data.buildings[context.cityID][i].GetType()} \"${Data.buildings[context.cityID][i].name}\"`)
                         break
                     }
                 }
@@ -1085,7 +1114,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.buildings[context.cityID][i].ownerType === "city")
                     {
-                        buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.cityID][i].type) + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
+                        buildingButtons.push([Data.buildings[context.cityID][i].GetEmoji() + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
                         request += `${NameLibrary.GetBuildingType(Data.buildings[context.cityID][i].type)} \"${Data.buildings[context.cityID][i].name}\" ${Data.buildings[context.cityID][i].level} ур\n`
                     }
                 }
@@ -1155,7 +1184,7 @@ class BuildersAndControlsScripts
                 {
                     if(Data.buildings[context.cityID][i].ownerType === "city")
                     {
-                        buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.cityID][i].type) + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
+                        buildingButtons.push([Data.buildings[context.cityID][i].GetEmoji() + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
                         request += `${NameLibrary.GetBuildingType(Data.buildings[context.cityID][i].type)} \"${Data.buildings[context.cityID][i].name}\" ${Data.buildings[context.cityID][i].level} ур\n`
                     }
                 }
@@ -1247,9 +1276,10 @@ class BuildersAndControlsScripts
                         {
                             isVoid = false
                             resource = Data.buildings[context.cityID][i].type.replace("building_of_", "")
-                            extract = Math.round(NameLibrary.GetFarmRandom(resource + "_lvl" + Data.buildings[context.cityID][i].level) * 0.9)
+                            extract = Math.round(Data.buildings[context.cityID][i].GetExtraction() * 0.9)
                             request += " - добыто\n"
                             Data.buildings[context.cityID][i].lastActivityTime = future
+                            await Data.buildings[context.cityID][i].SaveWorkTime()
                             if(extraction[resource])
                             {
                                 extraction[resource] += -extract
@@ -1565,9 +1595,10 @@ class BuildersAndControlsScripts
                                 {
                                     isVoid = false
                                     resource = Data.buildings[Data.cities[k].id][i].type.replace("building_of_", "")
-                                    extract = Math.round(NameLibrary.GetFarmRandom(resource + "_lvl" + Data.buildings[Data.cities[k].id][i].level) * 0.8)
+                                    extract = Math.round(Data.buildings[Data.cities[k].id][i].GetExtraction() * 0.8)
                                     request += ` - добыто ${extract}`
                                     Data.buildings[Data.cities[k].id][i].lastActivityTime = future
+                                    await Data.buildings[Data.cities[k].id][i].SaveWorkTime()
                                     if(extraction[resource])
                                     {
                                         extraction[resource] += -extract
@@ -2188,7 +2219,7 @@ class BuildersAndControlsScripts
                             {
                                 if(Data.buildings[Data.cities[i].id][j].ownerType === "country" && !Data.buildings[Data.cities[i].id][j].type.match(/mint/))
                                 {
-                                    buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[Data.cities[i].id][j].type) + Data.buildings[Data.cities[i].id][j].name, "ID" + Data.buildings[Data.cities[i].id][j].id])
+                                    buildingButtons.push([Data.buildings[Data.cities[i].id][j].GetEmoji() + Data.buildings[Data.cities[i].id][j].name, "ID" + Data.buildings[Data.cities[i].id][j].id])
                                     request += `${NameLibrary.GetBuildingType(Data.buildings[Data.cities[i].id][j].type)} \"${Data.buildings[Data.cities[i].id][j].name}\" ${Data.buildings[Data.cities[i].id][j].level} ур\n`
                                 }
                             }
@@ -2246,7 +2277,7 @@ class BuildersAndControlsScripts
                     {
                         if(Data.buildings[Data.cities[city].id][j].ownerType === "country")
                         {
-                            buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[Data.cities[city].id][j].type) + Data.buildings[Data.cities[city].id][j].name, "ID" + Data.buildings[Data.cities[city].id][j].id])
+                            buildingButtons.push([Data.buildings[Data.cities[city].id][j].GetEmoji() + Data.buildings[Data.cities[city].id][j].name, "ID" + Data.buildings[Data.cities[city].id][j].id])
                             request += `${NameLibrary.GetBuildingType(Data.buildings[Data.cities[city].id][j].type)} \"${Data.buildings[Data.cities[city].id][j].name}\" ${Data.buildings[Data.cities[city].id][j].level} ур\n`
                         }
                     }
@@ -2811,18 +2842,7 @@ class BuildersAndControlsScripts
                     await context.send("🚫 Отклонено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                const country = Data.countries[context.player.citizenship]
-                await PlayerStatus.update({citizenship: null, registration: null}, {where: {id: context.player.id}})
-                country.population = await PlayerStatus.count({where: {citizenship: country.id}})
-                await Country.update({population: country.population}, {where: {id: country.id}})
-                if(!context.player.status.match(/worker/))
-                {
-                    Data.users[context.player.id].status = "stateless"
-                    await Player.update({status: "stateless"}, {where: {id: context.player.id}})
-                }
-                context.player.citizenship = null
-                context.player.registration = null
-                await api.SendMessage(country.leaderID, `ℹ Игрок ${context.player.GetName()} отказался от гражданства фракции ${country.GetName()}`)
+                await CrossStates.RefuseCitizenship(context.player.id)
                 await context.send("ℹ Теперь вы апатрид.", {keyboard: keyboard.build(await scenes.keyboard(context))})
             }
             catch (e)
@@ -3778,7 +3798,7 @@ class BuildersAndControlsScripts
                             if(context.player.id === Data.countries[context.player.countryID].leaderID)
                             {
 
-                                    buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.player.location][i].type) + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
+                                    buildingButtons.push([Data.buildings[context.player.location][i].GetEmoji() + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
                                     continue
                             }
                         }
@@ -3786,7 +3806,7 @@ class BuildersAndControlsScripts
                         {
                             if(Data.officials[context.player.countryID][context.player.id]?.canUseResources)
                             {
-                                buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.player.location][i].type) + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
+                                buildingButtons.push([Data.buildings[context.player.location][i].GetEmoji() + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
                                 continue
                             }
                         }
@@ -3795,7 +3815,7 @@ class BuildersAndControlsScripts
                     {
                         if(keys[j].dataValues.houseID === Data.buildings[context.player.location][i].id)
                         {
-                            buildingButtons.push([NameLibrary.GetBuildingEmoji(Data.buildings[context.player.location][i].type) + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
+                            buildingButtons.push([Data.buildings[context.player.location][i].GetEmoji() + Data.buildings[context.player.location][i].name, "ID" + Data.buildings[context.player.location][i].id])
                             break
                         }
                     }
@@ -3841,7 +3861,7 @@ class BuildersAndControlsScripts
                 const resource = context.player.inBuild.type.replace("building_of_", "")
                 let playerBalance = {}
                 let cityBalance = {}
-                let extraction = NameLibrary.GetFarmRandom(resource + "_lvl" + context.player.inBuild.level)
+                let extraction = context.player.inBuild.GetExtraction()
                 const extractionTax = parseInt(context.player.citizenship) === parseInt(country.id) ? country.citizenTax : country.nonCitizenTax
                 const tax = Math.round(extraction * (extractionTax * 0.01))
                 extraction -= tax
@@ -3999,28 +4019,6 @@ class BuildersAndControlsScripts
         })
     }
 
-    async ClearUserCache(context, current_keyboard)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                const accept = await InputManager.InputBoolean(context, "⚠ Вы действительно хотите очистить кэш пользователей?\n\n⚠⚠⚠ Это приведет к выбрасыванию всех игроков в главное меню, усталость всех игроков сбросится, те игроки, что спят или куда-то идут, окажутся в главном меню и не получат уведомления об окончании процесса.", current_keyboard)
-                if(!accept)
-                {
-                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
-                    return resolve()
-                }
-                Data.users = {}
-                await context.send("✅ Кэш пользователей очищен", {keyboard: keyboard.build(current_keyboard)})
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ClearUserCache", e)
-            }
-        })
-    }
-
     async ChangeMap(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
@@ -4105,36 +4103,6 @@ class BuildersAndControlsScripts
             catch (e)
             {
                 await api.SendLogs(context, "BuildersAndControlsScripts/ChangeMap", e)
-            }
-        })
-    }
-
-    async ChangeVariables(context, current_keyboard)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                const vars = Object.keys(Data.variables)
-                const varButtons = []
-                let request = "ℹ Список переменных:\n\n"
-                for(let i = 0; i < vars.length; i++)
-                {
-                    varButtons.push([vars[i], vars[i]])
-                    request += "🔸 " + vars[i] + "   =   " + Data.variables[vars[i]] + "\n"
-                }
-                request += "\nℹ Выберите переменную которую хотите изменить"
-                const variable = await InputManager.KeyboardBuilder(context, request, varButtons, current_keyboard)
-                if(!variable) return resolve()
-                const newValue = await InputManager.InputString(context, "1️⃣ Введите новое значение переменной " + variable, current_keyboard)
-                if(!newValue) return resolve()
-                Data.variables[variable] = newValue
-                await Data.SaveVariables()
-                await context.send("✅ Сохранено новое значение переменной", {keyboard: keyboard.build(current_keyboard)})
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeVariables", e)
             }
         })
     }
@@ -4501,9 +4469,9 @@ class BuildersAndControlsScripts
                 const name = await InputManager.InputString(context, "3️⃣ Введите название чата", current_keyboard)
                 if(!name) return resolve()
 
-                const link = await InputManager.InputString(context, "4️⃣ Вставьте ссылку приглашения в чат", current_keyboard)
+                const link = await InputManager.InputString(context, "4️⃣ Вставьте ссылку приглашения в чат ВК или ТГ", current_keyboard)
                 if(!link) return resolve()
-                if(!link.match(/vk\.me\/join/))
+                if(!link.match(/vk\.me\/join|t\.me\//))
                 {
                     await context.send("🚫 Это не приглашение в беседу", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
@@ -7221,11 +7189,12 @@ class BuildersAndControlsScripts
                         {
                             isVoid = false
                             resource = Data.buildings[context.player.location][i].type.replace("building_of_", "")
-                            extract = NameLibrary.GetFarmRandom(resource + "_lvl" + Data.buildings[context.player.location][i].level)
+                            extract = Data.buildings[context.player.location][i].GetExtraction()
                             countryIncome = Math.round(extract * (Data.GetCountryForCity(context.player.location).privateBuildingTax / 100))
                             extract -= countryIncome
                             request += ` - добыто ${extract} (налог ${countryIncome})`
                             Data.buildings[context.player.location][i].lastActivityTime = future
+                            await Data.buildings[context.player.location][i].SaveWorkTime()
                             extraction[resource] = extraction[resource] ? extraction[resource] + extract : extract
                             tax[resource] = tax[resource] ? tax[resource] + countryIncome : countryIncome
                         }
