@@ -156,7 +156,7 @@ class VK_API
             {
                 if(Data.countries[i])
                 {
-                    if(Data.countries[i].hide)
+                    if(!Data.countries[i].hide)
                     {
                         if(Data.countries[i].active >= max)
                         {
