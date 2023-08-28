@@ -341,6 +341,7 @@ class VK_API
                 json: JSON.stringify(UsingRes),
                 date: yesterday
             })
+            Data.active = 0
             await Data.SaveActive()
         }
         catch (e)
