@@ -39,6 +39,7 @@ class CountryObject
         this.merchants = country.dataValues.merchants
         this.privateBuildingTax = country.dataValues.privateBuildingTax
         this.moderID = country.dataValues.moderID
+        this.hide = country.dataValues.hide
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood

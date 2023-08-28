@@ -1097,11 +1097,11 @@ class KeyboardButtons
         }
     })
 
-    activeButton = Keyboard.textButton({
-        label: '📈 Актив',
+    hideButton = Keyboard.textButton({
+        label: '✨ Скрыть',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'active'
+            choice: 'hide'
         }
     })
 

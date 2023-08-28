@@ -252,7 +252,7 @@ class ChatController
             }
             if(context.command?.match(/^semen$/))
             {
-                await context.send("💦💦💦 Oh sheet, I'm sorry!")
+                await context.send("💦💦💦 Oh shit, I'm sorry!")
                 return true
             }
 
@@ -729,21 +729,21 @@ class ChatController
     async CheckAdmins(context)
     {
         let owner = await Player.findAll({where: {role: "owner"}})
-        owner = owner.length === 0 ? "Не назначен" : owner.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        owner = owner.length === 0 ? "Не назначен" : owner.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let PH = await Player.findAll({where: {role: "project_head"}})
-        PH = PH.length === 0 ? "Не назначен" : PH.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        PH = PH.length === 0 ? "Не назначен" : PH.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let supports = await Player.findAll({where: {role: "support"}})
-        supports = supports.length === 0 ? "Не назначен" : supports.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        supports = supports.length === 0 ? "Не назначен" : supports.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let Madmins = await Player.findAll({where: {role: "Madmin"}})
-        Madmins = Madmins.length === 0 ? "Не назначен" : Madmins.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        Madmins = Madmins.length === 0 ? "Не назначен" : Madmins.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let admins = await Player.findAll({where: {role: "admin"}})
-        admins = admins.length === 0 ? "Не назначен" : admins.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        admins = admins.length === 0 ? "Не назначен" : admins.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let MGMs = await Player.findAll({where: {role: "MGM"}})
-        MGMs = MGMs.length === 0 ? "Не назначен" : MGMs.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        MGMs = MGMs.length === 0 ? "Не назначен" : MGMs.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let GMs = await Player.findAll({where: {role: "GM"}})
-        GMs = GMs.length === 0 ? "Не назначен" : GMs.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        GMs = GMs.length === 0 ? "Не назначен" : GMs.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let moders = await Player.findAll({where: {role: "moder"}})
-        moders = moders.length === 0 ? "Не назначен" : moders.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(",", "\n")
+        moders = moders.length === 0 ? "Не назначен" : moders.map(key => {return `@id${key.dataValues.id}(${key.dataValues.nick})`}).toString().replace(/,/g, "\n")
         let request = "Администрация проекта:"
         request += "\n\n🔝 Владелец\n"
         request += owner
@@ -761,7 +761,7 @@ class ChatController
         request += GMs
         request += "\n\n🪄 Модератор\n"
         request += moders
-        await context.send(request)
+        await context.send(request, {disable_mentions: true})
     }
 
     async Cleaning(context)
@@ -3901,7 +3901,7 @@ class ChatController
                 const strings = []
                 for (let i = 0; i < Math.ceil(array.length / 2); i++)
                 {
-                    strings.push(array.slice((i * 4), (i * 4) + 4))
+                    strings.push(array.slice((i * 3), (i * 3) + 3))
                 }
                 for(let i = 0; i < strings.length; i++)
                 {
@@ -3917,14 +3917,14 @@ class ChatController
             let kb = []
             let countryKB = []
             let cityKB = []
-            const countryRoads = await CountryRoads.findAll({where: {fromID: context.player.countryID, isBlocked: false}, limit: 8, attributes: ["toID", "time"]})
+            const countryRoads = await CountryRoads.findAll({where: {fromID: context.player.countryID, isBlocked: false}, limit: 6, attributes: ["toID", "time"]})
             if(countryRoads.length !== 0) request += "\n🔵 Вы можете отправиться в фракции:\n"
             for(const key of countryRoads)
             {
                 countryKB.push([Data.countries[key.dataValues.toID].name, "ID" + key.dataValues.toID, "to_other_country"])
                 request += `🔸 ${Data.countries[key.dataValues.toID].GetName(context.player.platform === "IOS")} - ${key.dataValues.time} мин, въездная пошлина - ${Data.countries[key.dataValues.toID].entranceFee} монет\n`
             }
-            const cityRoads = await CityRoads.findAll({where: {fromID: context.player.location, isBlocked: false}, limit: 8, attributes: ["toID", "time"]})
+            const cityRoads = await CityRoads.findAll({where: {fromID: context.player.location, isBlocked: false}, limit: 6, attributes: ["toID", "time"]})
             if(cityRoads.length !== 0) request += "\n⚪ Вы можете посетить города:\n"
             for(const key of cityRoads)
             {
@@ -4010,12 +4010,15 @@ class ChatController
                 user = undefined
                 if(country)
                 {
-                    user = await Player.findOne({where: {id: country[0].leaderID}, attributes: ["nick"]})
-                    request += `${country[0].GetName(context.player.platform === "IOS")}\n`
-                    request += `👥 Население - ${country[1]} чел.\n`
-                    request += `🏆 Стабильность - ${country[0].stability}\n`
-                    request += `🌆 Столица - ${Data.cities[country[0].capitalID].name}\n`
-                    request += `👑 Правител${country[0].isParliament ? "и:\n" : "ь - "}${country[0].isParliament ? ((user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "") + getLeaders(country[0].id)) : (user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен")}\n\n`
+                    if(!country[0].hide)
+                    {
+                        user = await Player.findOne({where: {id: country[0].leaderID}, attributes: ["nick"]})
+                        request += `${country[0].GetName(context.player.platform === "IOS")}\n`
+                        request += `👥 Население - ${country[1]} чел.\n`
+                        request += `🏆 Стабильность - ${country[0].stability}\n`
+                        request += `🌆 Столица - ${Data.cities[country[0].capitalID].name}\n`
+                        request += `👑 Правител${country[0].isParliament ? "и:\n" : "ь - "}${country[0].isParliament ? ((user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "") + getLeaders(country[0].id)) : (user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен")}\n\n`
+                    }
                 }
             }
             await context.send(request, {disable_mentions: true})

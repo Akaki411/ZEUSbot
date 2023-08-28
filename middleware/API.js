@@ -156,43 +156,46 @@ class VK_API
             {
                 if(Data.countries[i])
                 {
-                    Data.countriesWeekActive[Data.countries[i].id] += Data.countries[i].active
-                    if(Data.countries[i].active >= max)
+                    if(Data.countries[i].hide)
                     {
-                        max = Data.countries[i].active
-                        active = i
-                    }
-                    if(Data.countries[i].active <= min)
-                    {
-                        min = Data.countries[i].active
-                        activeNegative = i
-                    }
-                    if(Data.countries[i].active > 2000)
-                    {
-                        Data.countries[i].rating++
-                        await Country.update({rating: Data.countries[i].rating}, {where: {id: Data.countries[i].id}})
-                        await this.SendMessage(Data.countries[i].leaderID, `✅ Поздравляем! Ваша фракция ${Data.countries[i].GetName()} набрала более 2000 сообщений за день, рейтинг активности увеличен на 1 балл`)
-                    }
-                    if(Data.countries[i].tested && Data.countries[i].active < 700)
-                    {
-                        Data.countries[i].warnings ++
-                        await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
-                        await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} набрала менее 700 сообщений за день, так как она находится на тестовом периоде, она получает варн`)
-                        Data.countries[i].active = 0
-                        continue
-                    }
-                    if(Data.countries[i].active < 500)
-                    {
-                        Data.countriesWeekPassiveScore[Data.countries[i].id] += 1
-                        await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} ${Data.countriesWeekPassiveScore[Data.countries[i].id]}-й раз набрала меньше 500 сообщений актива`)
-                        if(Data.countriesWeekPassiveScore[Data.countries[i].id] >= 3)
+                        if(Data.countries[i].active >= max)
+                        {
+                            max = Data.countries[i].active
+                            active = i
+                        }
+                        if(Data.countries[i].active <= min)
+                        {
+                            min = Data.countries[i].active
+                            activeNegative = i
+                        }
+                        if(Data.countries[i].active > 2000)
+                        {
+                            Data.countries[i].rating++
+                            await Country.update({rating: Data.countries[i].rating}, {where: {id: Data.countries[i].id}})
+                            await this.SendMessage(Data.countries[i].leaderID, `✅ Поздравляем! Ваша фракция ${Data.countries[i].GetName()} набрала более 2000 сообщений за день, рейтинг активности увеличен на 1 балл`)
+                        }
+                        if(Data.countries[i].tested && Data.countries[i].active < 700)
                         {
                             Data.countries[i].warnings ++
                             await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
-                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} получила варн`)
-                            Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} набрала менее 700 сообщений за день, так как она находится на тестовом периоде, она получает варн`)
+                            Data.countries[i].active = 0
+                            continue
+                        }
+                        if(Data.countries[i].active < 500)
+                        {
+                            Data.countriesWeekPassiveScore[Data.countries[i].id] += 1
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} ${Data.countriesWeekPassiveScore[Data.countries[i].id]}-й раз набрала меньше 500 сообщений актива`)
+                            if(Data.countriesWeekPassiveScore[Data.countries[i].id] >= 3)
+                            {
+                                Data.countries[i].warnings ++
+                                await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
+                                await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} получила варн`)
+                                Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
+                            }
                         }
                     }
+                    Data.countriesWeekActive[Data.countries[i].id] += Data.countries[i].active
                     activity.push({
                         id: i,
                         n: Data.countries[i].GetName(),

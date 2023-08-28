@@ -1051,7 +1051,7 @@ class SceneController
         return [
             [keyboard.createCountryButton, keyboard.removeCountryButton, keyboard.photoButton,],
             [keyboard.appointLeaderCountryButton, keyboard.tagsButton, keyboard.addTheChatButton],
-            [keyboard.warningsButton, keyboard.activeButton, keyboard.testButton],
+            [keyboard.warningsButton, keyboard.hideButton, keyboard.testButton],
             [keyboard.backButton, keyboard.changeModerButton]
         ]
     }
@@ -1213,7 +1213,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|photo|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|active|test|change_moder/))
+            if(context.messagePayload?.choice?.match(/back|photo|create_country|remove_country|appoint_leader|add_the_chat|tags|warnings|hide|test|change_moder/))
             {
                 if(context.messagePayload.choice.match(/back/))
                 {
@@ -1246,9 +1246,9 @@ class SceneController
                 {
                     await Builders.CountryWarnings(context, current_keyboard)
                 }
-                if(context.messagePayload.choice.match(/active/))
+                if(context.messagePayload.choice.match(/hide/))
                 {
-                    await Builders.CountryActive(context, current_keyboard)
+                    await Builders.HideCountry(context, current_keyboard)
                 }
                 if(context.messagePayload.choice.match(/test/))
                 {

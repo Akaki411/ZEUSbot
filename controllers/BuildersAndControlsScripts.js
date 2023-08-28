@@ -4949,7 +4949,7 @@ class BuildersAndControlsScripts
                             await api.api.messages.send({
                                 user_id: i,
                                 random_id: Math.round(Math.random() * 100000),
-                                message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и и не провоцируйте администрацию.`,
+                                message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и не провоцируйте администрацию.`,
                                 attachment: proof
                             })
                         } catch (e) {unsended.push(i)}
@@ -5015,7 +5015,7 @@ class BuildersAndControlsScripts
                         await api.api.messages.send({
                             user_id: user.dataValues.id,
                             random_id: Math.round(Math.random() * 100000),
-                            message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и и не провоцируйте администрацию.`,
+                            message: `⚠ Вам выдано устное предупреждение:\n\n${reason}\n\n⚠ Имейте в виду - устные предупреждения выдают модераторы и админы, они в праве выдать вам полноценный варн, который может привести к бану в проекте.\nБудьте осторожны и не провоцируйте администрацию.`,
                             attachment: proof
                         })
                     }
@@ -5060,24 +5060,13 @@ class BuildersAndControlsScripts
                     return resolve()
                 }
                 await Data.AddPlayerResources(context.player.id, {money: -150})
-                for(const id of Object.keys(Data.administrators))
+                const admins = await Player.findAll({where: {role: ["moder", "admin", "Madmin", "support"]}})
+                for(const i of admins)
                 {
                     try
                     {
                         await api.api.messages.send({
-                            user_id: id,
-                            random_id: Math.round(Math.random() * 100000),
-                            message: `⚠ Игрок ${context.player.GetName()} отправил жалобу на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nТекст жалобы:\n${reason}`,
-                            attachment: proof
-                        })
-                    } catch (e) {}
-                }
-                for(const id of Object.keys(Data.moderators))
-                {
-                    try
-                    {
-                        await api.api.messages.send({
-                            user_id: id,
+                            user_id: i.dataValues.id,
                             random_id: Math.round(Math.random() * 100000),
                             message: `⚠ Игрок ${context.player.GetName()} отправил жалобу на игрок${users.length > 1 ? "ов" : "а"}:\n${users.map(user => {return "*id" + user + "(" + user + ")"})}\n\nТекст жалобы:\n${reason}`,
                             attachment: proof
@@ -5357,63 +5346,18 @@ class BuildersAndControlsScripts
         })
     }
 
-    async CountryActive(context, current_keyboard)
+    async HideCountry(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
             try
             {
-                let report = "📈 Актив фракций за день:\n\n"
-                let active = []
-                for(const country of Data.countries)
-                {
-                    if(country)
-                    {
-                        active.push(country)
-                    }
-                }
-                for (let j = active.length - 1; j > 0; j--)
-                {
-                    for (let i = 0; i < j; i++)
-                    {
-                        if (active[i].active < active[i + 1].active)
-                        {
-                            let temp = active[i];
-                            active[i] = active[i + 1];
-                            active[i + 1] = temp;
-                        }
-                    }
-                }
-                for(const country of active)
-                {
-                    report += country.GetName(context.player.platform === "IOS") + "   -   " + country.active + " сообщений\n"
-                }
-                report += "\n\n📈 Актив фракций за неделю:\n\n"
-
-                active = []
-                for(const country of Data.countries)
-                {
-                    if(country)
-                    {
-                        active.push([country, Data.countriesWeekActive[country.id] + country.active])
-                    }
-                }
-                for (let j = active.length - 1; j > 0; j--)
-                {
-                    for (let i = 0; i < j; i++)
-                    {
-                        if (active[i][1] < active[i + 1][1])
-                        {
-                            let temp = active[i];
-                            active[i] = active[i + 1];
-                            active[i + 1] = temp;
-                        }
-                    }
-                }
-                for(const country of active)
-                {
-                    report += country[0].GetName(context.player.platform === "IOS") + "   -   " + country[1] + " сообщений\n"
-                }
-                await context.send(report, {keyboard: keyboard.build(current_keyboard)})
+                let country = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                country.hide = !country.hide
+                await Country.update({hide: country.hide}, {where: {id: country.id}})
+                await context.send(`✅ Фракция ${country.GetName()} теперь ${country.hide ? "скрыта" : "отображается"}`, {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
             catch (e)

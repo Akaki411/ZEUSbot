@@ -206,10 +206,13 @@ class OutputManager
                 {
                     if(Data.countries[activeCountries[i][1]])
                     {
-                        request += `${params.app === "VK" ? Data.countries[activeCountries[i][1]].GetName(params.platform === "IOS") : Data.countries[activeCountries[i][1]].name}\n`
-                        request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за неделю: ${Data.countriesWeekActive[Data.countries[[activeCountries[i][1]]].id] + Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
-                        request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
-                        request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                        if(!Data.countries[activeCountries[i][1]].hide)
+                        {
+                            request += `${params.app === "VK" ? Data.countries[activeCountries[i][1]].GetName(params.platform === "IOS") : Data.countries[activeCountries[i][1]].name}\n`
+                            request += `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за неделю: ${Data.countriesWeekActive[Data.countries[[activeCountries[i][1]]].id] + Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
+                            request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
+                            request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                        }
                     }
                 }
                 return {request: request, short: false}
@@ -274,11 +277,14 @@ class OutputManager
                 {
                     if(Data.countries[activeCountries[i][1]])
                     {
-                        request += `${params.app === "VK" ? Data.countries[activeCountries[i][1]].GetName(params.platform === "IOS") : Data.countries[activeCountries[i][1]].name}\n`
-                        request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
-                        request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
-                        request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
-                        totalActive += Data.countries[activeCountries[i][1]].active
+                        if(!Data.countries[activeCountries[i][1]].hide)
+                        {
+                            request += `${params.app === "VK" ? Data.countries[activeCountries[i][1]].GetName(params.platform === "IOS") : Data.countries[activeCountries[i][1]].name}\n`
+                            request +=  `${Data.countries[activeCountries[i][1]].chatID ? `⚒ Актив за сегодня: ${Data.countries[activeCountries[i][1]].active} сообщений` : "⚠ Чат не добавлен"}\n`
+                            request += `💪 Рейтинг активности: ${Data.countries[activeCountries[i][1]].rating}\n`
+                            request += `🔴 Получено варнов: ${Data.countries[activeCountries[i][1]].warnings}\n\n`
+                            totalActive += Data.countries[activeCountries[i][1]].active
+                        }
                     }
                 }
                 request += `⚒ Общий актив фракций: ${totalActive}\n`
