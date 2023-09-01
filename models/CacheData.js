@@ -52,6 +52,7 @@ class CacheData
         this.mute = {}
         this.voiceMute = {}
         this.activeIgnore = {}
+        this.floodBase = {}
         this.ignore = {}
         this.botCallTimeouts = {}
         this.botCallModes = {}
@@ -85,6 +86,31 @@ class CacheData
             request += lib[Math.round(Math.random() * (lib.length - 1))]
         }
         return request
+    }
+
+    NewUserMessage(id, text)
+    {
+        text = text || ""
+        if(text.length > 8 || text.split(" ").length === 1)
+        {
+            if(!this.floodBase[id]) this.floodBase[id] = {}
+            let msgId = this.GenerateString(4)
+            this.floodBase[id][msgId] = setTimeout(() => {
+                delete this.floodBase[id][msgId]
+            }, 30000)
+            if(Object.keys(this.floodBase[id]).length >= 5)
+            {
+                for(const i of Object.keys(this.floodBase[id]))
+                {
+                    clearTimeout(this.floodBase[id][i])
+                    delete this.floodBase[id][i]
+                }
+                delete this.floodBase[id]
+                this.activeIgnore[id] = setTimeout(() => {
+                    delete this.activeIgnore[id]
+                }, 180000)
+            }
+        }
     }
 
     GetCountryButtons()

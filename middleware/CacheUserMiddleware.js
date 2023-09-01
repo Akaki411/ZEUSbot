@@ -48,11 +48,12 @@ module.exports = async (context, next) =>
                 Data.VKChats[context.peerId] = new VKChat(chat)
             }
             context.chat = Data.VKChats[context.peerId]
-            if(peerId > 0 && !Data.activeIgnore[peerId])
+            if(peerId > 0)
             {
                 Data.active++
-                if(Data.countryChats[context.peerId])
+                if(Data.countryChats[context.peerId] && !Data.activeIgnore[peerId])
                 {
+                    Data.NewUserMessage(peerId, context.text)
                     Data.countries[Data.countryChats[context.peerId]].active++
                 }
             }

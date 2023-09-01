@@ -339,10 +339,11 @@ class CallbackEventController
 
     async GiveCitizenship(context)
     {
-        const secondUserID = context.eventPayload.item
-        const countryID = context.eventPayload.addition
+        const secondUserID = parseInt(context.eventPayload.item)
+        const countryID = parseInt(context.eventPayload.addition)
         try
         {
+            console.log(Data.timeouts["get_citizenship_" + secondUserID], secondUserID)
             if(Data.timeouts["get_citizenship_" + secondUserID])
             {
                 clearTimeout(Data.timeouts["get_citizenship_" + secondUserID].timeout)
@@ -351,15 +352,17 @@ class CallbackEventController
                 let time = new Date()
                 time.setDate(time.getDate() + 7)
                 await PlayerStatus.update({citizenship: countryID, lastCitizenship: time},{where: {id: secondUserID}})
+                const user = await Player.findOne({where: {id: secondUserID}})
+                if(!user) return
+                if(user.dataValues.status !== "worker")
+                {
+                    await Player.update({status: "citizen"}, {where: {id: secondUserID}})
+                    if(Data.users[secondUserID]) {Data.users[secondUserID].status = "citizen"}
+                }
                 if(Data.users[secondUserID])
                 {
                     Data.users[secondUserID].citizenship = countryID
                     Data.users[secondUserID].lastCitizenship = time
-                    if(!Data.users[secondUserID].status.match(/worker|official|leader/))
-                    {
-                        Data.users[secondUserID].status = "citizen"
-                        await Player.update({status: "citizen"}, {where: {id: secondUserID}})
-                    }
                 }
                 try
                 {
@@ -387,6 +390,7 @@ class CallbackEventController
         }
         catch (e)
         {
+            console.log(e)
             await api.SendLogs(context, "CallbackEventController/GiveCitizenship", e)
         }
     }

@@ -1,8 +1,10 @@
 const Data = require("../models/CacheData")
-const {Keys, Warning, Player, Ban, PlayerStatus} = require("../database/Models")
+const {Keys, Warning, Player, Ban, PlayerStatus, PlayerInfo, PlayerResources} = require("../database/Models")
 const api = require("../middleware/API")
 const StopList = require("../files/StopList.json")
 const NameLibrary = require("../variables/NameLibrary")
+const keyboard = require("../variables/Keyboards");
+const User = require("../models/User")
 
 class CrossStates
 {
@@ -148,8 +150,8 @@ class CrossStates
     {
         return new Promise(async resolve => {
             const status = await PlayerStatus.findOne({where: {id: id}})
-            if(!status) return
-            if(!status.dataValues.citizenship) return
+            if(!status) return resolve()
+            if(!status.dataValues.citizenship) return resolve()
             const player = await Player.findOne({where: {id: id}})
             await api.SendMessage(Data.countries[status.dataValues.citizenship].leaderID, `ℹ Игрок @id${id}(${player.dataValues.id}) отказался от гражданства фракции ${Data.countries[status.dataValues.citizenship].GetName()}`)
             if(Data.users[id])
@@ -163,6 +165,61 @@ class CrossStates
             await status.save()
             return resolve()
         })
+    }
+
+    async GetCitizenship(userId, countryId)
+    {
+        let player = null
+        if(Data.users[userId])
+        {
+           player = Data.users[userId]
+        }
+        else
+        {
+            const playerDB = await Player.findOne({where: {id: userId}})
+            if(!playerDB) return false
+            const playerStatus = await PlayerStatus.findOne({where: {id: userId}})
+            const playerInfo = await PlayerInfo.findOne({where: {id: userId}})
+            const playerResources = await PlayerResources.findOne({where: {id: userId}})
+            Data.users[userId] = new User(playerDB, playerStatus, playerInfo, playerResources)
+            player = Data.users[userId]
+        }
+        await api.api.messages.send({
+            user_id: Data.countries[countryId].leaderID,
+            random_id: Math.round(Math.random() * 100000),
+            message: `🪪 Игрок ${player.GetName()} подал на гражданство в вашу фракцию: \n\n${player.GetInfo()}`,
+            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: userId, parameter: countryId}), keyboard.declineCallbackButton({command: "decline_citizenship", item: userId, parameter: countryId})]]).inline().oneTime()
+        })
+        let officials = Data.officials[countryId]
+        if(officials)
+        {
+            for(const official of Object.keys(officials))
+            {
+                if(officials[official].canBeDelegate)
+                {
+                    await api.api.messages.send({
+                        user_id: official,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `🪪 Игрок ${player.GetName()} подал на гражданство в вашу фракцию: \n\n${player.GetInfo()}`,
+                        keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: userId, parameter: countryId}), keyboard.declineCallbackButton({command: "decline_citizenship", item: player.id, parameter: countryId})]]).inline().oneTime()
+                    })
+                }
+            }
+        }
+        const time = new Date()
+        time.setHours(time.getHours() + 24)
+        Data.timeouts["get_citizenship_" + userId] = {
+            type: "user_timeout",
+            subtype: "get_citizenship",
+            userId: userId,
+            time: time,
+            countryID: countryId,
+            timeout: setTimeout(async () => {
+                await api.SendMessage(userId,`ℹ Вы подали заявку на получение гражданства в фракции ${Data.countries[countryId].GetName(player.platform === "IOS")}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
+                delete Data.timeouts["get_citizenship_" + userId]
+            }, 86400000)
+        }
+        return true
     }
 
     async AddUser(userId, newbieId, peerId)

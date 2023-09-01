@@ -3389,40 +3389,7 @@ class ChatController
                 await context.send("⚠ Вы уже являетесь гражданином этой фракции.")
                 return
             }
-            await api.api.messages.send({
-                user_id: country.leaderID,
-                random_id: Math.round(Math.random() * 100000),
-                message: `🪪 Игрок ${context.player.GetName()} подал на гражданство в вашу фракцию: \n\n${context.player.GetInfo()}`,
-                keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country.id})]]).inline().oneTime()
-            })
-            let officials = Data.officials[country.id]
-            if(officials)
-            {
-                for(const official of Object.keys(officials))
-                {
-                    if(officials[official].canBeDelegate)
-                    {
-                        await api.api.messages.send({
-                            user_id: official,
-                            random_id: Math.round(Math.random() * 100000),
-                            message: `🪪 Игрок ${context.player.GetName()} подал на гражданство в вашу фракцию: \n\n${context.player.GetInfo()}`,
-                            keyboard: keyboard.build([[keyboard.acceptCallbackButton({command: "give_citizenship", item: context.player.id, parameter: country.id}), keyboard.declineCallbackButton({command: "decline_citizenship", item: context.player.id, parameter: country.id})]]).inline().oneTime()
-                        })
-                    }
-                }
-            }
-            time.setHours(time.getHours() + 24)
-            Data.timeouts["get_citizenship_" + context.player.id] = {
-                type: "user_timeout",
-                subtype: "get_citizenship",
-                userId: context.player.id,
-                time: time,
-                countryID: country.id,
-                timeout: setTimeout(async () => {
-                    await api.SendMessage(context.player.id, `ℹ Вы подали заявку на получение гражданства в фракции ${country.GetName(context.player.platform === "IOS")}, но прошло уже 24 часа, и никто её не принял, поэтому она аннулируется.`)
-                    delete Data.timeouts["get_citizenship_" + context.player.id]
-                }, 86400000)
-            }
+            await CrossStates.GetCitizenship(context.player.id, country.id)
             await context.send("✅ Заявка отправлена")
         }
         catch (e)
