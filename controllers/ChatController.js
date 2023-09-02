@@ -255,6 +255,11 @@ class ChatController
                 await context.send("💦💦💦 Oh shit, I'm sorry!")
                 return true
             }
+            if(context.command?.match(/^\//))
+            {
+                await this.Randomizer(context)
+                return true
+            }
 
             //Модератор+
             if(context.command?.match(/^id$|^ид$/))
@@ -574,6 +579,107 @@ class ChatController
         catch (e)
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async Randomizer(context)
+    {
+        try
+        {
+
+            if(context.command.match(/^\/d\d+/))
+            {
+                const numb = parseInt(context.command.match(/\d+/))
+                const res = NameLibrary.GetRandomNumb(0, numb)
+                await context.send(`Бросок d${numb}: ${res}`)
+                return
+            }
+            if(context.command.match(/^\/\d+d\d+[+-]\d+/))
+            {
+                let [mul, num, act] = context.command.match(/\d+d\d+[+-]\d+/).toString().split(/[d+-]/).map(key => {return parseInt(key)})
+                const action = context.command.match(/[+-]/).toString()
+                const nums = []
+                let sum = 0
+                let temp = 0
+                for(let i = 0; i < mul; i++)
+                {
+                    temp = NameLibrary.GetRandomNumb(0, num)
+                    nums.push(temp)
+                    sum += temp
+                }
+                sum += parseInt(action + act)
+                await context.send(`Бросок ${mul}d${num}${action}${act}: ${sum}\n(${nums.toString().replace(/,/g, "+")}${action}${act})`)
+                return
+            }
+            if(context.command.match(/^\/\d+d\d+/))
+            {
+                let [mul, num] = context.command.match(/\d+d\d+/).toString().split("d").map(key => {return parseInt(key)})
+                const nums = []
+                let sum = 0
+                let temp = 0
+                for(let i = 0; i < mul; i++)
+                {
+                    temp = NameLibrary.GetRandomNumb(0, num)
+                    nums.push(temp)
+                    sum += temp
+                }
+                await context.send(`Бросок ${mul}d${num}: ${sum}\n(${nums.toString().replace(/,/g, "+")})`)
+                return
+            }
+            if(context.command.match(/^\/ds\d+/))
+            {
+                const numb = parseInt(context.command.match(/\d+/))
+                const res = [NameLibrary.GetRandomNumb(0, numb), NameLibrary.GetRandomNumb(0, numb)]
+                await context.send(`Бросок с помехой ds${numb}: ${Math.min(res[0], res[1])} ([${res.toString()}])`)
+                return
+            }
+            if(context.command.match(/^\/\d+ds\d+/))
+            {
+                let [mul, num] = context.command.match(/\d+ds\d+/).toString().split("ds").map(key => {return parseInt(key)})
+                const nums = []
+                let sum = 0
+                let temp = 0
+                for(let i = 0; i < mul; i++)
+                {
+                    temp = [NameLibrary.GetRandomNumb(0, num), NameLibrary.GetRandomNumb(0, num)]
+                    nums.push(temp)
+                    sum += Math.min(temp[0], temp[1])
+                }
+                await context.send(`Бросок с помехой ${mul}ds${num}: ${sum}\n(${nums.map(key => {return `${Math.min(key[0], key[1])}([${key.toString().replace(",", ";")}])`}).toString().replace(/,/g, "+")})`)
+                return
+            }
+            if(context.command.match(/^\/ad\d+/))
+            {
+                const numb = parseInt(context.command.match(/\d+/))
+                const res = [NameLibrary.GetRandomNumb(0, numb), NameLibrary.GetRandomNumb(0, numb)]
+                await context.send(`Бросок с преимуществом ad${numb}: ${Math.max(res[0], res[1])} ([${res.toString()}])`)
+                return
+            }
+            if(context.command.match(/^\/\d+ad\d+/))
+            {
+                let [mul, num] = context.command.match(/\d+ad\d+/).toString().split("ad").map(key => {return parseInt(key)})
+                const nums = []
+                let sum = 0
+                let temp = 0
+                for(let i = 0; i < mul; i++)
+                {
+                    temp = [NameLibrary.GetRandomNumb(0, num), NameLibrary.GetRandomNumb(0, num)]
+                    nums.push(temp)
+                    sum += Math.max(temp[0], temp[1])
+                }
+                await context.send(`Бросок с преимуществом ${mul}ad${num}: ${sum}\n(${nums.map(key => {return `${Math.max(key[0], key[1])}([${key.toString().replace(",", ";")}])`}).toString().replace(/,/g, "+")})`)
+            }
+        }
+        catch (e)
+        {
+            if(e.code === 914)
+            {
+                await context.send("Сообщение получилось слишком длинным, попробуйте изменить запрос.")
+            }
+            else
+            {
+                console.log(e)
+            }
         }
     }
 
@@ -2693,7 +2799,7 @@ class ChatController
             }
             if(context.messagePayload.action === "most_active")
             {
-                request += "☢️ Самые активные люди Античности!\n\n"
+                request += "Самые активные люди Античности!\n\n"
                 const mostActive = await sequelize.query("SELECT \"id\", \"msgs\" FROM \"player-infos\" ORDER BY msgs DESC LIMIT 25")
                 const players = await Player.findAll({
                     where: {id: mostActive[0].map(key => {return key.id})},
@@ -2755,7 +2861,7 @@ class ChatController
                         }
                     }
                 }
-                request += "☢️ Самые активные за сегодня:\n\n"
+                request += "Самые активные за сегодня:\n\n"
                 array = array.reverse()
                 for(let i = 0; i < Math.min(10, array.length); i++)
                 {
@@ -2799,7 +2905,7 @@ class ChatController
                 }
                 for(let i = 0; i < active.length; i++)
                 {
-                    request += `♦️ ${i+1} *id${active[i].id}(${active[i].nick}) - ${active[i].active}\n`
+                    request += `${i+1} *id${active[i].id}(${active[i].nick}) - ${active[i].active}\n`
                 }
                 request += "\n"
                 let array = []

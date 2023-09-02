@@ -91,24 +91,20 @@ class CacheData
     NewUserMessage(id, text)
     {
         text = text || ""
-        if(text.length > 8 || text.split(" ").length === 1)
+        if(text.length < 8 || (text.split(" ").length === 1 && text.length < 6))
         {
-            if(!this.floodBase[id]) this.floodBase[id] = {}
-            let msgId = this.GenerateString(4)
-            this.floodBase[id][msgId] = setTimeout(() => {
-                delete this.floodBase[id][msgId]
-            }, 30000)
-            if(Object.keys(this.floodBase[id]).length >= 5)
+            if(!this.floodBase[id]) this.floodBase[id] = []
+            const time = new Date()
+            const now = new Date()
+            time.setSeconds(time.getSeconds() + 20)
+            this.floodBase[id].push(time)
+            this.floodBase[id] = this.floodBase[id].filter(key => {return (key - now) > 0})
+            if(this.floodBase[id].length >= 8)
             {
-                for(const i of Object.keys(this.floodBase[id]))
-                {
-                    clearTimeout(this.floodBase[id][i])
-                    delete this.floodBase[id][i]
-                }
                 delete this.floodBase[id]
                 this.activeIgnore[id] = setTimeout(() => {
                     delete this.activeIgnore[id]
-                }, 180000)
+                }, 60000)
             }
         }
     }
