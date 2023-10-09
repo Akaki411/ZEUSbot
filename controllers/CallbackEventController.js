@@ -339,16 +339,19 @@ class CallbackEventController
 
     async GiveCitizenship(context)
     {
+        console.log("Выдача гражданства --------------------------------------------------")
         const secondUserID = parseInt(context.eventPayload.item)
         const countryID = parseInt(context.eventPayload.addition)
+        console.log(countryID, secondUserID)
         try
         {
-            console.log(Data.timeouts["get_citizenship_" + secondUserID], secondUserID)
+            console.log(Data.timeouts["get_citizenship_" + secondUserID])
             if(Data.timeouts["get_citizenship_" + secondUserID])
             {
                 clearTimeout(Data.timeouts["get_citizenship_" + secondUserID].timeout)
                 delete Data.timeouts["get_citizenship_" + secondUserID]
                 await CrossStates.RefuseCitizenship(secondUserID)
+                console.log("Отказ от гражданства проведен")
                 let time = new Date()
                 time.setDate(time.getDate() + 7)
                 await PlayerStatus.update({citizenship: countryID, lastCitizenship: time},{where: {id: secondUserID}})
@@ -387,6 +390,7 @@ class CallbackEventController
                 } catch (e) {}
                 await api.SendMessage(context.player.id, "⚠ Не актуально")
             }
+            console.log("Конец--------------------------------------------------")
         }
         catch (e)
         {

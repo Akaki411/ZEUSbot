@@ -1,4 +1,4 @@
-const {Player, City, PlayerStatus, CountryArmy} = require("../database/Models")
+const {Player, City, PlayerStatus, Army, UnitType, UnitClass, Country} = require("../database/Models")
 
 class CountryObject
 {
@@ -89,45 +89,40 @@ class CountryObject
         }
     }
 
-    GetUnitType(type)
-    {
-        switch (type)
-        {
-            case "elephant":
-                return "Слоны"
-            case "cavalier":
-                return "Кавалерия"
-            case "soldier":
-                return "Пехота"
-        }
-        return "Не отмеченный тип"
-    }
-
     async ShowArmy()
     {
-        const units = await CountryArmy.findAll({where: {countryID: this.id}})
-        if(units.length === 0) return ["🚫 Юниты не добавлены"]
+        const army = await Army.findAll({where: {ownerId: this.id, ownerType: "country"}})
+        if(army.length === 0) return ["🚫 Отряды не добавлены"]
         let request = [""]
         let page = 0
-        for(const unit of units)
+        let i = 1
+        for(const detachment of army)
         {
-            if(unit.dataValues.count > 0)
+            let type = await UnitType.findOne({where: {id: detachment.dataValues.typeId}})
+            if(!type) continue
+            let unit = await UnitClass.findOne({where: {id: detachment.dataValues.classId}})
+            if(!unit) continue
+            let city = await City.findOne({where: {id: detachment.dataValues.location}})
+            if(!city) continue
+            let country = await Country.findOne({where: {id: city.dataValues.countryID}})
+            if(!country) continue
+            request[page] += "🔵 Отряд " + detachment.dataValues.name + "\n"
+            request[page] += "🔰 Юнит: " + unit.dataValues.name + "\n"
+            request[page] += "🏹 Количество юнитов в отряде: " + detachment.dataValues.count + "\n"
+            request[page] += "👥 Описание: " + unit.dataValues.description + "\n"
+            request[page] += "💂‍♂ Тип: " + type.dataValues.name + "\n"
+            request[page] += "🎖 Боевой опыт: " + detachment.dataValues.experience + "\n"
+            request[page] += `📍 Местоположение отряда: город ${city.dataValues.name} фракции @public${country.dataValues.groupID}(${country.dataValues.name}), ${detachment.dataValues.note}`
+            request[page] += "\n\n"
+            i++
+            if(request[page].length > 3500)
             {
-                request[page] += unit.dataValues.name + "\n"
-                request[page] += "🏹 Количество: " + unit.dataValues.count + "\n"
-                request[page] += "👥 Описание: " + unit.dataValues.description + "\n"
-                request[page] += "💂‍♂ Тип: " + this.GetUnitType(unit.dataValues.type) + "\n"
-                request[page] += "🎖 Боевой опыт: " + unit.dataValues.rating + "\n"
-                request[page] += "\n\n"
-                if(request[page].length > 3500)
-                {
-                    page ++
-                    request[page] = ""
-                }
+                page ++
+                request[page] = ""
             }
         }
         request = request.filter(key => {return key.length > 0})
-        if(request[0].length === 0) return ["⚠ Нет армии"]
+        if(request[0].length === 0) return ["⚠ Список отрядов пуст"]
         return request
     }
 

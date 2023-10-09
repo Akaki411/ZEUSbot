@@ -1,13 +1,12 @@
 const {API, Upload} = require('vk-io')
 const keyboard = require('../variables/Keyboards')
 const Data = require("../models/CacheData")
-const {PlayerStatus, Warning, Player, Country, PlayerInfo, PlayerResources, CountryArmy, Ban, CountryUsingResources,
-    CountryActive, Keys
+const {PlayerStatus, Warning, Player, Country, PlayerInfo, PlayerResources, Ban, CountryUsingResources,
+    CountryActive, Keys, Army, UnitType
 } = require("../database/Models");
 const NameLibrary = require("../variables/NameLibrary")
 const fs = require("fs");
 const User = require("../models/User")
-const Prices = require("../variables/Prices")
 
 class VK_API
 {
@@ -71,31 +70,34 @@ class VK_API
             {
                 let army = []
                 let prices = []
-                let priceIds = []
                 let fullPrice = {}
                 let request = ""
-                let reduced = []
                 for(const country of Data.countries)
                 {
                     if(country)
                     {
-                        request = `🔔 Обращаем ваше внимание, ваше светлость, что оплата за содержание армии страны была взята. Это обошлось нам в:\n\n`
+                        request = `🔔 Завтра, в воскресенье, в 00:00 будет снята оплата за содержание армии, на данный момент стоимость содержания:\n\n`
                         prices = []
-                        priceIds = []
                         fullPrice = {}
-                        reduced = []
-                        army = await CountryArmy.findAll({where: {countryID: country.id}})
+                        army = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
                         if(army.length === 0) continue
-                        for(let i = 0; i < army.length; i++)
+                        for(const dec of army)
                         {
-                            if(army[i].dataValues.count === 0) continue
-                            prices.push(NameLibrary.PriceMultiply(Prices["unit_lvl_" + army[i].dataValues.barracksLVL], army[i].dataValues.count))
-                            priceIds.push(i)
+                            let type = await UnitType.findOne({where: {id: dec.dataValues.typeId}})
+                            if(!type) continue
+                            type = JSON.parse(type.dataValues.service)
+                            prices.push(NameLibrary.PriceMultiply(type, dec.dataValues.count))
                         }
                         fullPrice = NameLibrary.PriceSum(prices)
                         request += NameLibrary.GetPrice(fullPrice) + "\n\n"
-
-                        await Data.AddCountryResources(country.id, fullPrice)
+                        if(country.CanPay(fullPrice))
+                        {
+                            request += "✅ В бюджете хватает ресурсов для оплаты содержания, постарайтесь продержать бюджет в том же состоянии"
+                        }
+                        else
+                        {
+                            request += "⚠ В бюджете не хватает ресурсов для оплаты содержания, если во время сбора не будет хватать ресурсов, то ГМы распустят некоторые отряды"
+                        }
                         country.leaderID && await this.SendMessage(country.leaderID, request)
                         let officials = Data.officials[country.id]
                         if(officials)
@@ -113,6 +115,57 @@ class VK_API
             }
         }
         catch (e) {}
+    }
+
+    GiveCitizensPresent = async (countryId, present, active) =>
+    {
+        const citizens = await PlayerStatus.findAll({where: {citizenship: countryId}})
+        if(citizens.length === 0) return
+        for(let cit of citizens)
+        {
+            if(!Data.activity[cit.dataValues.id]) continue
+            if(Data.activity[cit.dataValues.id] < 20) continue
+            await Data.AddPlayerResources(cit.dataValues.id, {money: present})
+            await this.SendMessage(cit.dataValues.id, "🎉 Спасибо за активное участие в жизни фракции!\n\nФракция, гражданином которой вы являетесь набрала за сегодня " + active + " сообщений актива не без вашей помощи, за это вот вам " + present + " монет")
+        }
+    }
+
+    CalculatePresent = async (countryId, active) =>
+    {
+        if(active >= 3500)
+        {
+            await this.GiveCitizensPresent(countryId, 550, active)
+            return
+        }
+        if(active >= 3000)
+        {
+            await this.GiveCitizensPresent(countryId, 450, active)
+            return
+        }
+        if(active >= 2500)
+        {
+            await this.GiveCitizensPresent(countryId, 350, active)
+            return
+        }
+        if(active >= 2000)
+        {
+            await this.GiveCitizensPresent(countryId, 275, active)
+            return
+        }
+        if(active >= 1500)
+        {
+            await this.GiveCitizensPresent(countryId, 200, active)
+            return
+        }
+        if(active >= 1000)
+        {
+            await this.GiveCitizensPresent(countryId, 150, active)
+            return
+        }
+        if(active >= 500)
+        {
+            await this.GiveCitizensPresent(countryId, 50, active)
+        }
     }
 
     EveryDayLoop = async () =>
@@ -158,6 +211,7 @@ class VK_API
                 {
                     if(!Data.countries[i].hide)
                     {
+                        await this.CalculatePresent(Data.countries[i].id, Data.countries[i].active)
                         if(Data.countries[i].active >= max)
                         {
                             max = Data.countries[i].active
@@ -174,18 +228,18 @@ class VK_API
                             await Country.update({rating: Data.countries[i].rating}, {where: {id: Data.countries[i].id}})
                             await this.SendMessage(Data.countries[i].leaderID, `✅ Поздравляем! Ваша фракция ${Data.countries[i].GetName()} набрала более 2000 сообщений за день, рейтинг активности увеличен на 1 балл`)
                         }
-                        if(Data.countries[i].tested && Data.countries[i].active < 700)
+                        if(Data.countries[i].tested && Data.countries[i].active < Data.variables["minActive"])
                         {
                             Data.countries[i].warnings ++
                             await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
-                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} набрала менее 700 сообщений за день, так как она находится на тестовом периоде, она получает варн`)
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} набрала менее ${Data.variables["minActive"]} сообщений за день, так как она находится на тестовом периоде, она получает варн`)
                             Data.countries[i].active = 0
                             continue
                         }
-                        if(Data.countries[i].active < 500)
+                        if(Data.countries[i].active < Data.variables["minTestActive"])
                         {
                             Data.countriesWeekPassiveScore[Data.countries[i].id] += 1
-                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} ${Data.countriesWeekPassiveScore[Data.countries[i].id]}-й раз набрала меньше 500 сообщений актива`)
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} ${Data.countriesWeekPassiveScore[Data.countries[i].id]}-й раз набрала меньше ${Data.variables["minTestActive"]} сообщений актива`)
                             if(Data.countriesWeekPassiveScore[Data.countries[i].id] >= 3)
                             {
                                 Data.countries[i].warnings ++
@@ -352,14 +406,60 @@ class VK_API
 
     async EveryWeakLoop()
     {
-        for(let i = 0; i < Data.countries.length; i++)
+        let army = []
+        let prices = []
+        let fullPrice = {}
+        let request = ""
+        let GMRequest = "У фракций была взята плата за содержание армий, вот результат:\n\n"
+        for(const country of Data.countries)
         {
-            if(Data.countries[i])
+            if(country)
             {
-                Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
-                Data.countriesWeekActive[Data.countries[i].id] = 0
+                Data.countriesWeekPassiveScore[country.id] = 0
+                Data.countriesWeekActive[country.id] = 0
+                request = `✅ Только что была снята оплата за содержание армии, стоимость содержания:\n\n`
+                prices = []
+                fullPrice = {}
+                army = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
+                if(army.length === 0) continue
+                for(const dec of army)
+                {
+                    let type = await UnitType.findOne({where: {id: dec.dataValues.typeId}})
+                    if(!type) continue
+                    type = JSON.parse(type.dataValues.service)
+                    prices.push(NameLibrary.PriceMultiply(type, dec.dataValues.count))
+                }
+                fullPrice = NameLibrary.PriceSum(prices)
+                request += NameLibrary.GetPrice(fullPrice) + "\n\n"
+                if(country.CanPay(fullPrice))
+                {
+
+                    request += "✅ В бюджете хватило ресурсов для оплаты содержания, вся армия осталась в прежнем состоянии"
+                    await Data.AddCountryResources(country.id, fullPrice)
+                    GMRequest += country.GetName() + " - ✅ Полностью оплачено\n\n"
+                }
+                else
+                {
+                    request += "⚠ В бюджете не хватило ресурсов для оплаты содержания, ГМы распустят некоторые отряды"
+                    GMRequest += country.GetName() + " - ⚠ Не хватило ресурсов\n"
+                    GMRequest += country.GetResources() + "\n"
+                    GMRequest += "Требовалось для оплаты содержания:\n" + NameLibrary.GetPrice(fullPrice) + "\nРесурсы не сняты, ожидается ручное распоряжение\n\n"
+                }
+                country.leaderID && await this.SendMessage(country.leaderID, request)
+                let officials = Data.officials[country.id]
+                if(officials)
+                {
+                    for(const official of Object.keys(officials))
+                    {
+                        if(officials[official].canUseArmy || officials[official].canUseResources)
+                        {
+                            await this.SendMessage(country.leaderID, request)
+                        }
+                    }
+                }
             }
         }
+        await this.GMMailing(GMRequest)
     }
 
     async LoadTimeouts(scenes)

@@ -22,10 +22,10 @@ const VKbot = new VK({token: process.env.VK_BOT_TOKEN})
 const TGbot = new TelegramBot(process.env.TG_BOT_TOKEN, {polling: true});
 const questionManager = new QuestionManager()
 
-VKbot.updates.on('message_new', questionManager.middleware)
-VKbot.updates.on('message_new', CacheUserMiddleware)
-VKbot.updates.on('message_new', SelectPlayerMiddleware)
-VKbot.updates.on('message_new', CountStatsMiddleware)
+VKbot.updates.on('message', questionManager.middleware)
+VKbot.updates.on('message', CacheUserMiddleware)
+VKbot.updates.on('message', SelectPlayerMiddleware)
+VKbot.updates.on('message', CountStatsMiddleware)
 VKbot.updates.on('message_event', CacheUserCallbackMiddleware)
 
 // Памятка для кодеров:
@@ -56,7 +56,6 @@ const StartDB = async () =>
             return reject()
         }
     })
-
 }
 
 const LoadCache = () =>
@@ -117,13 +116,11 @@ const StartVKBot = async () =>
                     await CrossStates.AddUser(context.from_id, context.action.member_id, context.peer_id)
                     return
                 }
-                if(context.senderId > 0)
-                {
-                    context.TGapi = TGbot
-                    context.scenes = SceneController
-                    context.peerType === "user" && await context.player.state(context)
-                    context.peerType === "chat" && await ChatController.CommandHandler(context)
-                }
+                if(context.peerType === "user" && context.senderId < 0) return
+                context.TGapi = TGbot
+                context.scenes = SceneController
+                context.peerType === "user" && await context.player.state(context)
+                context.peerType === "chat" && await ChatController.CommandHandler(context)
             })
             VKbot.updates.on('message_event', (context) =>
             {

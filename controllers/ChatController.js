@@ -4,7 +4,7 @@ const keyboard = require("../variables/Keyboards")
 const api = require("../middleware/API")
 const Data = require("../models/CacheData")
 const {Player, PlayerStatus, PlayerInfo, Country, CountryRoads, CityRoads, PlayerResources, Warning, OfficialInfo,
-    Transactions, CountryTaxes, Chats, VKChats
+    Transactions, CountryTaxes, Chats, VKChats, UnitClass
 } = require("../database/Models")
 const Samples = require("../variables/Samples")
 const sequelize = require("../database/DataBase")
@@ -204,7 +204,7 @@ class ChatController
             }
             if(context.command?.match(Commands.info))
             {
-                await this.CountryInfo(context)
+                await this.GetInfo(context)
                 return true
             }
             if(context.command?.match(Commands.rules))
@@ -1110,7 +1110,8 @@ class ChatController
     {
         try
         {
-            let part = context.command.match(/\d+[,.\/]\d+/)
+            let request = ""
+            let part = context.command.match(/\d+[,.\/]\d+[,.\/]\d+/)
             if(part)
             {
                 part = part[0].split(/[,.\/]/)
@@ -1129,7 +1130,50 @@ class ChatController
                     await context.send("⚠ Пункта " + part[1] + " в статье " + part[0] + " не существует")
                     return
                 }
-                await context.send(Rules[part[0]][part[1]]["text"])
+                if(Rules[part[0]][part[1]]["text"])
+                {
+                    await context.send(Rules[part[0]][part[1]]["text"])
+                    return
+                }
+                if(!Rules[part[0]][part[1]][part[2]])
+                {
+                    await context.send("⚠ Подпункта " + part[2] + " пункта " + part[1] + " в статье " + part[0] + " не существует")
+                    return
+                }
+                await context.send(Rules[part[0]][part[1]][part[2]]["text"])
+                return
+            }
+            part = context.command.match(/\d+[,.\/]\d+/)
+            if(part)
+            {
+                part = part[0].split(/[,.\/]/)
+                if(!Rules[part[0]])
+                {
+                    await context.send("⚠ Статьи " + part[0] + " не существует")
+                    return
+                }
+                if(Rules[part[0]]["text"])
+                {
+                    await context.send(Rules[part[0]]["text"])
+                    return
+                }
+                if(!Rules[part[0]][part[1]])
+                {
+                    await context.send("⚠ Пункта " + part[1] + " в статье " + part[0] + " не существует")
+                    return
+                }
+                if(!Rules[part[0]][part[1]]["text"])
+                {
+                    for(const key of Object.keys(Rules[part[0]][part[1]]))
+                    {
+                        request += Rules[part[0]][part[1]][key]["text"] + "\n\n"
+                    }
+                }
+                else
+                {
+                    request = Rules[part[0]][part[1]]["text"]
+                }
+                await context.send(request)
                 return
             }
             part = context.command.match(/\d+/)
@@ -1145,7 +1189,6 @@ class ChatController
                     await context.send(Rules[part[0]]["text"])
                     return
                 }
-                let request = ""
                 for(const key of Object.keys(Rules[part]))
                 {
                     request += Rules[part][key]["text"] + "\n\n"
@@ -1202,26 +1245,29 @@ class ChatController
         }
     }
 
-    async CountryInfo(context)
+    async GetInfo(context)
     {
         try
         {
-            const getLeaders = (countryID) =>
+            let temp, object
+            const units = await UnitClass.findAll()
+            for(const key of units)
             {
-                let request = ""
-                if(Data.officials[countryID])
+                if(key?.dataValues.tag)
                 {
-                    for(const id of Object.keys(Data.officials[countryID]))
+                    temp = new RegExp(key.dataValues.tag)
+                    if(context.command.match(temp))
                     {
-                        if(Data.officials[countryID][id].canAppointMayors)
-                        {
-                            request += `\n*id${id}(${Data.officials[countryID][id].nick})`
-                        }
+                        object = key
+                        break
                     }
                 }
-                return request
             }
-            let temp, country, request = ""
+            if(object)
+            {
+                await this.GetInfoAboutUnit(context, object.dataValues)
+                return
+            }
             for(const key of Data.countries)
             {
                 if(key?.tags)
@@ -1229,66 +1275,119 @@ class ChatController
                     temp = new RegExp(key.tags)
                     if(context.command.match(temp))
                     {
-                        country = key
+                        object = key
                         break
                     }
                 }
             }
-            if(!country) return
-            const photos = []
-            photos.push(country.photoURL)
-            photos.push(country.welcomePhotoURL)
-            photos.push(Data.cities[country.capitalID].photoURL)
-            const population = await PlayerStatus.count({where: {citizenship: country.id}})
-            const leader = await Player.findOne({where: {id: country.leaderID}, attributes: ["nick"]})
-            request += country.GetName() + "\n"
-            request += country.description + "\n\n"
-            request += "🌐 Столица - " + Data.cities[country.capitalID].name + "\n"
-            request += "👥 Население - " + population + "\n"
-            request += `👑 Правител${country.isParliament ? "и:\n" : "ь - "}${country.isParliament ? ((leader ? `@id${country.leaderID}(${leader.dataValues.nick})` : "") + getLeaders(country.id)) : (leader ? `@id${country.leaderID}(${leader.dataValues.nick})` : "Не назначен")}\n`
-            request += "🏛 Форма правления - " + country.governmentForm + "\n\n"
-            request += "На территории можно добыть:\n\n"
-            let res = country.resources.split(".")
-            for(const r of res)
+            if(object)
             {
-                request += NameLibrary.GetResourceName(r) + "\n"
-            }
-            if(country.tested) request += "\n❗ Фракция находится на испытательном сроке\n"
-            request += "\n🏆 Стабильность - " + country.stability + "\n"
-            if(NameLibrary.RoleEstimator(context.player.role) > 1)
-            {
-                request += "🌾 Крестьянство и горожане - " + country.peasantry + "\n"
-                request += "🙏 Религия - " + country.religion + "\n"
-                request += "👑 Аристократия - " + country.aristocracy + "\n"
-                request += "⚔ Военные - " + country.military + "\n"
-                request += "💰 Купечество - " + country.merchants + "\n"
-            }
-            let msg = await context.send(request, {attachment: photos.join(",")})
-            if(context.chat?.clean)
-            {
-                setTimeout(async () => {
-                    try {
-                        await api.api.messages.delete({
-                            conversation_message_ids: context.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: context.peerId
-                        })
-                    } catch (e) {
-                    }
-                    try {
-                        await api.api.messages.delete({
-                            conversation_message_ids: msg.conversationMessageId,
-                            delete_for_all: 1,
-                            peer_id: msg.peerId
-                        })
-                    } catch (e) {
-                    }
-                }, 60000)
+                await this.GetInfoAboutCountry(context, object)
             }
         }
         catch (e)
         {
             await api.SendLogs(context, "ChatController/CountryInfo", e)
+        }
+    }
+
+    async GetInfoAboutUnit(context, object)
+    {
+        let request = ""
+        request += "Юнит \"" + object.name + "\"\n"
+        request += "Принадлежит фракции " + Data.countries[object.countryId]?.GetName(context.player.platform === "IOS") + "\n"
+        request += object.description
+        let msg = await context.send(request)
+        if(context.chat?.clean)
+        {
+            setTimeout(async () => {
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: msg.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: msg.peerId
+                    })
+                } catch (e) {}
+            }, 60000)
+        }
+    }
+
+    async GetInfoAboutCountry(context, object)
+    {
+        const getLeaders = (countryID) =>
+        {
+            let request = ""
+            if(Data.officials[countryID])
+            {
+                for(const id of Object.keys(Data.officials[countryID]))
+                {
+                    if(Data.officials[countryID][id].canAppointMayors)
+                    {
+                        request += `\n*id${id}(${Data.officials[countryID][id].nick})`
+                    }
+                }
+            }
+            return request
+        }
+        let request = ""
+        const photos = []
+        photos.push(object.photoURL)
+        photos.push(object.welcomePhotoURL)
+        photos.push(Data.cities[object.capitalID].photoURL)
+        const population = await PlayerStatus.count({where: {citizenship: object.id}})
+        const leader = await Player.findOne({where: {id: object.leaderID}, attributes: ["nick"]})
+        request += "Фракция " + object.GetName() + "\n"
+        request += object.description + "\n\n"
+        request += "🌐 Столица - " + Data.cities[object.capitalID].name + "\n"
+        request += "👥 Население - " + population + "\n"
+        request += `👑 Правител${object.isParliament ? "и:\n" : "ь - "}${object.isParliament ? ((leader ? `@id${object.leaderID}(${leader.dataValues.nick})` : "") + getLeaders(object.id)) : (leader ? `@id${object.leaderID}(${leader.dataValues.nick})` : "Не назначен")}\n`
+        request += "🏛 Форма правления - " + object.governmentForm + "\n\n"
+        request += "На территории можно добыть:\n\n"
+        let res = object.resources.split(".")
+        for(const r of res)
+        {
+            request += NameLibrary.GetResourceName(r) + "\n"
+        }
+        if(object.tested) request += "\n❗ Фракция находится на испытательном сроке\n"
+        request += "\n🏆 Стабильность - " + object.stability + "\n"
+        if(NameLibrary.RoleEstimator(context.player.role) > 1)
+        {
+            request += "🌾 Крестьянство и горожане - " + object.peasantry + "\n"
+            request += "🙏 Религия - " + object.religion + "\n"
+            request += "👑 Аристократия - " + object.aristocracy + "\n"
+            request += "⚔ Военные - " + object.military + "\n"
+            request += "💰 Купечество - " + object.merchants + "\n"
+        }
+        let msg = await context.send(request, {attachment: photos.join(",")})
+        if(context.chat?.clean)
+        {
+            setTimeout(async () => {
+                try {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {
+                }
+                try {
+                    await api.api.messages.delete({
+                        conversation_message_ids: msg.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: msg.peerId
+                    })
+                } catch (e) {
+                }
+            }, 60000)
         }
     }
 
@@ -3169,8 +3268,7 @@ class ChatController
                             delete_for_all: 1,
                             peer_id: msg.peerId
                         })
-                    } catch (e) {
-                    }
+                    } catch (e) {}
                 }, 60000)
             }
         }
@@ -5089,7 +5187,7 @@ class ChatController
             }
             const userInfo = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
             const userStatus = await PlayerStatus.findOne({where: {id: context.replyPlayers[0]}})
-            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? (user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘 Жена)` : `*id${userInfo.dataValues.marriedID}(💘 Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n🍺 Выпито пива: ${parseFloat(user.dataValues.beer).toFixed(1)} л.\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true, attachment: user.dataValues.avatar})
+            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? (user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘 Жена)` : `*id${userInfo.dataValues.marriedID}(💘 Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n🍺 Выпито пива: ${parseFloat(user.dataValues.beer).toFixed(1)} л.\n🛡Клан: ${user.dataValues.clan ? user.dataValues.clan : "Нет"}\n🪚Положение: ${user.dataValues.position ? user.dataValues.position : "Нет"}\n🔍Внешний вид: ${user.dataValues.appearance ? user.dataValues.appearance : "Нет"}\n🔖Характер: ${user.dataValues.personality ? user.dataValues.personality : "Нет"}\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true, attachment: user.dataValues.avatar})
         }
         catch (e)
         {

@@ -275,7 +275,7 @@ class SceneController
         return [
             [keyboard.upgradeBarakButton],
             [keyboard.trainUnitButton, keyboard.refuseUnitButton],
-            [keyboard.armyButton, keyboard.expensesButton],
+            [keyboard.armyButton, keyboard.expensesButton, keyboard.trainDetachmentButton],
             [keyboard.backButton]
         ]
     }
@@ -347,8 +347,8 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            const current_keyboard = this.GetCountryArmyMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|train_unit|refuse_unit|expenses|army|upgrade_barak/))
+            const current_keyboard = this.GetOfficialsArmyMenuKeyboard()
+            if(context.messagePayload?.choice?.match(/back|train_unit|refuse_unit|expenses|army|upgrade_barak|train_detachment/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
@@ -370,6 +370,10 @@ class SceneController
                 if (context.messagePayload.choice.match(/expenses/))
                 {
                     await Builders.UnitsExpenses(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/train_detachment/))
+                {
+                    await Builders.TrainDetachment(context, current_keyboard)
                 }
                 if (context.messagePayload.choice.match(/army/))
                 {
@@ -717,8 +721,8 @@ class SceneController
     GetGMArmyMenuKeyboard = () =>
     {
         return [
-            [keyboard.createUnitButton],
-            [keyboard.editUnitButton, keyboard.deleteUnitButton],
+            [keyboard.detachmentButton],
+            [keyboard.unitTypeButton, keyboard.unitClassButton],
             [keyboard.backButton]
         ]
     }
@@ -783,7 +787,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMArmyMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|create_unit|delete_unit|edit_unit/))
+            if(context.messagePayload?.choice?.match(/back|detachment|unit_type|unit_class/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
@@ -792,22 +796,22 @@ class SceneController
                     })
                     context.player.state = this.GMCountriesMenu
                 }
-                if (context.messagePayload.choice.match(/create_unit/))
+                if (context.messagePayload.choice.match(/detachment/))
                 {
-                    await Builders.CreateUnit(context, current_keyboard)
+                    await Builders.ChangeArmyDetachment(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/delete_unit/))
+                if (context.messagePayload.choice.match(/unit_class/))
                 {
-                    await Builders.DeleteUnit(context, current_keyboard)
+                    await Builders.ChangeClassUnits(context, current_keyboard)
                 }
-                if (context.messagePayload.choice.match(/edit_unit/))
+                if (context.messagePayload.choice.match(/unit_type/))
                 {
-                    await Builders.EditUnit(context, current_keyboard)
+                    await Builders.ChangeTypeUnits(context, current_keyboard)
                 }
             }
             else
             {
-                context.send("👉🏻 Армия",{
+                await context.send("👉🏻 Армия",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }
@@ -1402,7 +1406,7 @@ class SceneController
         return [
             [keyboard.upgradeBarakButton],
             [keyboard.trainUnitButton, keyboard.refuseUnitButton],
-            [keyboard.armyButton, keyboard.expensesButton],
+            [keyboard.armyButton, keyboard.expensesButton, keyboard.trainDetachmentButton],
             [keyboard.backButton]
         ]
     }
@@ -1914,7 +1918,7 @@ class SceneController
                 await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
                 return
             }
-            if(context.messagePayload?.choice?.match(/back|train_unit|refuse_unit|expenses|army|upgrade_barak/))
+            if(context.messagePayload?.choice?.match(/back|train_unit|refuse_unit|expenses|army|upgrade_barak|train_detachment/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1938,6 +1942,10 @@ class SceneController
                 if (context.messagePayload.choice.match(/expenses/))
                 {
                     await Builders.UnitsExpenses(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/train_detachment/))
+                {
+                    await Builders.TrainDetachment(context, current_keyboard)
                 }
                 if (context.messagePayload.choice.match(/army/))
                 {
@@ -2644,7 +2652,7 @@ class SceneController
                 }
                 if (context.messagePayload.choice.match(/info/))
                 {
-                    let request = "Проект *public218388422 («ZEUS - Вселенная игроков»).\n Войны, интриги, симулятор античного жителя.\n\nБот создан на NodeJS версии: "+ process.version + "\nБот версии: "+ Data.variables.version +"\nВладелец проекта - *id212554134(Игорь Будзинский)\nГлавный разработчик - *id565472458(Александр Ковалысько)\nЕсли возникли проблемы с использованием, кого пинать - знаете."
+                    let request = "Проект *public218388422 («ZEUS - Вселенная игроков»).\n Войны, интриги, симулятор античного жителя.\n\nБот создан на NodeJS версии: "+ process.version + "\nБот версии: "+ Data.variables.version +"\nВладелец проекта - *id215639629(Сергей Корниенко)\nГлавный разработчик - *id565472458(Александр Ковалысько)\nЕсли возникли проблемы с использованием, кого пинать - знаете."
                     await context.send(request)
                 }
                 if (context.messagePayload.choice.match(/account/))

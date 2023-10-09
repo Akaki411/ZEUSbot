@@ -13,7 +13,11 @@ const Player = sequelize.define("player", {
     status: {type: DataTypes.STRING, allowNull: false, defaultValue: "stateless"},
     platform: {type: DataTypes.STRING, allowNull: false, defaultValue: "ANDROID"},
     avatar: {type: DataTypes.STRING, unique: false, allowNull: true},
-    beer: {type: DataTypes.REAL, defaultValue: 0.0}
+    beer: {type: DataTypes.REAL, defaultValue: 0.0},
+    clan: {type: DataTypes.STRING, unique: false, allowNull: true},
+    position: {type: DataTypes.STRING, unique: false, allowNull: true},
+    appearance: {type: DataTypes.STRING, unique: false, allowNull: true},
+    personality: {type: DataTypes.STRING, unique: false, allowNull: true},
 })
 const PlayerStatus = sequelize.define("player-status", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
@@ -138,16 +142,6 @@ const CountryResources = sequelize.define("country-resources", {
     silver: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     diamond: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
 })
-const CountryArmy = sequelize.define("country-army", {
-    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true, autoIncrement: true},
-    countryID: {type: DataTypes.INTEGER, allowNull: false},
-    name: {type: DataTypes.STRING, allowNull: false},
-    description: {type: DataTypes.STRING, allowNull: false, defaultValue: "Без описания"},
-    tags: {type: DataTypes.STRING, allowNull: true},
-    barracksLVL: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 1},
-    type: {type: DataTypes.STRING, allowNull: false, defaultValue: "soldier"}
-})
-
 const CountryTaxes = sequelize.define("country-taxes", {
     id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
     countryID: {type: DataTypes.INTEGER, primaryKey: true, allowNull: false},
@@ -175,6 +169,36 @@ const CountryActive = sequelize.define("country-active", {
     id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
     json: {type: DataTypes.TEXT, allowNull: false},
     date: {type: DataTypes.DATE}
+})
+
+//Армии
+const UnitType = sequelize.define("unit-type", {
+    id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
+    name: {type: DataTypes.STRING, unique: true, allowNull: false},
+    price: {type: DataTypes.TEXT, allowNull: false, defaultValue: "{}"},
+    service: {type: DataTypes.TEXT, allowNull: false, defaultValue: "{}"},
+    barracksLVL: {type:DataTypes.INTEGER, allowNull: false, defaultValue: 1},
+    citizenPrice: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 1}
+})
+const UnitClass = sequelize.define("unit-class", {
+    id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
+    tag: {type: DataTypes.STRING, unique: true, allowNull: false, defaultValue: ""},
+    name: {type: DataTypes.STRING, unique: true, allowNull: false},
+    description: {type: DataTypes.STRING, unique: true, allowNull: false},
+    countryId: {type: DataTypes.INTEGER, allowNull: false}
+})
+const Army = sequelize.define("army", {
+    id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
+    name: {type: DataTypes.STRING, allowNull: false},
+    ownerId: {type: DataTypes.INTEGER, allowNull: false},
+    ownerType: {type: DataTypes.STRING, allowNull: false, defaultValue: "country"},
+    typeId: {type: DataTypes.INTEGER, allowNull: false},
+    classId: {type: DataTypes.INTEGER, allowNull: false},
+    count: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    experience: {type: DataTypes.INTEGER, allowNull: false},
+    note: {type:DataTypes.TEXT, allowNull: true},
+    location: {type: DataTypes.INTEGER, allowNull: false},
+    trainEndTime: {type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.fn("now")}
 })
 
 //Города
@@ -327,11 +351,13 @@ module.exports = {
     Country,
     CountryResources,
     CountryRoads,
-    CountryArmy,
     CountryTaxes,
     CountryUsingResources,
     CountryActive,
     CountryNotes,
+    UnitType,
+    UnitClass,
+    Army,
     City,
     CityResources,
     CityRoads,

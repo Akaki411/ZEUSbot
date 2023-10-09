@@ -79,6 +79,42 @@ class InputManager
         })
     }
 
+    static async InputFloat(context, message, current_keyboard, min, max)
+    {
+        return new Promise(async (resolve) =>
+        {
+            try
+            {
+                if (min) min = Math.max(min, -2147483646)
+                if (max) max = Math.min(max, 2147483646)
+                min = min || -2147483646
+                max = max || 2147483646
+
+                let answer = await context.question(message, {
+                    keyboard: keyboard.build([[keyboard.cancelButton]])
+                })
+                while ((isNaN(answer.text) || (parseFloat(answer.text) < min || parseFloat(answer.text) > max)) && !answer.payload)
+                {
+                    answer = await context.question("⚠ Введите корректное значение.", {
+                        keyboard: keyboard.build([[keyboard.cancelButton]])
+                    })
+                }
+                if(answer.payload)
+                {
+                    await context.send('🚫 Ввод отменен.', {
+                        keyboard: keyboard.build(current_keyboard)
+                    })
+                    return resolve(null)
+                }
+                return resolve(parseFloat(answer.text))
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "InputManager/InputInteger", e)
+            }
+        })
+    }
+
     static async InputDate(context, message, current_keyboard)
     {
         return new Promise(async (resolve) =>
@@ -551,6 +587,54 @@ class InputManager
             {
                 return resolve(null)
             }
+        })
+    }
+
+    static async InputPrice(context, message, current_keyboard, canBeFloat)
+    {
+        return new Promise(async (resolve) => {
+            const resourcesKeyboard = [
+                ["🌾 Зерно", "wheat", false],
+                ["🪵 Древесина", "wood", false],
+                ["🪨 Камень", "stone", false],
+                ["🌑 Железо", "iron", false],
+                ["🥉 Бронза", "copper", false],
+                ["🥈 Серебро", "silver", false],
+                ["💎 Алмазы", "diamond", false]
+            ]
+            const resourceNames = {
+                wheat: "зерна",
+                wood: "дерева",
+                stone: "камня",
+                iron: "железа",
+                copper: "бронзы",
+                silver: "серебра",
+                diamond: "алмазов"
+            }
+            let resources = await InputManager.RadioKeyboardBuilder(context, message + "\n\n1️⃣ Выберите ресурсы:", resourcesKeyboard, current_keyboard)
+            if(!resources) return resolve()
+            if(resources.filter(key => {return key[1]}).length === 0)
+            {
+                await context.send('🚫 Ресурсы не выбраны.', {
+                    keyboard: keyboard.build(current_keyboard)
+                })
+                return resolve(null)
+            }
+            let price = {}
+            for(const res of resources)
+            {
+                if(res[1])
+                {
+                    price[res[0]] = 0
+                }
+            }
+            for(const key of Object.keys(price))
+            {
+                let count = canBeFloat ? await InputManager.InputFloat(context, `Введите необходимое количество ${resourceNames[key]}`, current_keyboard, 0) : await InputManager.InputInteger(context, `Введите необходимое количество ${resourceNames[key]}`, current_keyboard, 0)
+                if(!count) return resolve(null)
+                price[key] = count
+            }
+            return resolve(price)
         })
     }
 }

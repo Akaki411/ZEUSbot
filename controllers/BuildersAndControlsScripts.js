@@ -4,8 +4,8 @@ const Data = require("../models/CacheData");
 const keyboard = require("../variables/Keyboards");
 const {City, Country, PlayerStatus, Player, Ban, LastWills, Buildings,
     CountryResources, CityResources, PlayerInfo, CountryRoads, Keys, OfficialInfo, Messages, Chats,
-    Warning, CityRoads, Transactions, CountryArmy, CountryTaxes, CountryNotes, CityNotes, PlayerNotes, Events,
-    PlayerResources
+    Warning, CityRoads, Transactions, CountryTaxes, CountryNotes, CityNotes, PlayerNotes, Events,
+    PlayerResources, UnitClass, UnitType, Army
 } = require("../database/Models");
 const api = require("../middleware/API");
 const NameLibrary = require("../variables/NameLibrary")
@@ -44,19 +44,44 @@ class BuildersAndControlsScripts
                 const gender = await InputManager.InputBoolean(context, `3️⃣ Укажите пол вашего персонажа.`, current_keyboard, keyboard.manButton, keyboard.womanButton)
                 if(gender === null) return resolve(false)
 
-                const description = await InputManager.InputString(context, `4️⃣ Расскажите о своём персонаже! Откуда он родом, чем занимается. Возможно есть ли у него семья, дети. С какой целью он пришёл в то место, где находится сейчас.\n⚠ Длина до 1000 символов.`, current_keyboard, 0, 1000)
-                if(!description) return resolve(false)
-
                 const nationKeyboard = []
                 Object.keys(Nations).forEach(key => {
                     nationKeyboard.push([Nations[key].name, key])
                 })
-                let nation = await InputManager.KeyboardBuilder(context, "5️⃣ Какова национальность вашего персонажа?", nationKeyboard, current_keyboard)
+
+                let nation = await InputManager.KeyboardBuilder(context, "4️⃣ Какова национальность вашего персонажа?", nationKeyboard, current_keyboard)
                 if(!nation) return resolve()
+
+                const clan = await InputManager.InputString(context, `5️⃣ Расскажите о своём клане/племени/филе/доме и тд, если они есть\n\n⚠ Длина до 100 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 100)
+                const position = await InputManager.InputString(context, `4️⃣ Расскажите о положении в обществе, например: политик, религиозный деятель, торговец, солдат и т.д.\n\n⚠ Длина до 100 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 100)
+                const appearance = await InputManager.InputString(context, `4️⃣ Укажите внешность, телосложение, гражданская одежда\n\n⚠ Длина до 150 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 150)
+                const personality = await InputManager.InputString(context, `4️⃣ Опишите характер, взгляды, ценности. Если вы опытный ролевик, то именно на этот пункт вы должны сделать акцент.\n⚠ Длина до 250 символов.`, current_keyboard, 0, 250)
+                const description = await InputManager.InputString(context, `4️⃣ Расскажите о своём персонаже! Откуда он родом, чем занимается. Возможно есть ли у него семья, дети. С какой целью он пришёл в то место, где находится сейчас.\n⚠ Длина до 1000 символов.`, current_keyboard, 0, 1000)
+                if(!description) return resolve(false)
                 await context.send(Nations[nation].description)
                 nation = Nations[nation].name
-                await Player.update({nick: name, gender: gender}, {where: {id: context.player.id}})
-                await PlayerInfo.update({description: description, nationality: nation, age: age}, {where: {id: context.player.id}})
+                await Player.update({
+                    nick: name,
+                    gender: gender,
+                    clan: clan,
+                    position: position,
+                    appearance: appearance,
+                    personality: personality
+                }, {where: {id: context.player.id}})
+                await PlayerInfo.update({
+                    description: description,
+                    nationality: nation,
+                    age: age
+                }, {where: {id: context.player.id}})
+                context.player.nick = name
+                context.player.gender = gender
+                context.player.clan = clan
+                context.player.position = position
+                context.player.appearance = appearance
+                context.player.personality = personality
+                context.player.description = description
+                context.player.nationality = nation
+                context.player.age = age
                 await context.send("✅ Данные обновлены", {keyboard: keyboard.build(current_keyboard)})
                 context.player.state = context.scenes.StartScreen
                 return resolve(true)
@@ -5095,7 +5120,8 @@ class BuildersAndControlsScripts
                 await Ban.create({
                     userID: user,
                     reason: reason,
-                    explanation: explanation
+                    explanation: explanation,
+                    moderID: context.player.id
                 })
                 await api.BanUser(user)
                 await Warning.update({banned: true}, {where: {userID: user}})
@@ -5221,25 +5247,13 @@ class BuildersAndControlsScripts
                     await context.send("🚫 Назначать работников на должность градоначальника запрещено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                let city = await City.findOne({where: {leaderID: leader.dataValues.id}, attributes: ["id"]})
-                while(city)
-                {
-                    leader = await InputManager.InputUser(context, `⚠ Игрок *id${leader.dataValues.id}(${leader.dataValues.nick})уже является главой города ${city.dataValues.name}`, current_keyboard)
-                    if(!leader) return resolve()
-                    if(leader.dataValues.status === "worker")
-                    {
-                        await context.send("🚫 Назначать игроков со статусом ⚙ Работник на должность градоначальника запрещено", {keyboard: keyboard.build(current_keyboard)})
-                        return resolve()
-                    }
-                    city = await City.findOne({where: {leaderID: leader.dataValues.id}, attributes: ["id"]})
-                }
                 let country = await InputManager.KeyboardBuilder(context, "2️⃣ Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
                 if(!country) return resolve()
                 country = Data.ParseButtonID(country)
                 country = Data.countries[country]
                 let name = await InputManager.InputString(context, "3️⃣ Введите название нового города (от 2 до 35 символов)", current_keyboard, 2, 35)
                 if(!name) return resolve()
-                city = await City.findOne({where: {name: name}})
+                let city = await City.findOne({where: {name: name}})
                 while(city)
                 {
                     name = await InputManager.InputString(context, "⚠ Город с таким названием уже существует, повторите ввод.", current_keyboard, 2, 100)
@@ -5268,7 +5282,7 @@ class BuildersAndControlsScripts
                     defaults: {id: leader.dataValues.id, countryID: country.id, nick: leader.dataValues.nick}
                 })
                 await Data.ResetCities()
-                await api.SendMessage(leader.dataValues.id, `Вы были назначены главой нового города \"${newCity.dataValues.name}\", ваш статус изменен на "Чиновник"`)
+                await api.SendMessage(leader.dataValues.id, `✅ Вы были назначены главой нового города \"${newCity.dataValues.name}\", ваш статус изменен на "Чиновник"`)
                 await context.send("✅ Город создан.", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
             }
@@ -6281,7 +6295,477 @@ class BuildersAndControlsScripts
         })
     }
 
-    async CreateUnit(context, current_keyboard)
+    async ChangeArmyDetachment(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const kb = [
+                    ["➕ Создать отряд", "add"],
+                    ["↘ Переместить отряд", "move"],
+                    ["🎯 Изменить боевой опыт", "experience"],
+                    ["♾ Изменить количество юнитов", "count"],
+                    ["✏ Изменить заметку", "note"],
+                    ["❌ Удалить отряд", "delete"]
+                ]
+                const action = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action === "add" && await this.CreateArmyDetachment(context, current_keyboard)
+                action === "count" && await this.ChangeCountDetachment(context, current_keyboard)
+                action === "move" && await this.MoveDetachment(context, current_keyboard)
+                action === "note" && await this.ChangeNoteDetachment(context, current_keyboard)
+                action === "experience" && await this.ChangeDetachmentExperience(context, current_keyboard)
+                action === "delete" && await this.DeleteDetachment(context, current_keyboard)
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeClassUnits", e)
+            }
+        })
+    }
+
+    async DeleteDetachment(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию, которой принадлежит отряд", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                const detachments = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
+                if(detachments.length === 0)
+                {
+                    await context.send("У фракции " + country.GetName(context.player.platform === "IOS") + " нет отрядов")
+                    return resolve()
+                }
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите отряд, который хотите удалить", detachments.map(key => {return [`${key.dataValues.name} ${key.dataValues.count}`, "ID" + key.dataValues.id]}), current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(key => {return key.dataValues.id === detachment})[0]
+                let accept = await InputManager.InputBoolean(context, "Вы уверены?", current_keyboard)
+                if(!accept) return resolve()
+                await Army.destroy({where: {id: detachment.dataValues.id}})
+                await context.send("✅ Отряд удален", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
+            }
+        })
+    }
+
+    async ChangeDetachmentExperience(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию, которой принадлежит отряд", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                const detachments = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
+                if(detachments.length === 0)
+                {
+                    await context.send("У фракции " + country.GetName(context.player.platform === "IOS") + " нет отрядов")
+                    return resolve()
+                }
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите отряд, который хотите переместить", detachments.map(key => {return [`${key.dataValues.name} ${key.dataValues.count}`, "ID" + key.dataValues.id]}), current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(key => {return key.dataValues.id === detachment})[0]
+                let newExperience = await InputManager.InputInteger(context, "Сейчас опыт отряда равен  " + detachment.dataValues.experience + "\n\nВведите новое значение", current_keyboard, 0)
+                if(!newExperience) return resolve()
+                await Army.update({experience: newExperience}, {where: {id: detachment.dataValues.id}})
+                await context.send("✅ Боевой опыт отряда установлен", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
+            }
+        })
+    }
+
+    async ChangeNoteDetachment(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию, которой принадлежит отряд", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                const detachments = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
+                if(detachments.length === 0)
+                {
+                    await context.send("У фракции " + country.GetName(context.player.platform === "IOS") + " нет отрядов")
+                    return resolve()
+                }
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите отряд, который хотите переместить", detachments.map(key => {return [`${key.dataValues.name} ${key.dataValues.count}`, "ID" + key.dataValues.id]}), current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(key => {return key.dataValues.id === detachment})[0]
+                let newNote = await InputManager.InputString(context, "Текст заметки: " + detachment.dataValues.note + "\n\nВведите новый текст заметки", current_keyboard)
+                if(!newNote) return resolve()
+                await Army.update({note: newNote}, {where: {id: detachment.dataValues.id}})
+                await context.send("✅ Заметка изменена", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
+            }
+        })
+    }
+
+    async MoveDetachment(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию, которой принадлежит отряд", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                const detachments = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
+                if(detachments.length === 0)
+                {
+                    await context.send("У фракции " + country.GetName(context.player.platform === "IOS") + " нет отрядов")
+                    return resolve()
+                }
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите отряд, который хотите переместить", detachments.map(key => {return [`${key.dataValues.name} ${key.dataValues.count}`, "ID" + key.dataValues.id]}), current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(key => {return key.dataValues.id === detachment})[0]
+                let locateCountry = await InputManager.KeyboardBuilder(context, "Сейчас отряд находится в городе " + Data.cities[detachment.dataValues.location].name + " фракции " + Data.countries[Data.cities[detachment.dataValues.location].countryID]?.GetName() + "\nВведите новое местоположение отряда\n\nУкажите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!locateCountry) return resolve()
+                locateCountry = Data.ParseButtonID(locateCountry)
+                locateCountry = Data.countries[locateCountry]
+                let locateCity = await InputManager.KeyboardBuilder(context, "Укажите город, в котором или рядом с которым располагается отряд", Data.GetCityForCountryButtons(locateCountry.id), current_keyboard)
+                if(!locateCity) return resolve()
+                locateCity = Data.ParseButtonID(locateCity)
+                locateCity = Data.cities[locateCity]
+                await Army.update({location: locateCity.id}, {where: {id: detachment.dataValues.id}})
+                await context.send("✅ Местоположение установлено", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
+            }
+        })
+    }
+
+    async ChangeCountDetachment(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const arrToObj = (arr) =>
+                {
+                    let obj = {}
+                    for(const e of arr)
+                    {
+                        obj[e[0]] = e[1]
+                    }
+                    return obj
+                }
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию, которой принадлежит отряд", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                const population = await PlayerStatus.count({where: {citizenship: country.id}})
+                const detachments = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
+                if(detachments.length === 0)
+                {
+                    await context.send("У фракции " + country.GetName(context.player.platform === "IOS") + " нет отрядов")
+                    return resolve()
+                }
+                let types = []
+                for(const det of detachments) {if(!types.includes(det.dataValues.typeId)) types.push(det.dataValues.typeId)}
+                types = await UnitType.findAll({where: {id: types}})
+                types = arrToObj(types.map(key => {return [key.dataValues.id, key.dataValues]}))
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите отряд, который хотите изменить", detachments.map(key => {return [`${key.dataValues.name} ${key.dataValues.count}`, "ID" + key.dataValues.id]}), current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(key => {return key.dataValues.id === detachment})[0]
+                let usedUnitPos = 0
+                for(const det of detachments)
+                {
+                    if(detachment.dataValues.id === det.dataValues.id) continue
+                    usedUnitPos += Math.ceil(det.dataValues.count / types[det.dataValues.typeId].citizenPrice)
+                }
+                usedUnitPos = population - usedUnitPos
+                const count = await InputManager.InputInteger(context, "Введите количество юнитов в отряде, от 1 до " + usedUnitPos * types[detachment.dataValues.typeId].citizenPrice, current_keyboard, 0, usedUnitPos * types[detachment.dataValues.typeId].citizenPrice)
+                if(!count) return resolve()
+                await Army.update({count: count}, {where: {id: detachment.dataValues.id}})
+                await context.send("✅ Количество установлено", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
+            }
+        })
+    }
+
+    async CreateArmyDetachment(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const types = await UnitType.findAll()
+                if(types.length === 0)
+                {
+                    await context.send("Перед созданием отряда добавьте типы юнитов")
+                    return resolve()
+                }
+                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию, которой будет принадлежать отряд", Data.GetCountryButtons(), current_keyboard)
+                if(!country) return resolve()
+                country = Data.ParseButtonID(country)
+                country = Data.countries[country]
+                const classes = await UnitClass.findAll({where: {countryId: country.id}})
+                if(classes.length === 0)
+                {
+                    await context.send("Перед созданием отряда добавьте юниты фракции " + country.GetName(), {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let unitType = await InputManager.KeyboardBuilder(context, "Выберите тип юнита", types.map(key => {return [key.name, "ID" + key.id]}), current_keyboard)
+                if(!unitType) return resolve()
+                unitType = Data.ParseButtonID(unitType)
+                unitType = types.filter(key => {return key.id === unitType})[0].dataValues
+                let unitClass = await InputManager.KeyboardBuilder(context, "Выберите юнит", classes.map(key => {return [key.name, "ID" + key.id]}), current_keyboard)
+                if(!unitClass) return resolve()
+                unitClass = Data.ParseButtonID(unitClass)
+                unitClass = classes.filter(key => {return key.id === unitClass})[0].dataValues
+
+                const allCountryArmy = await Army.findAll({where: {ownerId: country.id, ownerType: "country"}})
+                const population = await PlayerStatus.count({where: {citizenship: country.id}})
+                let usedCitizens = 0
+                for(const unit of allCountryArmy)
+                {
+                    let type = await UnitType.findOne({where: {id: unit.dataValues.typeId}})
+                    if(!type) continue
+                    usedCitizens += Math.ceil(unit.dataValues.count / type.dataValues.citizenPrice)
+                }
+                const freeCitizens = population - usedCitizens
+                if(freeCitizens <= 0)
+                {
+                    await context.send("Не хватает граждан для формирования отряда этого типа", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const name = await InputManager.InputString(context, "Введите название отряда", current_keyboard)
+                if(!name) return resolve()
+                let count = await InputManager.InputInteger(context, "Введите количество юнитов в отряде (от 1 до " + (unitType.citizenPrice * freeCitizens) + ")", current_keyboard, 1, unitType.citizenPrice * freeCitizens)
+                if(!count) return resolve()
+                let rating = await InputManager.InputDefaultInteger(context, "Укажите боевой опыт этого отряда", current_keyboard, -1000000, 1000000, 0)
+                if(rating === null) return resolve()
+                let locateCountry = await InputManager.KeyboardBuilder(context, "Введите местоположение отряда\n\nУкажите фракцию", Data.GetCountryButtons(), current_keyboard)
+                if(!locateCountry) return resolve()
+                locateCountry = Data.ParseButtonID(locateCountry)
+                locateCountry = Data.countries[locateCountry]
+                let locateCity = await InputManager.KeyboardBuilder(context, "Укажите город, в котором или рядом с которым располагается отряд", Data.GetCityForCountryButtons(locateCountry.id), current_keyboard)
+                if(!locateCity) return resolve()
+                locateCity = Data.ParseButtonID(locateCity)
+                locateCity = Data.cities[locateCity]
+                let note = await InputManager.InputString(context, "Сделайте уточнение по местоположению отряда", current_keyboard)
+                if(!note) return resolve()
+
+                const request = "Отряд юнитов: " + unitClass.name + "\n" +
+                    "Тип юнитов: " + unitType.name + "\n" +
+                    "Принадлежит фракции " + country.GetName() + "\n" +
+                    "Количество: " + count + "\n" +
+                    "Боевой опыт: " + rating + "\n" +
+                    "Располагается в фракции " + locateCountry.GetName() + ", в городе " + locateCity.name + ", " + note
+                const accept = await InputManager.InputBoolean(context, request, current_keyboard)
+                if(!accept) return resolve()
+                await Army.create({
+                    ownerId: country.id,
+                    ownerType: "country",
+                    typeId: unitType.id,
+                    classId: unitClass.id,
+                    count: count,
+                    experience: rating,
+                    note: note,
+                    name: name,
+                    location: locateCity.id
+                })
+                await context.send("✅ Отряд создан", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
+            }
+        })
+    }
+
+    async ChangeTypeUnits(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const kb = [
+                    ["➕ Добавить тип", "add"],
+                    ["✏ Изменить тип", "edit"],
+                    ["❌ Удалить тип", "delete"]
+                ]
+                const action = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action === "add" && await this.AddUnitType(context, current_keyboard)
+                action === "edit" && await this.EditUnitType(context, current_keyboard)
+                action === "delete" && await this.DeleteUnitType(context, current_keyboard)
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeClassUnits", e)
+            }
+        })
+    }
+
+    async DeleteUnitType(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const classes = await UnitType.findAll()
+                if(classes.length === 0)
+                {
+                    await context.send("Типы не добавлены")
+                    return resolve()
+                }
+                let unitType = await InputManager.KeyboardBuilder(context, "Выберите тип, который вы хотите удалить", classes.map(key => {return [key.name, "ID" + key.id]}), current_keyboard)
+                if(!unitType) return resolve()
+                unitType = Data.ParseButtonID(unitType)
+                unitType = classes.filter(key => {return key.id === unitType})[0].dataValues
+                const accept = await InputManager.InputBoolean(context, `Вы действительно хотите удалить тип ${unitType.name}?`, current_keyboard)
+                if(!accept)
+                {
+                    await context.send("🚫 Отменено")
+                    return resolve()
+                }
+                await UnitType.destroy({where: {id: unitType.id}})
+                await Army.destroy({where: {typeId: unitType.id}})
+                await context.send("✅ Тип удален", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/EditUnitClass", e)
+            }
+        })
+    }
+
+    async EditUnitType(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const classes = await UnitType.findAll()
+                if(classes.length === 0)
+                {
+                    await context.send("Типы не добавлены")
+                    return resolve()
+                }
+                let unitType = await InputManager.KeyboardBuilder(context, "Выберите тип юнита, который вы хотите отредактировать", classes.map(key => {return [key.name, "ID" + key.id]}), current_keyboard)
+                if(!unitType) return resolve()
+                unitType = Data.ParseButtonID(unitType)
+                unitType = classes.filter(key => {return key.id === unitType})[0].dataValues
+                let name = await InputManager.InputString(context, `Текущее название: ${unitType.name}\n\nВведите новое название класса юнита\n\nЧтобы пропустить нажмите \"отмена\"`, current_keyboard)
+                if(!name) name = unitType.name
+
+                let accept = await InputManager.InputBoolean(context, "Изменить цену тренировки типа юнита?", current_keyboard)
+                let newPrice = JSON.parse(unitType.price)
+                if(accept)
+                {
+                    newPrice = await InputManager.InputPrice(context, "Введите новую цену тренировки", current_keyboard)
+                    if(!newPrice) newPrice = JSON.parse(unitType.price)
+                }
+                accept = await InputManager.InputBoolean(context, "Изменить стоимость содержания типа юнита?", current_keyboard)
+                let newService = JSON.parse(unitType.price)
+                if(accept)
+                {
+                    newService = await InputManager.InputPrice(context, "Введите новую стоимость содержания", current_keyboard)
+                    if(!newPrice) newService = JSON.parse(unitType.price)
+                }
+                let barracksLVL = await InputManager.InputInteger(context, "Введите уровень казармы, с которого будет доступна тренировка юнита такого типа, чтобы оставить как есть, нажмите отмена", current_keyboard, 1, 4)
+                if(!barracksLVL) barracksLVL = unitType.barracksLVL
+                let citizenPrice = await InputManager.InputInteger(context, "Введите сколько можно будет натренировать юнитов такого типа за одного гражданина, чтобы оставить как есть, нажмите отмена", current_keyboard, 1)
+                if(!citizenPrice) citizenPrice = unitType.citizenPrice
+
+                await UnitType.update({
+                    name: name,
+                    price: JSON.stringify(newPrice),
+                    service: JSON.stringify(newService),
+                    barracksLVL: barracksLVL,
+                    citizenPrice: citizenPrice
+                }, {where: {id: unitType.id}})
+                await context.send("✅ Тип обновлен", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/EditUnitClass", e)
+            }
+        })
+    }
+
+    async AddUnitType(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const name = await InputManager.InputString(context, "Введите название типа юнита", current_keyboard)
+                if(!name) return resolve()
+
+                const price = await InputManager.InputPrice(context, "Укажите цену покупки юнита этого типа", current_keyboard)
+                if(!price) return resolve()
+                const service = await InputManager.InputPrice(context, "Укажите цену поддержки юнита этого типа", current_keyboard, true)
+                if(!service) return resolve()
+                const barracksLVL = await InputManager.InputInteger(context, "Укажите уровень казармы, с которого будет доступна тренировка юнита такого типа", current_keyboard, 1, 4)
+                if(!barracksLVL) return resolve()
+                const citizenPrice = await InputManager.InputInteger(context, "Укажите сколько юнитов такого типа можно будет натренировать за одного гражданина", current_keyboard, 1,)
+                if(!citizenPrice) return resolve()
+
+                const accept = await InputManager.InputBoolean(context, `\nНазвание типа: ${name}\nУровень казармы:\n${barracksLVL}\nЦена покупки: ${NameLibrary.GetPrice(price)}\n\nСтоимость содержания: ${NameLibrary.GetPrice(service)}\n\nВерно?`, current_keyboard)
+                if(!accept) return resolve()
+                await UnitType.create({
+                    name: name,
+                    price: JSON.stringify(price),
+                    service: JSON.stringify(service),
+                    barracksLVL: barracksLVL,
+                    citizenPrice: citizenPrice
+                })
+                await context.send("✅ Тип юнита создан", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/AddUnitClass", e)
+            }
+        })
+    }
+
+    async ChangeClassUnits(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const kb = [
+                    ["➕ Добавить юнит", "add"],
+                    ["✏ Изменить юнит", "edit"],
+                    ["❌ Удалить юнит", "delete"]
+                ]
+                const action = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите действие", kb, current_keyboard)
+                if(!action) return resolve()
+                action === "add" && await this.AddUnitClass(context, current_keyboard)
+                action === "edit" && await this.EditUnitClass(context, current_keyboard)
+                action === "delete" && await this.DeleteUnitClass(context, current_keyboard)
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeClassUnits", e)
+            }
+        })
+    }
+
+    async AddUnitClass(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
             try
@@ -6295,52 +6779,17 @@ class BuildersAndControlsScripts
                     }
                     return request
                 }
-                const barrackLVLs = [
-                    [keyboard.secondaryButton(["1️⃣", "ID1"])],
-                    [keyboard.secondaryButton(["2️⃣", "ID2"])],
-                    [keyboard.secondaryButton(["3️⃣", "ID3"])],
-                    [keyboard.secondaryButton(["4️⃣", "ID4"])],
-                    [keyboard.cancelButton]
-                ]
-                const types = [
-                    [keyboard.secondaryButton(["Слоны", "elephant"])],
-                    [keyboard.secondaryButton(["Кавалерия", "cavalier"])],
-                    [keyboard.secondaryButton(["Пехота", "soldier"])],
-                    [keyboard.cancelButton]
-                ]
 
-                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
+                const name = await InputManager.InputString(context, "Введите название юнита", current_keyboard)
+                if(!name) return resolve()
+                const description = await InputManager.InputString(context, "Введите описание юнита", current_keyboard)
+                if(!description) return resolve()
+                let country = await InputManager.KeyboardBuilder(context, "Выберите  фракцию, которой будет принадлежать юнит", Data.GetCountryButtons(), current_keyboard)
                 if(!country) return resolve()
                 country = Data.ParseButtonID(country)
                 country = Data.countries[country]
 
-                let name = await InputManager.InputString(context, "Введите название юнита", current_keyboard, 2, 30)
-                if(!name) return resolve()
-
-                let description = await InputManager.InputString(context, "Введите описание юнита (отмена = без описания)", current_keyboard, 2, 30)
-
-                let type = await InputManager.ChooseButton(context, "Укажите тип юнита", types)
-                if(type === "cancel")
-                {
-                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
-                    return resolve()
-                }
-
-                let rating = await InputManager.InputDefaultInteger(context, "Укажите боевой опыт этого юнита", current_keyboard, -1000000, 1000000, 0)
-                if(rating === null) return resolve()
-
-                let barracks = await InputManager.ChooseButton(context, "Укажите, с какого уровня улучшения казармы они будут доступны?", barrackLVLs)
-                if(barracks === "cancel")
-                {
-                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
-                    return resolve()
-                }
-                barracks = Data.ParseButtonID(barracks)
-
-                let count = await InputManager.InputDefaultInteger(context, "Введите изначальное количество этого юнита у фракции", current_keyboard, 0, 1000000, 0)
-                if(count === null) return resolve()
-
-                await context.send("Теперь надо указать теги этого юнита.\n\nТеги нужны для того чтобы быстро запрашивать информацию об конкретном юните, изменять характеристики и т.д.\n\nТегом может являться часть слова: с тегом \"кавалер\" бот найдет совпадения в словах \"КАВАЛЕР\", \"КАВАЛЕРия\", \"КАВАЛЕРийский\" и т.д.\n\nБудьте аккуратны, если теги будут пересекаться, то бот может выдавать не верный результат")
+                await context.send("Укажите теги этого юнита.\n\nТеги нужны для того чтобы быстро запрашивать информацию об конкретном юните, изменять характеристики и т.д.\n\nТегом может являться часть слова: с тегом \"кавалер\" бот найдет совпадения в словах \"КАВАЛЕР\", \"КАВАЛЕРия\", \"КАВАЛЕРийский\" и т.д.\n\nБудьте аккуратны, если теги будут пересекаться, то бот может выдавать не верный результат")
                 let tags = []
                 let newTag = ""
                 do
@@ -6356,206 +6805,24 @@ class BuildersAndControlsScripts
                 if(tags.length === 0) return resolve()
                 newTag = tags.join("|")
 
-                const request = "Проверьте данные:\n\n" +
-                    "Принадлежит фракции - " + country.GetName() + "\n" +
-                    "Название - " + name + "\n" +
-                    "Описание - " + (description ? description : "Без описания") + "\n" +
-                    "Тип - " + NameLibrary.GetUnitType(type) + "\n" +
-                    "Боевой опыт - " + rating + "\n" +
-                    "Доступен в казарме " + barracks + " уровня\n\n" +
-                    "Верно?"
-
-                const accept = await InputManager.InputBoolean(context, request, current_keyboard)
+                const accept = await InputManager.InputBoolean(context, `${country.GetName(context.player.platform === "IOS")}\nНазвание: ${name}\nОписание:\n${description}\n\nВерно?`, current_keyboard)
                 if(!accept) return resolve()
-
-                await CountryArmy.create({
-                    countryID: country.id,
+                await UnitClass.create({
                     name: name,
                     description: description,
-                    tags: newTag,
-                    rating: rating,
-                    count: count,
-                    type: type,
-                    barracksLVL: barracks
+                    countryId: country.id,
+                    tag: newTag
                 })
                 await context.send("✅ Юнит создан", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/AddUnitClass", e)
             }
         })
     }
 
-    async DeleteUnit(context, current_keyboard)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
-                if(!country) return resolve()
-                country = Data.ParseButtonID(country)
-                country = Data.countries[country]
-
-                const units = await CountryArmy.findAll({where: {countryID: country.id}})
-                if(units.length === 0)
-                {
-                    await context.send("У фракции " + country.GetName() + " нет боевых юнитов")
-                    return resolve()
-                }
-                let kb = []
-                for(const unit of units)
-                {
-                    kb.push([unit.dataValues.name, "ID" + unit.dataValues.id])
-                }
-                let unit = await InputManager.KeyboardBuilder(context, "Выберите юнит, который хотите удалить", kb, current_keyboard)
-                if(!unit) return resolve()
-                unit = Data.ParseButtonID(unit)
-                await CountryArmy.destroy({where: {id: unit}})
-                await context.send("✅ Юнит удален", {keyboard: keyboard.build(current_keyboard)})
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
-            }
-        })
-    }
-
-    async EditUnit(context, current_keyboard)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                let country = await InputManager.KeyboardBuilder(context, "Выберите фракцию", Data.GetCountryButtons(), current_keyboard)
-                if(!country) return resolve()
-                country = Data.ParseButtonID(country)
-                country = Data.countries[country]
-
-                const units = await CountryArmy.findAll({where: {countryID: country.id}})
-                if(units.length === 0)
-                {
-                    await context.send("У фракции " + country.GetName() + " нет боевых юнитов")
-                    return resolve()
-                }
-                let kb = []
-                for(const unit of units)
-                {
-                    kb.push([unit.dataValues.name, "ID" + unit.dataValues.id])
-                }
-                let unit = await InputManager.KeyboardBuilder(context, "Выберите юнит, который хотите изменить", kb, current_keyboard)
-                if(!unit) return resolve()
-                unit = Data.ParseButtonID(unit)
-                kb = [
-                    ["Фракция", "country"],
-                    ["Название", "name"],
-                    ["Описание", "description"],
-                    ["Теги", "tags"],
-                    ["Тип", "type"],
-                    ["Уровень казармы", "barrack_lvl"],
-                    ["Боевой опыт", "rating"]
-                ]
-                let answer = null
-                do
-                {
-                    answer = await InputManager.KeyboardBuilder(context, "Выберите параметр юнита, который хотите изменить", kb, current_keyboard)
-                    answer === "country" && await this.ChangeUnitCountry(context, current_keyboard, unit)
-                    answer === "name" && await this.ChangeUnitName(context, current_keyboard, unit)
-                    answer === "description" && await this.ChangeUnitDescription(context, current_keyboard, unit)
-                    answer === "type" && await this.ChangeUnitType(context, current_keyboard, unit)
-                    answer === "barrack_lvl" && await this.ChangeUnitBarracksLVL(context, current_keyboard, unit)
-                    answer === "rating" && await this.ChangeUnitRating(context, current_keyboard, unit)
-                    answer === "tags" && await this.ChangeUnitTags(context, current_keyboard, unit)
-                }
-                while(answer)
-                await context.send("✅ Юнит изменен", {keyboard: keyboard.build(current_keyboard)})
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/CreateUnit", e)
-            }
-        })
-    }
-
-    async ChangeUnitRating(context, current_keyboard, unitID)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                let rating = await InputManager.InputString(context, "Введите количество боевого опыта (от 0)", current_keyboard, 0)
-                if(!rating) return resolve()
-                await CountryArmy.update({rating: rating}, {where: {id: unitID}})
-                await context.send("✅ Боевой опыт изменен")
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitRating", e)
-            }
-        })
-    }
-
-    async ChangeUnitTags(context, current_keyboard, unitID)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                const kb = [
-                    ["➕ Добавить тег", "add_tag"],
-                    ["➖ Удалить тег", "remove_tag"]
-                ]
-                const action = await InputManager.KeyboardBuilder(context, "Выберите действие", kb, current_keyboard)
-                if(!action) return resolve()
-                action === "add_tag" && await this.AddUnitTag(context, current_keyboard, unitID)
-                action === "remove_tag" && await this.DeleteUnitTag(context, current_keyboard, unitID)
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitRating", e)
-            }
-        })
-    }
-
-    async DeleteUnitTag(context, current_keyboard, unitID)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                const unit = await CountryArmy.findOne({where: {id: unitID}})
-                let tags = unit.dataValues.tags ? unit.dataValues.tags.split("|") : []
-                if(tags.length === 0)
-                {
-                    await context.send("Нет тегов", {keyboard: keyboard.build(current_keyboard)})
-                    return resolve()
-                }
-                let tagsKB = []
-                for(const tag of tags)
-                {
-                    tagsKB.push([tag, tag])
-                }
-                let newTag = await InputManager.KeyboardBuilder(context, "Выберите тег, который вы хотите убрать", tagsKB, current_keyboard)
-                if(!newTag) return resolve()
-                tags = tags.filter(key => {return key !== newTag})
-                if(tags.length !== 0)
-                {
-                    newTag = tags.join("|")
-                    await CountryArmy.update({tags: newTag}, {where: {id: unitID}})
-                }
-                else
-                {
-                    await CountryArmy.update({tags: null}, {where: {id: unitID}})
-                }
-                await context.send("✅ Теги обновлены")
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitBarracksLVL", e)
-            }
-        })
-    }
-
-    async AddUnitTag(context, current_keyboard, unitID)
+    async EditUnitClass(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
             try
@@ -6569,143 +6836,118 @@ class BuildersAndControlsScripts
                     }
                     return request
                 }
-                await context.send("Укажите теги этого юнита.\n\nТеги нужны для того чтобы быстро запрашивать информацию об конкретном юните, изменять характеристики и т.д.\n\nТегом может являться часть слова: с тегом \"кавалер\" бот найдет совпадения в словах \"КАВАЛЕР\", \"КАВАЛЕРия\", \"КАВАЛЕРийский\" и т.д.\n\nБудьте аккуратны, если теги будут пересекаться, то бот может выдавать не верный результат")
-                const unit = await CountryArmy.findOne({where: {id: unitID}})
-                let tags = unit.dataValues.tags ? unit.dataValues.tags.split("|") : []
-                let newTag = ""
-                do
+
+                const classes = await UnitClass.findAll()
+                if(classes.length === 0)
                 {
-                    await context.send(showTags(tags))
-                    newTag = await InputManager.InputString(context, "Введите новый тег", current_keyboard)
-                    if(newTag)
+                    await context.send("Юниты не добавлены")
+                    return resolve()
+                }
+                let unitClass = await InputManager.KeyboardBuilder(context, "Выберите юнит, который вы хотите отредактировать", classes.map(key => {return [key.name, "ID" + key.id]}), current_keyboard)
+                if(!unitClass) return resolve()
+                unitClass = Data.ParseButtonID(unitClass)
+                unitClass = classes.filter(key => {return key.id === unitClass})[0].dataValues
+                let name = await InputManager.InputString(context, `Название: ${unitClass.name}\n\nВведите новое название юнита\n\nЧтобы пропустить нажмите \"отмена\"`, current_keyboard)
+                if(!name) name = unitClass.name
+                let description = await InputManager.InputString(context, `Описание: ${unitClass.description}\n\nВведите новое описание юнита\n\nЧтобы пропустить нажмите \"отмена\"`, current_keyboard)
+                if(!description) description = unitClass.description
+
+                let newTag = ""
+                let tags = unitClass.tag ? unitClass.tag.split("|") : []
+                const action = await InputManager.ChooseButton(context, "Выберите что сделать с тегами:", [[keyboard.deleteButton, keyboard.skipButton, keyboard.addButton]])
+                if(action === "add")
+                {
+                    do
                     {
-                        tags.push(newTag.toLowerCase())
+                        await context.send(showTags(tags))
+                        newTag = await InputManager.InputString(context, "Введите новый тег", current_keyboard)
+                        if(newTag)
+                        {
+                            tags.push(newTag.toLowerCase())
+                        }
+                    }
+                    while(newTag)
+                    if(tags.length === 0) return resolve()
+                    newTag = tags.join("|")
+                }
+                else if(action === "delete")
+                {
+                    if(tags.length === 0)
+                    {
+                        await context.send("Нет тегов", {keyboard: keyboard.build(current_keyboard)})
+                        return resolve()
+                    }
+                    let tagsKB = []
+                    for(const tag of tags)
+                    {
+                        tagsKB.push([tag, tag])
+                    }
+                    let newTag = await InputManager.KeyboardBuilder(context, "Выберите тег, который вы хотите убрать", tagsKB, current_keyboard)
+                    if(!newTag) return resolve()
+                    tags = tags.filter(key => {return key !== newTag})
+                    if(tags.length !== 0)
+                    {
+                        newTag = tags.join("|")
                     }
                 }
-                while(newTag)
-                if(tags.length === 0) return resolve()
-                newTag = tags.join("|")
-                await CountryArmy.update({tags: newTag}, {where: {id: unitID}})
-                await context.send("✅ Теги обновлены")
-                return resolve()
+                else
+                {
+                    newTag = tags.join("|")
+                }
+
+                let country = await InputManager.KeyboardBuilder(context, `Сейчас юнит принадлежит фракции: ${Data.countries[unitClass.countryId]?.GetName(context.player.platform === "IOS")}\n\nВыберите новую фракцию, которой будет принадлежать юнит, отмена = оставить прежнюю`, Data.GetCountryButtons(), current_keyboard)
+                if(country)
+                {
+                    country = Data.ParseButtonID(country)
+                    country = Data.countries[country].id
+                }
+                else
+                {
+                    country = unitClass.countryId
+                }
+                await UnitClass.update({
+                    name: name,
+                    description: description,
+                    countryId: country,
+                    tag: newTag
+                }, {where: {id: unitClass.id}})
+                await context.send("✅ Юнит обновлен", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitBarracksLVL", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/EditUnitClass", e)
             }
         })
     }
 
-    async ChangeUnitBarracksLVL(context, current_keyboard, unitID)
+    async DeleteUnitClass(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
             try
             {
-                const barrackLVLs = [
-                    [keyboard.secondaryButton(["1️⃣", "ID1"])],
-                    [keyboard.secondaryButton(["2️⃣", "ID2"])],
-                    [keyboard.secondaryButton(["3️⃣", "ID3"])],
-                    [keyboard.secondaryButton(["4️⃣", "ID4"])],
-                    [keyboard.cancelButton]
-                ]
-                let barracks = await InputManager.ChooseButton(context, "Укажите, с какого уровня улучшения казармы они будут доступны?", barrackLVLs)
-                if(barracks === "cancel")
+                const classes = await UnitClass.findAll()
+                if(classes.length === 0)
                 {
-                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("Юниты не добавлены")
                     return resolve()
                 }
-                barracks = Data.ParseButtonID(barracks)
-                await CountryArmy.update({barracksLVL: barracks}, {where: {id: unitID}})
-                await context.send("✅ Уровень казармы для покупки юнита изменен")
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitBarracksLVL", e)
-            }
-        })
-    }
-
-    async ChangeUnitType(context, current_keyboard, unitID)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                const types = [
-                    [keyboard.secondaryButton(["Слоны", "elephant"])],
-                    [keyboard.secondaryButton(["Кавалерия", "cavalier"])],
-                    [keyboard.secondaryButton(["Пехота", "soldier"])],
-                    [keyboard.cancelButton]
-                ]
-                let type = await InputManager.ChooseButton(context, "Укажите тип юнита", types)
-                if(type === "cancel")
+                let unitClass = await InputManager.KeyboardBuilder(context, "Выберите юнит, который вы хотите удалить", classes.map(key => {return [key.name, "ID" + key.id]}), current_keyboard)
+                if(!unitClass) return resolve()
+                unitClass = Data.ParseButtonID(unitClass)
+                unitClass = classes.filter(key => {return key.id === unitClass})[0].dataValues
+                const accept = await InputManager.InputBoolean(context, `Вы действительно хотите удалить юнит ${unitClass.name}?`, current_keyboard)
+                if(!accept)
                 {
-                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("🚫 Отменено")
                     return resolve()
                 }
-                await CountryArmy.update({type: type}, {where: {id: unitID}})
-                await context.send("✅ Тип юнита изменен")
-                return resolve()
+                await UnitClass.destroy({where: {id: unitClass.id}})
+                await Army.destroy({where: {classId: unitClass.id}})
+                await context.send("✅ Юнит удален", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitType", e)
-            }
-        })
-    }
-
-    async ChangeUnitDescription(context, current_keyboard, unitID)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                let description = await InputManager.InputString(context, "Введите новое описание (не более 512 символов)", current_keyboard, 2, 512)
-                if(!description) return resolve()
-                await CountryArmy.update({description: description}, {where: {id: unitID}})
-                await context.send("✅ Описание юнита изменено")
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitDescription", e)
-            }
-        })
-    }
-
-    async ChangeUnitName(context, current_keyboard, unitID)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                let name = await InputManager.InputString(context, "Введите новое название (не более 35 символов)", current_keyboard, 2, 35)
-                if(!name) return resolve()
-                await CountryArmy.update({name: name}, {where: {id: unitID}})
-                await context.send("✅ Название юнита изменено")
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitName", e)
-            }
-        })
-    }
-
-    async ChangeUnitCountry(context, current_keyboard, unitID)
-    {
-        return new Promise(async (resolve) => {
-            try
-            {
-                let country = await InputManager.KeyboardBuilder(context, "Выберите новую фракцию", Data.GetCountryButtons(), current_keyboard)
-                if(!country) return resolve()
-                country = Data.ParseButtonID(country)
-                country = Data.countries[country]
-                await CountryArmy.update({countryID: country.id}, {where: {id: unitID}})
-                await context.send("✅ Фракция юнита изменена")
-                return resolve()
-            }
-            catch (e)
-            {
-                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeUnitCountry", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/EditUnitClass", e)
             }
         })
     }
@@ -6844,42 +7086,47 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                const units = await CountryArmy.findAll({where: {countryID: context.country.id}})
-                if(units.length === 0)
+                const arrToObj = (arr) =>
                 {
-                    await context.send("⚠ ГМ-ы еще не добавили вам боевые юниты", {keyboard: keyboard.build(current_keyboard)})
+                    let obj = {}
+                    for(const e of arr)
+                    {
+                        obj[e[0]] = e[1]
+                    }
+                    return obj
+                }
+                const detachments = await Army.findAll({where: {ownerId: context.country.id, ownerType: "country"}})
+                if(detachments.length === 0)
+                {
+                    await context.send("⚠ ГМ-ы не добавили вам отряды", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
-                }
-                let soldier = {
-                    elephant: 0,
-                    cavalier: 0,
-                    soldier: 0
-                }
-                const price = {
-                    elephant: 12,
-                    cavalier: 300,
-                    soldier: 500
                 }
                 let request = [context.country.GetResources() + "\n\n"]
                 let page = 0
                 const kb = []
-                for(const unit of units)
+                for(const det of detachments)
                 {
-                    if(unit.dataValues.barracksLVL <= context.country.barracksLevel)
+                    let type = await UnitType.findOne({where: {id: det.dataValues.typeId}})
+                    if(!type) continue
+                    let unit = await UnitClass.findOne({where: {id: det.dataValues.classId}})
+                    if(!unit) continue
+                    if(type.dataValues.barracksLVL > context.country.barracksLevel) continue
+                    kb.push([det.dataValues.name, "ID" + det.dataValues.id])
+                    request[page] += "🟢 Отряд " + det.dataValues.name + "\n"
+                    request[page] += "💂‍♂ Юнит " + unit.dataValues.name + "\n"
+                    request[page] += "Количество: " + det.dataValues.count + "\n"
+                    request[page] += "Количество за одного гражданина: " + type.dataValues.citizenPrice + "\n"
+                    request[page] += "Тип: " + type.dataValues.name + "\n"
+                    request[page] += "Описание: " + unit.dataValues.description + "\n"
+                    request[page] += "Боевой опыт: " + det.dataValues.explanation + "\n"
+                    request[page] += "Доступен с казармы " + type.dataValues.barracksLVL + " уровня" + "\n"
+                    request[page] += "💸 Стоимость (за один):\n" + NameLibrary.GetPrice(JSON.parse(type.dataValues.price))
+                    request[page] += "💸 Содержание (за один):\n" + NameLibrary.GetPrice(JSON.parse(type.dataValues.service))
+                    request[page] += "\n\n"
+                    if(request[page].length > 3500)
                     {
-                        kb.push([unit.dataValues.name, "ID" + unit.dataValues.id])
-                        soldier[unit.dataValues.type] += unit.dataValues.count
-                        request[page] += unit.dataValues.name + "\n"
-                        request[page] += "💂‍♂ Тип: " + NameLibrary.GetUnitType(unit.dataValues.type) + "\n"
-                        request[page] += "Описание: " + unit.dataValues.description + "\n"
-                        request[page] += "Доступен с казармы " + unit.dataValues.barracksLVL + " уровня" + "\n"
-                        request[page] += "💸 Стоимость (за один):\n" + NameLibrary.GetPrice(Prices["new_unit_lvl_" + unit.dataValues.barracksLVL])
-                        request[page] += "\n\n"
-                        if(request[page].length > 3500)
-                        {
-                            page ++
-                            request[page] = ""
-                        }
+                        page ++
+                        request[page] = ""
                     }
                 }
                 if(kb.length === 0)
@@ -6891,43 +7138,44 @@ class BuildersAndControlsScripts
                 {
                     await context.send(part)
                 }
-                let unit = await InputManager.KeyboardBuilder(context, "Выберите, какой юнит вы хотите натренировать", kb, current_keyboard)
-                if(!unit) return resolve()
-                unit = Data.ParseButtonID(unit)
-                unit = units.filter(u => {return u.dataValues.id === unit})[0]
+                let types = []
+                for(const det of detachments) {if(!types.includes(det.dataValues.typeId)) types.push(det.dataValues.typeId)}
+                types = await UnitType.findAll({where: {id: types}})
+                types = arrToObj(types.map(key => {return [key.dataValues.id, key.dataValues]}))
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите, какой отряд вы хотите пополнить", kb, current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(u => {return u.dataValues.id === detachment})[0]
                 const population = await PlayerStatus.count({where: {citizenship: context.country.id}})
-                let active = 0
-                for(const u of Object.keys(soldier))
+                let usedUnitPos = 0
+                for(const det of detachments)
                 {
-                    if(u === unit.dataValues.type)
-                    {
-                        active += soldier[u] / price[u]
-                        continue
-                    }
-                    active += Math.ceil(soldier[u] / price[u])
+                    if(detachment.dataValues.id === det.dataValues.id) continue
+                    usedUnitPos += Math.ceil(det.dataValues.count / types[det.dataValues.typeId].citizenPrice)
                 }
-                active = population - active
-                if(active <= 0)
+                usedUnitPos = (population - usedUnitPos) * types[detachment.dataValues.typeId].citizenPrice
+                if(usedUnitPos <= 0)
                 {
-                    await context.send("⚠ У вас слишком мало граждан для тренировки этого типа юнитов", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("⚠ У вас слишком мало граждан для пополнения этого отряда", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                let maxCount = Math.round(active * price[unit.dataValues.type])
-                let maxRealCount = 0
-                do maxRealCount ++
-                while(context.country.CanPay(NameLibrary.PriceMultiply(Prices["new_unit_lvl_" + unit.dataValues.barracksLVL], maxRealCount)) && maxRealCount <= maxCount)
-                let count = await InputManager.InputInteger(context, `Введите количество юнитов, которые вы хотите натренировать (от 1 до ${maxRealCount})`, current_keyboard, 1, maxRealCount)
+                const count = await InputManager.InputInteger(context, "Введите сколько юнитов вы хотите добавить, от 1 до " + (usedUnitPos - detachment.dataValues.count), 1, usedUnitPos - detachment.dataValues.count)
                 if(!count) return resolve()
-                const accept = await InputManager.InputBoolean(context, `Вы хотите натренировать ${count} юнитов "${unit.dataValues.name}"\n\nЭто будет стоить:\n${NameLibrary.GetPrice(NameLibrary.PriceMultiply(Prices["new_unit_lvl_" + unit.dataValues.barracksLVL], count))}\n\nПродолжить?`, current_keyboard)
+                if(!context.country.CanPay(NameLibrary.PriceMultiply(JSON.parse(types[detachment.dataValues.typeId].price), count)))
+                {
+                    await context.send("🚫 В бюджете не хватает ресурсов для тренировки такого количества юнитов", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const accept = await InputManager.InputBoolean(context, `Вы хотите натренировать ${count} юнитов в отряд "${detachment.dataValues.name}"\n\nЭто будет стоить:\n${NameLibrary.GetPrice(NameLibrary.PriceMultiply(JSON.parse(types[detachment.dataValues.typeId].price), count))}\n\nПродолжить?`, current_keyboard)
                 if(!accept)
                 {
                     await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                await Data.AddCountryResources(context.country.id, NameLibrary.PriceMultiply(Prices["new_unit_lvl_" + unit.dataValues.barracksLVL], count))
-                unit.set({count: unit.dataValues.count + count})
-                await unit.save()
-                await context.send("✅ Юниты натренированы", {keyboard: keyboard.build(current_keyboard)})
+                await Data.AddCountryResources(context.country.id, NameLibrary.PriceMultiply(JSON.parse(types[detachment.dataValues.typeId].price), count))
+                detachment.set({count: detachment.dataValues.count + count})
+                await detachment.save()
+                await context.send("✅ Отряды пополнены", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
@@ -6941,57 +7189,159 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                const units = await CountryArmy.findAll({where: {countryID: context.country.id}})
-                if(units.length === 0)
+                const detachments = await Army.findAll({where: {ownerId: context.country.id, ownerType: "country"}})
+                if(detachments.length === 0)
                 {
-                    await context.send("⚠ ГМ-ы еще не добавили вам боевые юниты", {keyboard: keyboard.build(current_keyboard)})
+                    await context.send("⚠ ГМ-ы не добавили вам отряды", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 let request = [context.country.GetResources() + "\n\n"]
                 let page = 0
                 const kb = []
-                for(const unit of units)
+                for(const det of detachments)
                 {
-                    if(unit.dataValues.count > 0)
+                    let type = await UnitType.findOne({where: {id: det.dataValues.typeId}})
+                    if(!type) continue
+                    let unit = await UnitClass.findOne({where: {id: det.dataValues.classId}})
+                    if(!unit) continue
+                    if(det.dataValues.count <= 0) continue
+                    kb.push([unit.dataValues.name, "ID" + unit.dataValues.id])
+                    request[page] += "🟢 Отряд " + det.dataValues.name + "\n"
+                    request[page] += "💂‍♂ Юнит " + unit.dataValues.name + "\n"
+                    request[page] += "Количество: " + det.dataValues.count + "\n"
+                    request[page] += "Тип: " + type.dataValues.name + "\n"
+                    request[page] += "Боевой опыт: " + det.dataValues.explanation + "\n"
+                    request[page] += "💸 Содержание (за один):\n" + NameLibrary.GetPrice(JSON.parse(type.dataValues.service))
+                    request[page] += "💸 Содержание (полное):\n" + NameLibrary.GetPrice(NameLibrary.PriceMultiply(JSON.parse(type.dataValues.service), det.dataValues.count))
+                    request[page] += "\n\n"
+                    if(request[page].length > 3500)
                     {
-                        kb.push([unit.dataValues.name, "ID" + unit.dataValues.id])
-                        request[page] += unit.dataValues.name + "\n"
-                        request[page] += "🏹 Количество: " + unit.dataValues.count + "\n"
-                        request[page] += "💂‍♂ Тип: " + NameLibrary.GetUnitType(unit.dataValues.type) + "\n"
-                        request[page] += "💸 Содержание (за один):\n" + NameLibrary.GetPrice(Prices["unit_lvl_" + unit.dataValues.barracksLVL])
-                        request[page] += "\n\n"
-                        if(request[page].length > 3500)
-                        {
-                            page ++
-                            request[page] = ""
-                        }
+                        page ++
+                        request[page] = ""
                     }
                 }
                 if(kb.length === 0)
                 {
-                    await context.send(`⚠ Нет натренированных юнитов`, {keyboard: keyboard.build(current_keyboard)})
+                    await context.send(`⚠ Все отряды пусты`, {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
                 for(const part of request)
                 {
                     await context.send(part)
                 }
-                let unit = await InputManager.KeyboardBuilder(context, "Выберите, какой юнит вы хотите сократить", kb, current_keyboard)
-                if(!unit) return resolve()
-                unit = Data.ParseButtonID(unit)
-                unit = units.filter(u => {return u.dataValues.id === unit})[0]
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите, какой отряд вы хотите сократить", kb, current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(u => {return u.dataValues.id === detachment})[0]
 
-                let count = await InputManager.InputInteger(context, `Введите количество юнитов (сколько их останется после сокращения)`, current_keyboard, 0, unit.dataValues.count)
+                let count = await InputManager.InputInteger(context, `Введите количество юнитов (сколько их останется после сокращения)`, current_keyboard, 0, detachment.dataValues.count)
                 if(count === null) return resolve()
-                const accept = await InputManager.InputBoolean(context, `Вы хотите сократить ${unit.dataValues.count - count} юнитов "${unit.dataValues.name}, останется ${count}\n\nПродолжить?`, current_keyboard)
+                const accept = await InputManager.InputBoolean(context, `Вы хотите сократить ${detachment.dataValues.count - count} юнитов отряда ${detachment.dataValues.name}, останется ${count}\n\nПродолжить?`, current_keyboard)
                 if(!accept)
                 {
                     await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                unit.set({count: count})
-                await unit.save()
-                await context.send("✅ Юниты сокращены", {keyboard: keyboard.build(current_keyboard)})
+                detachment.set({count: count})
+                await detachment.save()
+                await context.send("✅ Отряд сокращен", {keyboard: keyboard.build(current_keyboard)})
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/SubscribeToTalking", e)
+            }
+        })
+    }
+
+    async TrainDetachment(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const arrToObj = (arr) =>
+                {
+                    let obj = {}
+                    for(const e of arr)
+                    {
+                        obj[e[0]] = e[1]
+                    }
+                    return obj
+                }
+                const detachments = await Army.findAll({where: {ownerId: context.country.id, ownerType: "country"}})
+                if(detachments.length === 0)
+                {
+                    await context.send("⚠ ГМ-ы не добавили вам отряды", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let types = []
+                for(const det of detachments) {if(!types.includes(det.dataValues.typeId)) types.push(det.dataValues.typeId)}
+                types = await UnitType.findAll({where: {id: types}})
+                types = arrToObj(types.map(key => {return [key.dataValues.id, key.dataValues]}))
+                let request = [context.country.GetResources() + "\n\n"]
+                let page = 0
+                const kb = []
+                let now = new Date()
+                for(const det of detachments)
+                {
+                    let unit = await UnitClass.findOne({where: {id: det.dataValues.classId}})
+                    if(!unit) continue
+                    let city = await City.findOne({where: {id: det.dataValues.location}})
+                    if(!city) continue
+                    if(det.dataValues.count <= 0) continue
+                    let trainEnd = new Date(det.dataValues.trainEndTime)
+                    request[page] += "🟢 Отряд " + det.dataValues.name + "\n"
+                    request[page] += "💂‍♂ Юнит " + unit.dataValues.name + "\n"
+                    request[page] += "Количество: " + det.dataValues.count + "\n"
+                    request[page] += "Тип: " + types[det.dataValues.typeId]?.name + "\n"
+                    if(now - trainEnd <= 0)
+                    {
+                        request[page] += "До окончания тренировки " + NameLibrary.ParseFutureTime(trainEnd)
+                        request[page] += "\n\n"
+                        continue
+                    }
+                    if(city.dataValues.countryID !== context.country.id)
+                    {
+                        request[page] += "⚠ Отряд находится вне фракции, невозможно тренировать"
+                        request[page] += "\n\n"
+                        continue
+                    }
+                    kb.push([unit.dataValues.name, "ID" + unit.dataValues.id])
+                    request[page] += "\n\n"
+                    if(request[page].length > 3500)
+                    {
+                        page ++
+                        request[page] = ""
+                    }
+                }
+                if(kb.length === 0)
+                {
+                    await context.send(`⚠ Все отряды пусты или тренируются или находятся за границей фракции`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                for(const part of request)
+                {
+                    await context.send(part)
+                }
+                let detachment = await InputManager.KeyboardBuilder(context, "Выберите, какой отряд вы хотите отправить тренироваться", kb, current_keyboard)
+                if(!detachment) return resolve()
+                detachment = Data.ParseButtonID(detachment)
+                detachment = detachments.filter(u => {return u.dataValues.id === detachment})[0]
+                if(!context.country.CanPay(NameLibrary.ReversePrice(NameLibrary.PriceMultiply(JSON.parse(types[detachment.dataValues.typeId].service), detachment.dataValues.count))))
+                {
+                    await context.send(`⚠ В бюджете не хватает ресурсов для оплаты тренировки`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const accept = await InputManager.InputBoolean(context, `Время тренировки отряда 1 неделя, во время тренировки отряды будут заморожены, цена тренировки - недельное снабжение отряда, а именно:\n${NameLibrary.GetPrice(NameLibrary.PriceMultiply(JSON.parse(types[detachment.dataValues.typeId].service), detachment.dataValues.count))}\n\nПродолжить?`, current_keyboard)
+                if(!accept)
+                {
+                    await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                now.setDate(now.getDate() + 7)
+                detachment.set({trainEndTime: now, experience: detachment.dataValues.experience + 2})
+                await detachment.save()
+                await Data.AddCountryResources(context.country.id, NameLibrary.ReversePrice(NameLibrary.PriceMultiply(JSON.parse(types[detachment.dataValues.typeId].service), detachment.dataValues.count)))
+                await context.send("✅ Отряд отправлен на тренировку", {keyboard: keyboard.build(current_keyboard)})
             }
             catch (e)
             {
@@ -7039,30 +7389,21 @@ class BuildersAndControlsScripts
         return new Promise(async (resolve) => {
             try
             {
-                const units = await CountryArmy.findAll({where: {countryID: context.country.id}})
-                if(units.length === 0)
+                const army = await Army.findAll({where: {ownerId: context.country.id, ownerType: "country"}})
+                let prices = []
+                if(army.length === 0)
                 {
-                    await context.send("⚠ ГМ-ы еще не добавили вам боевые юниты")
+                    await context.send("⚠ ГМ-ы еще не добавили вам отряды")
                     return resolve()
                 }
-                let fullPrice = []
-                let request = context.country.GetResources() + "\n\n📉 Расходы на содержание армии:\n\n"
-                for(const unit of units)
+                for(const dec of army)
                 {
-                    if(unit.dataValues.count !== 0)
-                    {
-                        request += unit.dataValues.name + " " + unit.dataValues.count + "💂‍♂" + "\n"
-                        request += NameLibrary.GetPrice(NameLibrary.PriceMultiply(Prices["unit_lvl_" + unit.dataValues.barracksLVL], unit.dataValues.count)) + "\n\n"
-                        fullPrice.push(NameLibrary.PriceMultiply(Prices["unit_lvl_" + unit.dataValues.barracksLVL], unit.dataValues.count))
-                    }
+                    let type = await UnitType.findOne({where: {id: dec.dataValues.typeId}})
+                    if(!type) continue
+                    type = JSON.parse(type.dataValues.service)
+                    prices.push(NameLibrary.PriceMultiply(type, dec.dataValues.count))
                 }
-                if(fullPrice.length === 0)
-                {
-                    await context.send("⚠ У вашей фракции нет армии")
-                    return resolve()
-                }
-                request += "💸 Общая стоимость содержания в неделю:\n" + NameLibrary.GetPrice(NameLibrary.PriceSum(fullPrice))
-                await context.send(request)
+                await context.send("💸 Общая стоимость содержания в неделю:\n" + NameLibrary.GetPrice(NameLibrary.PriceSum(prices)))
                 return resolve()
             }
             catch (e)

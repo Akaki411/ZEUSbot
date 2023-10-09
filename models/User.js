@@ -12,6 +12,10 @@ class User
         this.role = user.dataValues.role
         this.status = user.dataValues.status
         this.platform = user.dataValues.platform
+        this.clan = user.dataValues.clan
+        this.position = user.dataValues.position
+        this.appearance = user.dataValues.appearance
+        this.personality = user.dataValues.personality
         this.avatar = user.dataValues.avatar
         this.TGID = user.dataValues.TGID
         this.TGShortName = user.dataValues.TGShortName
@@ -143,11 +147,11 @@ class User
         {
             if(TG)
             {
-                return `👤 [${this.nick}](https://vk.com/id${this.id}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `[💘Жена](https://vk.com/id${this.marriedID})` : `[💘Муж](https://vk.com/id${this.marriedID})`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.countries[this.citizenship].name : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${Math.floor(this.beer)}\\.${this.beer % 1} л\\.\n💭 Описание: ${this.description}`
+                return `👤 [${this.nick}](https://vk.com/id${this.id}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `[💘Жена](https://vk.com/id${this.marriedID})` : `[💘Муж](https://vk.com/id${this.marriedID})`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.countries[this.citizenship].name : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${Math.floor(this.beer)}\\.${this.beer % 1} л\\.\n🛡Клан: ${this.clan ? this.clan : "Нет"}\n🪚Положение: ${this.position ? this.position : "Нет"}\n🔍Внешний вид: ${this.appearance ? this.appearance : "Нет"}\n🔖Характер: ${this.personality ? this.personality : "Нет"}\n💭 Описание: ${this.description}`
             }
             else
             {
-                return `👤 ${parseInt(this.id) > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${this.beer.toFixed(1)} л.\n💭 Описание: ${this.description}`
+                return `👤 ${parseInt(this.id) > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${this.beer.toFixed(1)} л.\n🛡Клан: ${this.clan ? this.clan : "Нет"}\n🪚Положение: ${this.position ? this.position : "Нет"}\n🔍Внешний вид: ${this.appearance ? this.appearance : "Нет"}\n🔖Характер: ${this.personality ? this.personality : "Нет"}\n💭 Описание: ${this.description}`
             }
         }
         catch (e)

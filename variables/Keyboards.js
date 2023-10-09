@@ -37,6 +37,30 @@ class KeyboardButtons
         }
     })
 
+    addButton = Keyboard.textButton({
+        label: '➕ Добавить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'add'
+        }
+    })
+
+    skipButton = Keyboard.textButton({
+        label: '➡️ Пропустить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'skip'
+        }
+    })
+
+    deleteButton = Keyboard.textButton({
+        label: '🚫 Удалить',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'delete'
+        }
+    })
+
     defaultsButton = Keyboard.textButton({
         label: '📌 По умолчанию',
         color: Keyboard.SECONDARY_COLOR,
@@ -485,8 +509,6 @@ class KeyboardButtons
             choice: 'divorce'
         }
     })
-
-
 
     aboutMeButton = Keyboard.textButton({
         label: '💪 Обо мне',
@@ -944,14 +966,6 @@ class KeyboardButtons
         }
     })
 
-    clearUserCacheButton = Keyboard.textButton({
-        label: '🗑 Очистить кэш пользователей',
-        color: Keyboard.SECONDARY_COLOR,
-        payload: {
-            choice: 'clear_user_cache'
-        }
-    })
-
     uploadMapButton = Keyboard.textButton({
         label: '🗺 Обновить карту',
         color: Keyboard.SECONDARY_COLOR,
@@ -1201,27 +1215,27 @@ class KeyboardButtons
         }
     })
 
-    createUnitButton = Keyboard.textButton({
-        label: '➕ Создать юнит',
+    detachmentButton = Keyboard.textButton({
+        label: "🛡 Отряды",
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'create_unit'
+            choice: "detachment"
         }
     })
 
-    deleteUnitButton = Keyboard.textButton({
-        label: '✖ Удалить юнит',
+    unitTypeButton = Keyboard.textButton({
+        label: "🟢 Типы юнитов",
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'delete_unit'
+            choice: "unit_type"
         }
     })
 
-    editUnitButton = Keyboard.textButton({
-        label: '♻ Изменить юнит',
+    unitClassButton = Keyboard.textButton({
+        label: "🔵 Юниты",
         color: Keyboard.SECONDARY_COLOR,
         payload: {
-            choice: 'edit_unit'
+            choice: "unit_class"
         }
     })
 
@@ -1258,7 +1272,7 @@ class KeyboardButtons
     })
 
     trainUnitButton = Keyboard.textButton({
-        label: '➕🛡 Тренировать юниты',
+        label: '➕🛡 Пополнить отряд',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'train_unit'
@@ -1266,10 +1280,18 @@ class KeyboardButtons
     })
 
     refuseUnitButton = Keyboard.textButton({
-        label: '➖🛡 Отказаться от юнитов',
+        label: '➖🛡 Сократить отряд',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'refuse_unit'
+        }
+    })
+
+    trainDetachmentButton = Keyboard.textButton({
+        label: '🏹 Тренировать отряд',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'train_detachment'
         }
     })
 
