@@ -228,18 +228,18 @@ class VK_API
                             await Country.update({rating: Data.countries[i].rating}, {where: {id: Data.countries[i].id}})
                             await this.SendMessage(Data.countries[i].leaderID, `✅ Поздравляем! Ваша фракция ${Data.countries[i].GetName()} набрала более 2000 сообщений за день, рейтинг активности увеличен на 1 балл`)
                         }
-                        if(Data.countries[i].tested && Data.countries[i].active < Data.variables["minActive"])
+                        if(Data.countries[i].tested && Data.countries[i].active < Data.variables["minTestActive"])
                         {
                             Data.countries[i].warnings ++
                             await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
-                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} набрала менее ${Data.variables["minActive"]} сообщений за день, так как она находится на тестовом периоде, она получает варн`)
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} набрала менее ${Data.variables["minTestActive"]} сообщений за день, так как она находится на тестовом периоде, она получает варн`)
                             Data.countries[i].active = 0
                             continue
                         }
-                        if(Data.countries[i].active < Data.variables["minTestActive"])
+                        if(Data.countries[i].active < Data.variables["minActive"])
                         {
                             Data.countriesWeekPassiveScore[Data.countries[i].id] += 1
-                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} ${Data.countriesWeekPassiveScore[Data.countries[i].id]}-й раз набрала меньше ${Data.variables["minTestActive"]} сообщений актива`)
+                            await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} ${Data.countriesWeekPassiveScore[Data.countries[i].id]}-й раз набрала меньше ${Data.variables["minActive"]} сообщений актива`)
                             if(Data.countriesWeekPassiveScore[Data.countries[i].id] >= 3)
                             {
                                 Data.countries[i].warnings ++
