@@ -260,6 +260,11 @@ class ChatController
                 await this.Randomizer(context)
                 return true
             }
+            if(context.command?.match(/^моя статья$/))
+            {
+                await this.GetArticle(context)
+                return true
+            }
 
             //Модератор+
             if(context.command?.match(/^id$|^ид$/))
@@ -579,6 +584,33 @@ class ChatController
         catch (e)
         {
             await api.SendLogs(context, "ChatController/ChatButtonHandler", e)
+        }
+    }
+
+    async GetArticle(context)
+    {
+        try
+        {
+            
+            const articles = [41, 42, 43]
+            let article = articles[Math.floor(Math.random() * articles.length)]
+            let text, point = null
+            let type = NameLibrary.GetChance(50) ? "варн" : "глобан"
+            if(Rules[article].text)
+            {
+                text = Rules[article].text
+            }
+            else
+            {
+                point = Object.keys(Rules[article])[Math.floor(Object.keys(Rules[article]).length * Math.random())]
+                text = Rules[article][point].text
+            }
+            text = text.replace(/статья.*?\n/i, "")
+            await context.send(`🤷‍♂ Сегодня ${await api.GetName(context.player.id)} получает ${type} по статье ${article}.${point ? (point + ".") : ""} ${text}`)
+        }
+        catch (e)
+        {
+            console.log(e)
         }
     }
 
@@ -5187,7 +5219,7 @@ class ChatController
             }
             const userInfo = await PlayerInfo.findOne({where: {id: context.replyPlayers[0]}})
             const userStatus = await PlayerStatus.findOne({where: {id: context.replyPlayers[0]}})
-            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? (user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘 Жена)` : `*id${userInfo.dataValues.marriedID}(💘 Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n🍺 Выпито пива: ${parseFloat(user.dataValues.beer).toFixed(1)} л.\n🛡Клан: ${user.dataValues.clan ? user.dataValues.clan : "Нет"}\n🪚Положение: ${user.dataValues.position ? user.dataValues.position : "Нет"}\n🔍Внешний вид: ${user.dataValues.appearance ? user.dataValues.appearance : "Нет"}\n🔖Характер: ${user.dataValues.personality ? user.dataValues.personality : "Нет"}\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true, attachment: user.dataValues.avatar})
+            await context.send(`📌Игрок *id${user.dataValues.id}(${user.dataValues.nick}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? (user.dataValues.gender ? `*id${userInfo.dataValues.marriedID}(💘 Жена)` : `*id${userInfo.dataValues.marriedID}(💘 Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.GetCountryName(userStatus.dataValues.citizenship) : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n🍺 Выпито пива: ${parseFloat(user.dataValues.beer).toFixed(1)} л.\n🛡Клан: ${user.dataValues.clan ? user.dataValues.clan : "Нет"}\n🪚Положение: ${user.dataValues.position ? user.dataValues.position : "Нет"}\n🔍Внешний вид: ${user.dataValues.appearance ? user.dataValues.appearance : "Нет"}\n🔖Характер: ${user.dataValues.personality ? user.dataValues.personality : "Нет"}\n📣 Первое появление: ${NameLibrary.ParseDateTime(new Date(user.dataValues.createdAt))}\n💭 Описание: ${userInfo.dataValues.description}`, {disable_mentions: true, attachment: user.dataValues.avatar})
         }
         catch (e)
         {

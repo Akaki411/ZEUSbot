@@ -20,7 +20,7 @@ class User
         this.TGID = user.dataValues.TGID
         this.TGShortName = user.dataValues.TGShortName
         this.avatar = user.dataValues.avatar
-        this.createdAt = user.dataValues.createdAt
+        this.createdAt = new Date(user.dataValues.createdAt)
         this.beer = parseFloat(user.dataValues.beer)
         this.location = status.dataValues.location
         this.countryID = status.dataValues.countryID
@@ -151,7 +151,7 @@ class User
             }
             else
             {
-                return `👤 ${parseInt(this.id) > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${this.beer.toFixed(1)} л.\n🛡Клан: ${this.clan ? this.clan : "Нет"}\n🪚Положение: ${this.position ? this.position : "Нет"}\n🔍Внешний вид: ${this.appearance ? this.appearance : "Нет"}\n🔖Характер: ${this.personality ? this.personality : "Нет"}\n💭 Описание: ${this.description}`
+                return `👤 ${parseInt(this.id) > 0 ? `*id${this.id}(${this.nick})` : `*public${Math.abs(this.id)}(${this.nick})`}:\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `*id${this.marriedID}(💘Жена)` : `*id${this.marriedID}(💘Муж)`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.GetCountryName(this.citizenship) : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${this.beer.toFixed(1)} л.\n🛡Клан: ${this.clan ? this.clan : "Нет"}\n🪚Положение: ${this.position ? this.position : "Нет"}\n🔍Внешний вид: ${this.appearance ? this.appearance : "Нет"}\n🔖Характер: ${this.personality ? this.personality : "Нет"}\n📣 Первое появление: ${NameLibrary.ParseDateTime(this.createdAt)}\n💭 Описание: ${this.description}`
             }
         }
         catch (e)

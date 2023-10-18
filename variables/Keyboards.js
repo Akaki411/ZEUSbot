@@ -1104,7 +1104,7 @@ class KeyboardButtons
     })
 
     changeDescriptionButton = Keyboard.textButton({
-        label: '🔡 Изменить описание',
+        label: '🔡 Описание',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'change_description'
@@ -1136,7 +1136,7 @@ class KeyboardButtons
     })
 
     changeGenderButton = Keyboard.textButton({
-        label: '⚧ Изменить пол',
+        label: '⚧ Пол',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'change_gender'
@@ -1144,15 +1144,47 @@ class KeyboardButtons
     })
 
     changeNationButton = Keyboard.textButton({
-        label: '☃ Изменить национальность',
+        label: '☃ Национальность',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'change_nation'
         }
     })
 
+    changeClanButton = Keyboard.textButton({
+        label: '🛡 Клан',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_clan'
+        }
+    })
+
+    changePositionButton = Keyboard.textButton({
+        label: '🪚 Положение',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_position'
+        }
+    })
+
+    changeAppearanceButton = Keyboard.textButton({
+        label: '🔍 Внешность',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_appearance'
+        }
+    })
+
+    changePersonalityButton = Keyboard.textButton({
+        label: '🔖 Характер',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'change_personality'
+        }
+    })
+
     changeAgeButton = Keyboard.textButton({
-        label: '🔢 Изменить возраст',
+        label: '🔢 Возраст',
         color: Keyboard.SECONDARY_COLOR,
         payload: {
             choice: 'change_age'

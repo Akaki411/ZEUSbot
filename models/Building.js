@@ -24,9 +24,9 @@ class Building
         return `${this.GetType(this.type)} \"${this.name}\"\n\n🙎‍♂ Владелец: ${this.ownerType === "user" ? "*id" + this.ownerID + "(Владелец)" : this.ownerType === "city" ? "Город" : "Государство"}\n⬆ Уровень: ${this.level}`
     }
 
-    GetType(type)
+    GetType()
     {
-        switch (type)
+        switch (this.type)
         {
             case "building_of_house":
                 return "🏠 Жилой дом"

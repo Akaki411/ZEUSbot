@@ -53,10 +53,10 @@ class BuildersAndControlsScripts
                 if(!nation) return resolve()
 
                 const clan = await InputManager.InputString(context, `5️⃣ Расскажите о своём клане/племени/филе/доме и тд, если они есть\n\n⚠ Длина до 100 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 100)
-                const position = await InputManager.InputString(context, `4️⃣ Расскажите о положении в обществе, например: политик, религиозный деятель, торговец, солдат и т.д.\n\n⚠ Длина до 100 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 100)
-                const appearance = await InputManager.InputString(context, `4️⃣ Укажите внешность, телосложение, гражданская одежда\n\n⚠ Длина до 150 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 150)
-                const personality = await InputManager.InputString(context, `4️⃣ Опишите характер, взгляды, ценности. Если вы опытный ролевик, то именно на этот пункт вы должны сделать акцент.\n⚠ Длина до 250 символов.`, current_keyboard, 0, 250)
-                const description = await InputManager.InputString(context, `4️⃣ Расскажите о своём персонаже! Откуда он родом, чем занимается. Возможно есть ли у него семья, дети. С какой целью он пришёл в то место, где находится сейчас.\n⚠ Длина до 1000 символов.`, current_keyboard, 0, 1000)
+                const position = await InputManager.InputString(context, `6️⃣ Расскажите о положении в обществе, например: политик, религиозный деятель, торговец, солдат и т.д.\n\n⚠ Длина до 100 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 100)
+                const appearance = await InputManager.InputString(context, `7️⃣ Укажите внешность, телосложение, гражданская одежда\n\n⚠ Длина до 150 символов. Чтобы пропустить нажмите отмена.`, current_keyboard, 0, 150)
+                const personality = await InputManager.InputString(context, `8️⃣ Опишите характер, взгляды, ценности. Если вы опытный ролевик, то именно на этот пункт вы должны сделать акцент.\n⚠ Длина до 250 символов.`, current_keyboard, 0, 250)
+                const description = await InputManager.InputString(context, `9️⃣ Расскажите о своём персонаже! Откуда он родом, чем занимается. Возможно есть ли у него семья, дети. С какой целью он пришёл в то место, где находится сейчас.\n⚠ Длина до 1000 символов.`, current_keyboard, 0, 1000)
                 if(!description) return resolve(false)
                 await context.send(Nations[nation].description)
                 nation = Nations[nation].name
@@ -996,7 +996,7 @@ class BuildersAndControlsScripts
                     request += (i+1) + ": " + Data.buildings[context.cityID][i].GetType() + " \"" + Data.buildings[context.cityID][i].name + "\" " + Data.buildings[context.cityID][i].level + " ур\n"
                     if(Data.buildings[context.player.location][i].type !== "building_of_house")
                     {
-                        buildingButtons.push([Data.buildings[context.cityID][i].GetEmoji + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
+                        buildingButtons.push([Data.buildings[context.cityID][i].GetEmoji() + Data.buildings[context.cityID][i].name, "ID" + Data.buildings[context.cityID][i].id])
                     }
                 }
                 if(buildingButtons.length === 0)
@@ -1286,7 +1286,7 @@ class BuildersAndControlsScripts
                 let request = "ℹ Добыча из построек:\n\n"
                 const time = new Date()
                 const future = new Date()
-                future.setHours(future.getHours() + 6)
+                future.setHours(future.getHours() + 4)
                 let resource = ""
                 let flag = false
                 let isVoid = true
@@ -1600,7 +1600,7 @@ class BuildersAndControlsScripts
                 let request = "ℹ Добыча из государственных построек:\n\n"
                 const time = new Date()
                 const future = new Date()
-                future.setHours(future.getHours() + 6)
+                future.setHours(future.getHours() + 4)
                 let resource = ""
                 let flag = false
                 let isVoid = true
@@ -6015,6 +6015,82 @@ class BuildersAndControlsScripts
         })
     }
 
+    async ChangeClan(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let clan = await InputManager.InputString(context, `1️⃣ Введите новое значение, которое будет отображаться в поле \"Клан\"`, current_keyboard,2, 20)
+                if(!clan) return resolve()
+                context.player.clan = clan
+                await Player.update({clan: clan}, {where: {id: context.player.id}})
+                await context.send("✅ Клан изменен", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+            }
+        })
+    }
+
+    async ChangePosition(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let position = await InputManager.InputString(context, `1️⃣ Введите новое значение, которое будет отображаться в поле \"Положение\"`, current_keyboard,2, 20)
+                if(!position) return resolve()
+                context.player.position = position
+                await Player.update({position: position}, {where: {id: context.player.id}})
+                await context.send("✅ Положение изменено", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+            }
+        })
+    }
+
+    async ChangeAppearance(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let appearance = await InputManager.InputString(context, `1️⃣ Введите новое значение, которое будет отображаться в поле \"Внешний вид\"`, current_keyboard,2, 20)
+                if(!appearance) return resolve()
+                context.player.appearance = appearance
+                await Player.update({appearance: appearance}, {where: {id: context.player.id}})
+                await context.send("✅ Внешний вид изменен", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+            }
+        })
+    }
+
+    async ChangePersonality(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                let personality = await InputManager.InputString(context, `1️⃣ Введите новое значение, которое будет отображаться в поле \"Характер\"`, current_keyboard,2, 20)
+                if(!personality) return resolve()
+                context.player.personality = personality
+                await Player.update({personality: personality}, {where: {id: context.player.id}})
+                await context.send("✅ Характер изменен", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeNick", e)
+            }
+        })
+    }
+
     async ChangeDescription(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
@@ -7429,7 +7505,7 @@ class BuildersAndControlsScripts
                 let isVoid = true
                 const time = new Date()
                 const future = new Date()
-                future.setHours(future.getHours() + 6)
+                future.setHours(future.getHours() + 4)
                 let extraction = {}
                 let tax = {}
                 let countryIncome = 0

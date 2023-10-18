@@ -2451,6 +2451,7 @@ class SceneController
         return [
             [keyboard.changeNickButton, keyboard.changeDescriptionButton, keyboard.gadgetButton],
             [keyboard.changeGenderButton, keyboard.changeNationButton, keyboard.changeAgeButton],
+            [keyboard.changeClanButton, keyboard.changePositionButton, keyboard.changeAppearanceButton, keyboard.changePersonalityButton],
             [keyboard.backButton, keyboard.avatarButton]
         ]
     }
@@ -2680,7 +2681,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             let current_keyboard = this.GetChangeAccountMenuKeyboard()
-            if (context.messagePayload?.choice?.match(/back|change_description|avatar|change_nick|gadget|change_nation|change_gender|change_age/))
+            if (context.messagePayload?.choice?.match(/back|change_description|avatar|change_nick|gadget|change_nation|change_gender|change_age|change_position|change_appearance|change_personality|change_clan/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -2690,6 +2691,22 @@ class SceneController
                 if (context.messagePayload.choice.match(/change_nick/))
                 {
                     await Builders.ChangeNick(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_position/))
+                {
+                    await Builders.ChangePosition(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_appearance/))
+                {
+                    await Builders.ChangeAppearance(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_personality/))
+                {
+                    await Builders.ChangePersonality(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/change_clan/))
+                {
+                    await Builders.ChangeClan(context, current_keyboard)
                 }
                 if (context.messagePayload.choice.match(/change_description/))
                 {
