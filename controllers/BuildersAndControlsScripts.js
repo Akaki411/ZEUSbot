@@ -1341,7 +1341,7 @@ class BuildersAndControlsScripts
                         {
                             await context.send(`✅ Постройки города ${Data.cities[context.cityID].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
                             delete Data.timeouts["city_timeout_resources_ready_" + context.cityID]
-                        }, 21600000)
+                        }, 14400000)
                     }
                 }
                 request += isVoid ? "" : ("\n\nДобыто всего:\n" + NameLibrary.GetPrice(extraction))
@@ -1668,7 +1668,7 @@ class BuildersAndControlsScripts
                         {
                             await context.send(`✅ Постройки фракции ${context.country.GetName(context.player.platform === "IOS")} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
                             delete Data.timeouts["country_timeout_resources_ready_" + context.country.id]
-                        }, 21600000)
+                        }, 14400000)
                     }
                 }
                 request += isVoid ? "" : ("\n\nДобыто всего:\n" + NameLibrary.GetPrice(extraction))
@@ -6335,7 +6335,7 @@ class BuildersAndControlsScripts
                     await context.send("🚫 Отменено", {keyboard: keyboard.build(current_keyboard)})
                     return resolve()
                 }
-                let seconds = Math.round(21600 * (count / maxCount))
+                let seconds = Math.round(14400 * (count / maxCount))
                 time.setSeconds(time.getSeconds() + seconds)
                 mintCount = 0
                 for(let k = 0; k < Data.cities.length; k++)
@@ -7571,7 +7571,7 @@ class BuildersAndControlsScripts
                         {
                             await context.send(`✅ Ваши постройки в городе ${Data.cities[city].name} завершили добычу ресурсов, а это значит что снова пора собирать ресурсы!`)
                             delete Data.timeouts["country_timeout_resources_ready_" + context.player.id]
-                        }, 21600000)
+                        }, 14400000)
                     }
                 }
                 request += isVoid ? "" : (`\n\nДобыто всего (после взятия налога ${Data.GetCountryForCity(context.player.location).privateBuildingTax}%):\n` + NameLibrary.GetPrice(extraction))
