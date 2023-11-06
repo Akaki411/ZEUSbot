@@ -147,7 +147,22 @@ class User
         {
             if(TG)
             {
-                return `👤 [${this.nick}](https://vk.com/id${this.id}):\n\n📅 Возраст: ${this.age}\n🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n🍣 Национальность: ${this.nationality}\n💍 Брак: ${this.marriedID ? (this.gender ? `[💘Жена](https://vk.com/id${this.marriedID})` : `[💘Муж](https://vk.com/id${this.marriedID})`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n🔰 Гражданство: ${this.citizenship ? Data.countries[this.citizenship].name : "Нет"}\n📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n🍺 Выпито пива: ${Math.floor(this.beer)}\\.${this.beer % 1} л\\.\n🛡Клан: ${this.clan ? this.clan : "Нет"}\n🪚Положение: ${this.position ? this.position : "Нет"}\n🔍Внешний вид: ${this.appearance ? this.appearance : "Нет"}\n🔖Характер: ${this.personality ? this.personality : "Нет"}\n💭 Описание: ${this.description}`
+                return `👤 <a href="https://vk.com/id${this.id}" style="text-decoration:none;color:transparent;">${this.nick}</a>` +
+                "\n\n"+
+                `📅 Возраст: ${this.age}\n` +
+                `🔅 Пол: ${this.gender ? "Мужской" : "Женский"}\n` +
+                `🍣 Национальность: ${this.nationality}\n` +
+                `💍 Брак: ${this.marriedID ? `<a href="https://vk.com/id${this.marriedID}" style="text-decoration:none;color:transparent;">💘${this.gender ? " Жена" : " Муж"}</a>` : "Нет"}\n` +
+                `🪄 Роль: ${NameLibrary.GetRoleName(this.role)}\n` +
+                `👑 Статус: ${NameLibrary.GetStatusName(this.status)}\n` +
+                `🔰 Гражданство: ${this.citizenship ? Data.countries[this.citizenship].name : "Нет"}\n` +
+                `📍 Прописка: ${this.registration ? Data.GetCityName(this.registration) : "Нет"}\n` +
+                `🍺 Выпито пива: ${Math.floor(this.beer)}.${this.beer % 1} л.\n` +
+                `🛡Клан: ${this.clan ? this.clan : "Нет"}\n` +
+                `🪚Положение: ${this.position ? this.position : "Нет"}\n` +
+                `🔍Внешний вид: ${this.appearance ? this.appearance : "Нет"}\n` +
+                `🔖Характер: ${this.personality ? this.personality : "Нет"}\n` +
+                `💭 Описание: ${this.description}`
             }
             else
             {

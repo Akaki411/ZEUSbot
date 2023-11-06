@@ -222,20 +222,6 @@ class NameLibrary
         return newPrice
     }
 
-    GetUnitType(type)
-    {
-        switch (type)
-        {
-            case "elephant":
-                return "Слоны"
-            case "cavalier":
-                return "Кавалерия"
-            case "soldier":
-                return "Пехота"
-        }
-        return "Не отмеченный тип"
-    }
-
     GetResourceName(res)
     {
         switch(res)
@@ -412,6 +398,15 @@ class NameLibrary
             request += user.GetInfo() + "\n\n" + user.GetResources()
         }
         return request
+    }
+
+    ConvertTGMessage(message)
+    {
+        message = message.replace(/\./gi, "\\.")
+        message = message.replace(/\[/gi, "\\[")
+        message = message.replace(/]/gi, "\\]")
+        message = message.replace(/-/gi, "\\-")
+        return message
     }
 }
 

@@ -38,7 +38,6 @@ class CacheData
         this.musicLovers = {}
         this.countryChats = {}
         this.TGcountryChats = {}
-        this.countriesWeekActive = {}
         this.countriesWeekPassiveScore = {}
         this.chatListen = {}
         this.userListen = {}
@@ -432,7 +431,6 @@ class CacheData
     {
         this.countries = []
         this.countryResourcesStats = {}
-        this.countriesWeekActive = {}
         return new Promise(async (resolve) => {
             const countries = await Country.findAll()
             for (const key of countries)
@@ -455,7 +453,6 @@ class CacheData
                 if(country)
                 {
                     country.active = active[country.id] ? active[country.id] : 0
-                    this.countriesWeekActive[country.id] = active["week_" + country.id] ? active["week_" + country.id] : 0
                     this.countriesWeekPassiveScore[country.id] = active.passiveScore ? active.passiveScore[country.id] ? active.passiveScore[country.id] : 0 : 0
                     if(active.resourcesStats)
                     {
@@ -547,13 +544,6 @@ class CacheData
                 if(country)
                 {
                     active[country.id] = country.active
-                }
-            }
-            for(const country of this.countries)
-            {
-                if(country)
-                {
-                    active["week_" + country.id] = this.countriesWeekActive[country.id] ? this.countriesWeekActive[country.id] : 0
                 }
             }
             for(const country of this.countries)

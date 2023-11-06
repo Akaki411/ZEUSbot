@@ -246,10 +246,27 @@ class VK_API
                                 await Country.update({warnings: Data.countries[i].warnings}, {where: {id: Data.countries[i].id}})
                                 await this.SendMessage(Data.countries[i].leaderID, `⚠ Внимание! Ваша фракция ${Data.countries[i].GetName()} получила варн`)
                                 Data.countriesWeekPassiveScore[Data.countries[i].id] = 0
+                                if(Data.countries[i].warnings >= 6 && !Data.countries[i].hide)
+                                {
+                                    Data.countries[i].hide = true
+                                    await Country.update({hide: true}, {where: {id: i}})
+                                    await this.SendMessage(Data.countries[i].leaderID, `⚠ Ваша фракция ${Data.countries[i].GetName()} получила 6-й варн, теперь она скрыта из общего списка фракций, админам отправлено соответствующее уведомление`)
+                                    const admins = await Player.findAll({where: {role: ["project_head", "GM", "MGM"]}})
+                                    for(const i of admins)
+                                    {
+                                        try
+                                        {
+                                            await this.api.messages.send({
+                                                user_id: i.dataValues.id,
+                                                random_id: Math.round(Math.random() * 100000),
+                                                message: `⚠ Фракция ${Data.countries[i].GetName()} получила 6-й варн, сейчас она скрыта из общего списка фракций`
+                                            })
+                                        } catch (e) {}
+                                    }
+                                }
                             }
                         }
                     }
-                    Data.countriesWeekActive[Data.countries[i].id] += Data.countries[i].active
                     activity.push({
                         id: i,
                         n: Data.countries[i].GetName(),
@@ -416,7 +433,6 @@ class VK_API
             if(country)
             {
                 Data.countriesWeekPassiveScore[country.id] = 0
-                Data.countriesWeekActive[country.id] = 0
                 request = `✅ Только что была снята оплата за содержание армии, стоимость содержания:\n\n`
                 prices = []
                 fullPrice = {}

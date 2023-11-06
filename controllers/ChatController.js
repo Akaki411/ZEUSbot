@@ -17,6 +17,7 @@ const APIKeysGenerator = require("../models/ApiKeysGenerator")
 const CrossStates = require("./CrossStates")
 const BotReactions = require("./Reactions")
 const StopList = require("../files/StopList.json")
+const Active = require("../models/Active")
 
 class ChatController
 {
@@ -1382,14 +1383,16 @@ class ChatController
         request += "🌐 Столица - " + Data.cities[object.capitalID].name + "\n"
         request += "👥 Население - " + population + "\n"
         request += `👑 Правител${object.isParliament ? "и:\n" : "ь - "}${object.isParliament ? ((leader ? `@id${object.leaderID}(${leader.dataValues.nick})` : "") + getLeaders(object.id)) : (leader ? `@id${object.leaderID}(${leader.dataValues.nick})` : "Не назначен")}\n`
-        request += "🏛 Форма правления - " + object.governmentForm + "\n\n"
-        request += "На территории можно добыть:\n\n"
+        request += "🏛 Форма правления - " + object.governmentForm + "\n"
+        request += "🔴 Количество варнов - " + object.warnings + "\n\n"
+        request += "На территории можно добыть:\n"
         let res = object.resources.split(".")
         for(const r of res)
         {
             request += NameLibrary.GetResourceName(r) + "\n"
         }
         if(object.tested) request += "\n❗ Фракция находится на испытательном сроке\n"
+        if(object.hide) request += "\n❗ Фракция является скрытой\n"
         request += "\n🏆 Стабильность - " + object.stability + "\n"
         if(NameLibrary.RoleEstimator(context.player.role) > 1)
         {
@@ -2874,10 +2877,6 @@ class ChatController
     {
         try
         {
-            if(NameLibrary.RoleEstimator(context.player.role) === 0)
-            {
-                return
-            }
             let user
             if(context.replyPlayers.length !== 0)
             {
@@ -2885,7 +2884,19 @@ class ChatController
             }
             else
             {
-                await context.send("⚠ Выберите игрока")
+                let request = "🔴 Количество варнов фракций:\n\n"
+                for(const country of Data.countries)
+                {
+                    if(country)
+                    {
+                        request += country.GetName(context.player.platform === "IOS") + " - " + country.warnings + " варнов \n"
+                    }
+                }
+                await context.send(request)
+                return
+            }
+            if(NameLibrary.RoleEstimator(context.player.role) === 0)
+            {
                 return
             }
             const count = await Warning.count({where: {userID: user}})
@@ -4265,15 +4276,25 @@ class ChatController
     {
         try
         {
-            if(context.command.match(/неделя/))
+            if(context.command.match(/\d+[.,:]\d+/))
             {
-                let {request} = await OutputManager.GetWeekActiveMessage({command: context.command, app: "VK", platform: context.player.platform})
-                await context.send(request)
+                await context.send(await Active.GetDateActive(context.command, "VK", context.player.platform === "IOS"))
+            }
+            else if(context.command.match(/месяц/))
+            {
+                await context.send(await Active.GetMonthActive(context.command, "VK", context.player.platform === "IOS"))
+            }
+            else if(context.command.match(/неделя/))
+            {
+                await context.send(await Active.GetWeekActive(context.command, "VK", context.player.platform === "IOS"))
+            }
+            else if(context.command.match(/весь|все|всё/))
+            {
+                await context.send(await Active.GetTotalActive(context.command, "VK", context.player.platform === "IOS"))
             }
             else
             {
-                let {request} = await OutputManager.GetDayActiveMessage({command: context.command, app: "VK", platform: context.player.platform})
-                await context.send(request)
+                await context.send(await Active.GetTodayActive(context.command, "VK", context.player.platform === "IOS"))
             }
         }
         catch (e)

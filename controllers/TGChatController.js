@@ -1,5 +1,4 @@
 const Commands = require('../variables/Commands')
-const OutputManager = require('./OutputManager')
 const NameLibrary = require('../variables/NameLibrary')
 const Data = require("../models/CacheData");
 const api = require("../middleware/API");
@@ -11,6 +10,7 @@ const CrossStates = require("./CrossStates");
 const sequelize = require("../database/DataBase");
 const Rules = require("../variables/Rules");
 const StopList = require("../files/StopList.json");
+const Active = require("../models/Active");
 
 class TGChatController
 {
@@ -250,7 +250,7 @@ class TGChatController
             }
             if(context.command?.match(Commands.aboutMe))
             {
-                await context.send(context.player.GetInfo(true), {parse_mode: 'MarkdownV2'})
+                await context.send(context.player.GetInfo(true), {parse_mode: 'html', disable_web_page_preview: true})
                 return true
             }
             if(context.command?.match(Commands.checkDocs))
@@ -3022,7 +3022,23 @@ class TGChatController
             }
             const userInfo = await PlayerInfo.findOne({where: {id: user.dataValues.id}})
             const userStatus = await PlayerStatus.findOne({where: {id: user.dataValues.id}})
-            await context.send(`📌Игрок [${user.dataValues.nick}](https://vk.com/id${user.dataValues.id}):\n\n📅 Возраст: ${userInfo.dataValues.age}\n⚤ Пол: ${user.dataValues.gender ? "♂ Мужчина" : "♀ Женщина"}\n🍣 Национальность: ${userInfo.dataValues.nationality}\n💍 Брак: ${userInfo.dataValues.marriedID ? (user.dataValues.gender ? `[💘Жена](https://vk.com/id${userInfo.dataValues.marriedID})` : `[💘 Муж](https://vk.com/id${userInfo.dataValues.marriedID})`) : "Нет"}\n🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.countries[userStatus.dataValues.citizenship].name : "Нет"}\n📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n🍺 Выпито пива: ${Math.floor(user.dataValues.beer)}\\.${user.dataValues.beer % 1} л\\.\n💭 Описание: ${userInfo.dataValues.description}`, {parse_mode: 'MarkdownV2'})
+            await context.send(`📌Игрок <a href="https://vk.com/id${user.dataValues.id}" style="text-decoration:none;color:transparent;">${user.dataValues.nick}</a>` +
+                "\n\n"+
+                `📅 Возраст: ${userInfo.dataValues.age}\n` +
+                `🔅 Пол: ${user.dataValues.gender ? "Мужской" : "Женский"}\n` +
+                `🍣 Национальность: ${userInfo.dataValues.nationality}\n` +
+                `💍 Брак: ${userInfo.dataValues.marriedID ? `<a href="https://vk.com/id${userInfo.dataValues.marriedID}" style="text-decoration:none;color:transparent;">💘${user.dataValues.gender ? " Жена" : " Муж"}</a>` : "Нет"}\n` +
+                `🪄 Роль: ${NameLibrary.GetRoleName(user.dataValues.role)}\n` +
+                `👑 Статус: ${NameLibrary.GetStatusName(user.dataValues.status)}\n` +
+                `🔰 Гражданство: ${userStatus.dataValues.citizenship ? Data.countries[userStatus.dataValues.citizenship].name : "Нет"}\n` +
+                `📍 Прописка: ${userStatus.dataValues.registration ? Data.GetCityName(userStatus.dataValues.registration) : "Нет"}\n` +
+                `🍺 Выпито пива: ${Math.floor(user.dataValues.beer)}.${user.dataValues.beer % 1} л.\n` +
+                `🛡Клан: ${user.dataValues.clan ? user.dataValues.clan : "Нет"}\n` +
+                `🪚Положение: ${user.dataValues.position ? user.dataValues.position : "Нет"}\n` +
+                `🔍Внешний вид: ${user.dataValues.appearance ? user.dataValues.appearance : "Нет"}\n` +
+                `🔖Характер: ${user.dataValues.personality ? user.dataValues.personality : "Нет"}\n` +
+                `💭 Описание: ${userInfo.dataValues.description}`,
+                {parse_mode: 'html', disable_web_page_preview: true})
         }
         catch (e)
         {
@@ -3058,15 +3074,25 @@ class TGChatController
     {
         try
         {
-            if(context.command.match(/неделя/))
+            if(context.command.match(/\d+[.,:]\d+/))
             {
-                let {request, short} = await OutputManager.GetWeekActiveMessage({command: context.command, app: "TG"})
-                short ? await context.send(request, {parse_mode: 'MarkdownV2'}) : await context.send(request)
+                await context.send(await Active.GetDateActive(context.command, "TG", true))
+            }
+            else if(context.command.match(/месяц/))
+            {
+                await context.send(await Active.GetMonthActive(context.command, "TG", true))
+            }
+            else if(context.command.match(/неделя/))
+            {
+                await context.send(await Active.GetWeekActive(context.command, "TG", true))
+            }
+            else if(context.command.match(/весь|все|всё/))
+            {
+                await context.send(await Active.GetTotalActive(context.command, "TG", true))
             }
             else
             {
-                let {request, short} = await OutputManager.GetDayActiveMessage({command: context.command, app: "TG"})
-                short ? await context.send(request, {parse_mode: 'MarkdownV2'}) : await context.send(request)
+                await context.send(await Active.GetTodayActive(context.command, "TG"))
             }
         }
         catch (e)
@@ -3079,7 +3105,7 @@ class TGChatController
     {
         try
         {
-            if(Data.requests[context.player.id])
+            if(Data.requests[context.player?.id])
             {
                 await context.send(Data.requests[context.player.id].sample.length > 0 ? Data.requests[context.player.id].sample : NameLibrary.GetRandomSample("call_request"))
             }

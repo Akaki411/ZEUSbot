@@ -4,7 +4,6 @@ const TGSceneController = require("../controllers/TGSceneController")
 const {Player, PlayerStatus, PlayerInfo, PlayerResources, TGChats, Ban} = require("../database/Models")
 const UserObject = require('../models/User')
 const TGChat = require("../models/TGChat")
-const api = require("./API");
 
 module.exports = async (context) =>
 {
@@ -117,10 +116,9 @@ module.exports = async (context) =>
             else
             {
                 delete Data.TGChats[context.peer.peerID].muteList[context.player.id]
-                await Data.SaveVKChat(context.chat.id)
+                await Data.SaveTGChat(context.chat.id)
             }
         }
-
         await TGChatController.Handler(context)
     }
     else

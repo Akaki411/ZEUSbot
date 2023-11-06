@@ -168,18 +168,14 @@ const StartTGBot = async () => {
             {
                 context.api = TGbot
                 context.scenes = SceneController
-                context.send = async (text, params) => {
-                    await TGbot.sendMessage(context.chat.id, text, params)
-                }
+                context.send = async (text, params) => {await TGbot.sendMessage(context.chat.id, text, params)}
                 await CacheTGUserMiddleware(context)
             })
             TGbot.on('callback_query', async (context) =>
             {
                 context.api = TGbot
                 context.scenes = SceneController
-                context.send = async (text, options) => {
-                    await TGbot.sendMessage(context.message.chat.id, text, options)
-                }
+                context.send = async (text, options) => {await TGbot.sendMessage(context.message.chat.id, text, options)}
                 await CacheUserCallbackTGMiddleware(context)
             })
             console.log("ТГ бот запущен")

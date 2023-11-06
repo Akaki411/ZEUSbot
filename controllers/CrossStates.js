@@ -169,7 +169,6 @@ class CrossStates
 
     async GetCitizenship(userId, countryId)
     {
-        console.log("Подача на гражданство-----------------------------------------------")
         let player = null
         if(Data.users[userId])
         {
@@ -185,7 +184,6 @@ class CrossStates
             Data.users[userId] = new User(playerDB, playerStatus, playerInfo, playerResources)
             player = Data.users[userId]
         }
-        console.log(player)
         await api.api.messages.send({
             user_id: Data.countries[countryId].leaderID,
             random_id: Math.round(Math.random() * 100000),
@@ -221,8 +219,6 @@ class CrossStates
                 delete Data.timeouts["get_citizenship_" + userId]
             }, 86400000)
         }
-        console.log(Data.timeouts["get_citizenship_" + userId])
-        console.log("Конец--------------------------------------------------")
         return true
     }
 

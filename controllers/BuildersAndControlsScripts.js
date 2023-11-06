@@ -2065,7 +2065,7 @@ class BuildersAndControlsScripts
                     })
                 }
                 await Data.AddCountryResources(context.country.id, Prices["new_city"])
-                await Data.ResetCities()
+                await Data.LoadCities()
                 await api.SendMessage(leader.dataValues.id, `✅ Правитель фракции ${context.country.GetName(context.player.platform === "IOS")} построил новый город \"${newCity.dataValues.name}\" и вы были назначены его главой, ваш статус изменен на "Чиновник"`)
                 await context.send("✅ Город создан.", {keyboard: keyboard.build(current_keyboard)})
                 return resolve()
