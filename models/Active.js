@@ -409,6 +409,7 @@ class Active
             for(const country of Data.countries)
             {
                 if(!country) continue
+                if(country.hide) continue
                 active.items.push({
                     id: country.id,
                     name: platform === "TG" ? country.name : country.GetName(isIOS),
