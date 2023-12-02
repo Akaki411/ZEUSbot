@@ -1407,6 +1407,70 @@ class KeyboardButtons
         }
     })
 
+    MiniRoundButton = Keyboard.textButton({
+        label: '❓ Миникатка',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'miniround'
+        }
+    })
+
+    intelligenceButton = Keyboard.textButton({
+        label: '🔭 Разведка',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'intelligence'
+        }
+    })
+
+    implementationButton = Keyboard.textButton({
+        label: '👀 Внедрение',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'implementation'
+        }
+    })
+
+    sabotageButton = Keyboard.textButton({
+        label: '💫 Саботаж',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'sabotage'
+        }
+    })
+
+    counterintelligenceButton = Keyboard.textButton({
+        label: '🕸 Контрразведка',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'counterintelligence'
+        }
+    })
+
+    buyEconomicScoreButton = Keyboard.textButton({
+        label: '🌀 Баллы экономики',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'buyEconomicScore'
+        }
+    })
+
+    empireRulesButton = Keyboard.textButton({
+        label: '📰 Имперские законы',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'empireRules'
+        }
+    })
+
+    empireBuildingsButton = Keyboard.textButton({
+        label: '🏛 Имперские постройки',
+        color: Keyboard.SECONDARY_COLOR,
+        payload: {
+            choice: 'empireBuildings'
+        }
+    })
+
     //Callback buttons
     acceptCallbackButton = (obj) => {
         obj.parameter = obj.parameter || null

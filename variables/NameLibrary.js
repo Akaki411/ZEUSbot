@@ -408,6 +408,25 @@ class NameLibrary
         message = message.replace(/-/gi, "\\-")
         return message
     }
+
+    GetCountryStage(score)
+    {
+        if(score <= 50)  return "Нестабильность"
+        if(score <= 100) return "Кризис"
+        if(score <= 150) return "Распад"
+        if(score < 200)  return "Закат империи"
+        return "Рецессия"
+    }
+
+    GetCountryEconomic(score)
+    {
+        if(score <= 100) return {state: "Упадок", tax: 6}
+        if(score <= 200) return {state: "Рецессия", tax: 10}
+        if(score <= 400) return {state: "Стагнация", tax: 14}
+        if(score < 600)  return {state: "Развитая держава", tax: 20}
+        if(score < 600)  return {state: "Великая держава", tax: 40}
+        return {state: "Сверхдержава", tax: 100}
+    }
 }
 
 module.exports = new NameLibrary()

@@ -5,7 +5,7 @@ const keyboard = require("../variables/Keyboards");
 const {City, Country, PlayerStatus, Player, Ban, LastWills, Buildings,
     CountryResources, CityResources, PlayerInfo, CountryRoads, Keys, OfficialInfo, Messages, Chats,
     Warning, CityRoads, Transactions, CountryTaxes, CountryNotes, CityNotes, PlayerNotes, Events,
-    PlayerResources, UnitClass, UnitType, Army
+    PlayerResources, UnitClass, UnitType, Army, LongTimeouts, EmpireRules
 } = require("../database/Models");
 const api = require("../middleware/API");
 const NameLibrary = require("../variables/NameLibrary")
@@ -2143,10 +2143,9 @@ class BuildersAndControlsScripts
     async CreateCountryBuilding(context, current_keyboard)
     {
         return new Promise(async (resolve) => {
-            try
-            {
+            try {
                 let city = await InputManager.KeyboardBuilder(context, "Выберите город, в котором хотите разместить новую постройку", Data.GetCityForCountryButtons(context.country.id), current_keyboard)
-                if(!city) return resolve()
+                if (!city) return resolve()
                 city = Data.ParseButtonID(city)
                 const buildingButtons = [
                     ["⚔ Казарма", "barracks"],
@@ -7864,7 +7863,7 @@ class BuildersAndControlsScripts
                 if(!country) return resolve()
                 country = Data.ParseButtonID(country)
                 country = Data.countries[country]
-                const kb = [
+                let kb = [
                     ["🏆 Стабильность", "stability"],
                     ["🌾 Крестьянство", "peasantry"],
                     ["🙏 Религия", "religion"],
@@ -7872,6 +7871,15 @@ class BuildersAndControlsScripts
                     ["⚔ Военные", "military"],
                     ["💰 Купечество", "merchants"]
                 ]
+                if(process.env["MINIROUND"])
+                {
+                    kb = kb.concat([
+                        ["🥕 Очки Благосостояния", "blessingScore"],
+                        ["💱 Очки Экономики", "economicScore"],
+                        ["🧨 Лояльность", "loyalty"],
+                        ["📈 Пассивный доход", "income"]
+                    ])
+                }
                 const variable = await InputManager.KeyboardBuilder(context, "Выберите, какую переменную вы хотите установить", kb, current_keyboard)
                 if(!variable) return resolve()
                 const count = await InputManager.InputInteger(context, "Введите новое значение", current_keyboard)
@@ -8038,7 +8046,7 @@ class BuildersAndControlsScripts
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/KillPlayer", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/ChangeCountryModer", e)
             }
         })
     }
@@ -8055,12 +8063,285 @@ class BuildersAndControlsScripts
                 }
                 const code = NameLibrary.GetRandomNumb(10000000, 99999999)
                 Data.TGcodes[code] = context.player.id
-                await context.send(`✅ Для того чтобы вам привязать свой телеграмм аккаунт к вашему профилю в боте, вам надо ввести код в ЛС телеграм боту.\n\nВот ваш код: ${code}\n\nПерейдите по адресу ${Data.variables["TGbotLink"]} и отправьте боту свой код.`, {keyboard: keyboard.build(current_keyboard(context))})
+                await context.send(`✅ Для того чтобы вам привязать свой телеграмм аккаунт к вашему профилю в боте, вам надо ввести код в ЛС телеграм боту.\n\nВот ваш код:`)
+                await context.send(code)
+                await context.send(`Перейдите по адресу ${Data.variables["TGbotLink"]} и отправьте боту свой код.`, {keyboard: keyboard.build(current_keyboard(context))})
+
                 return resolve()
             }
             catch (e)
             {
-                await api.SendLogs(context, "BuildersAndControlsScripts/KillPlayer", e)
+                await api.SendLogs(context, "BuildersAndControlsScripts/GetTGCode", e)
+            }
+        })
+    }
+
+    async IntelligenceService(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(context.country.gold < 30)
+                {
+                    await context.send(`🚫 В бюджете вашей фракции не хватает золотых монет, для того чтобы провести разведку требуется 30 золотых.`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let targetCountry = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите фракцию, в которой вы хотите провести разведку", Data.GetCountryButtons(context.country.id), current_keyboard)
+                if(!targetCountry) return resolve()
+                targetCountry = Data.ParseButtonID(targetCountry)
+                targetCountry = Data.countries[targetCountry]
+                let access = await InputManager.InputBoolean(context, `Сейчас в бюджете вашей фракции ${context.country.gold} золотых монет, для проведения разведки требуется 30 золотых, продолжить?`, current_keyboard)
+                if(!access)
+                {
+                    await context.send(`🚫 Отменено`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                await Data.AddCountryGold(context.country.id, -30)
+                await LongTimeouts.create({
+                    type: "intelligence_service",
+                    time: 7,
+                    fromCountry: context.country.id,
+                    toCountry: targetCountry.id
+                })
+                await context.send(`✅ Ваша шпионская сеть получила команду выведать секреты фракции ${targetCountry.GetName(context.player.platform === "IOS")}, результат их работы вы получите через неделю`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/IntelligenceService", e)
+            }
+        })
+    }
+
+    async Implementation(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(context.country.gold < 10)
+                {
+                    await context.send(`🚫 В бюджете вашей фракции не хватает золотых монет, для того чтобы провести внедрение требуется минимум 10 золотых.`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                let targetCountry = await InputManager.KeyboardBuilder(context, "1️⃣ Выберите фракцию, в которой вы хотите провести внедрение", Data.GetCountryButtons(context.country.id), current_keyboard)
+                if(!targetCountry) return resolve()
+                targetCountry = Data.ParseButtonID(targetCountry)
+                targetCountry = Data.countries[targetCountry]
+                let maxAgents = Math.min(Math.floor(context.country.gold / 10), 3)
+                const agentsCount = await InputManager.InputInteger(context, `Сколько агентов вы хотите отправить на внедрение (от 1 до ${maxAgents}), учтите что стоимость отправки каждого агента это минимум 10 золотых монет, чем больше агентов, тем выше шанс успешной операции, если ваша сеть вскроется, то будут обнаружены все агенты отправленные в этот раз.`, current_keyboard, 1, maxAgents)
+                if(!agentsCount) return resolve()
+                const price = await InputManager.InputInteger(context, `Сейчас в бюджете вашей фракции ${context.country.gold} золотых монет.\n\nВведите сколько золотых монет вы готовы заплатить каждому агенту (${agentsCount === 1 ? "он" : "их"} ${agentsCount}), минимальная сумма - 10 золотых, максимальная ограничена бюджетом фракции (${Math.floor(context.country.gold / agentsCount)} золотых), чем больше золотых заплатить за внедрение, тем больший урон получит выбранная фракция`, current_keyboard, 10, Math.floor(context.country.gold / agentsCount))
+                if(!price) return resolve()
+                await Data.AddCountryGold(context.country.id, -1 * price * agentsCount)
+                await LongTimeouts.create({
+                    type: "implementation",
+                    time: 7,
+                    fromCountry: context.country.id,
+                    toCountry: targetCountry.id,
+                    price: price * agentsCount,
+                    parameters: agentsCount
+                })
+                await context.send(`✅ Агенты отправлены, результат их работы вы получите через неделю`, {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/IntelligenceService", e)
+            }
+        })
+    }
+
+    async BuyEconomicScore(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                const count = await InputManager.InputInteger(context, `Вы можете обменять золотые монеты на очки экономики с курсом 1 к 1, но получите вы эти очки только через неделю после вклада, итак, сколько золотых вы хотите вложить в экономику? (от 1 до ${context.country.gold})`, current_keyboard, 1, context.country.gold)
+                if(!count) return resolve()
+                await LongTimeouts.create({
+                    type: "buy_economic_score",
+                    time: 7,
+                    fromCountry: context.country.id,
+                    toCountry: context.country.id,
+                    price: count
+                })
+                await Data.AddCountryGold(context.country.id, -1 * count)
+                await context.send("✅ Вклад в экономику осуществлен, через неделю вы получите очки экономики", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/IntelligenceService", e)
+            }
+        })
+    }
+
+    async Sabotage(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(context.country.gold < 5)
+                {
+                    await context.send(`🚫 В бюджете вашей фракции не хватает золотых монет, для того чтобы провести внедрение требуется минимум 10 золотых.`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const count = await InputManager.InputInteger(context, `В бюджете вашей фракции ${context.country.gold} золотых монет\n\nВы можете провести саботаж в любой фракции, во время саботажа вложенные в экономику золотые монеты просто пропадут пропорционально вашему вкладу в саботаж.\n\nВы можете вложить от 5 монет в проведение саботажа, и с 50% вероятностью вы повлияете на экономику врага. Количество золотых, которые вы вложите в проведение саботажа будут влиять на пречиненный ущерб, 1 золотая = 2% от вклада в экономику.`, current_keyboard, 5, context.country.gold)
+                if(!count) return resolve()
+                let targetCountry = await InputManager.KeyboardBuilder(context, "Выберите фракцию, в которой вы хотите провести саботаж", Data.GetCountryButtons(context.country.id), current_keyboard)
+                if(!targetCountry) return resolve()
+                targetCountry = Data.ParseButtonID(targetCountry)
+                targetCountry = Data.countries[targetCountry]
+                const contribution = await LongTimeouts.findOne({where: {toCountry: targetCountry.id, type: "buy_economic_score"}})
+                if(contribution && NameLibrary.GetChance(50))
+                {
+                    let damage = Math.round(contribution.dataValues.price * (1 - Math.min(1, count * 0.02)))
+                    await LongTimeouts.update({price: damage}, {where: {id: contribution.dataValues.id}})
+                    await context.send("✅ Саботаж проведен успешно", {keyboard: keyboard.build(current_keyboard)})
+                    await api.GMMailing(`Фракция ${context.country.GetName()} провела успешный саботаж в фракции ${targetCountry.GetName()}, в результате чего последняя не получит ${contribution.dataValues.price - damage} экономических очков со своего вклада`)
+                }
+                else
+                {
+                    await context.send("🚫 Саботаж провалился, можете попробовать еще", {keyboard: keyboard.build(current_keyboard)})
+                }
+                await Data.AddCountryGold(context.country.id, -1 * count)
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/IntelligenceService", e)
+            }
+        })
+    }
+
+    async Counterintelligence(context, current_keyboard)
+    {
+        return new Promise(async (resolve) => {
+            try
+            {
+                if(context.country.gold < 10)
+                {
+                    await context.send(`🚫 В бюджете вашей фракции не хватает золотых монет, для того чтобы провести контрразведку требуется минимум 10 золотых.`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const count = await InputManager.InputInteger(context, `В бюджете вашей фракции ${context.country.gold} золотых монет\n\nПроводя контрразведку вы можете с определенным шансом помешать диверсионной деятельности других фракций, чем больше монет вы вложите, тем меньше ущерба будет нанесено диверсантами.\n\nВведите количество золотых монет, которые вы хотите потратить на контрразведку. (от 10 до ${context.country.gold})`, current_keyboard, 10, context.country.gold)
+                if(!count) return resolve()
+                const enemyOperations = await LongTimeouts.findAll({where: {toCountry: context.country.id, type: ["implementation", "intelligence_service"]}})
+                if(enemyOperations.length > 0)
+                {
+                    let doCounterFlag = true
+                    let findIntelFlag = true
+                    for(const intel of enemyOperations)
+                    {
+                        if(intel.dataValues.type === "intelligence_service")
+                        {
+                            await LongTimeouts.update({price: count}, {where: {id: intel.dataValues.id}})
+                            doCounterFlag= false
+                        }
+                        if(findIntelFlag && intel.dataValues.type === "implementation")
+                        {
+                            if(NameLibrary.GetChance(Math.max(count, 50)))
+                            {
+                                await LongTimeouts.destroy({where: {id: intel.dataValues.id}})
+                                await context.send(`✅ Контрразведка выявила шпионскую сеть фракции ${Data.countries[intel.dataValues.fromCountry]?.GetName()}, шпионы ликвидированы`)
+                                if(Data.countries[intel.dataValues.fromCountry])
+                                {
+                                    await api.SendMessage(Data.countries[intel.dataValues.fromCountry].leaderID, `⚠ Ваша шпионская сеть в фракции ${context.country.GetName()} вскрылась, шпионы ликвидированы`)
+                                }
+                                await api.GMMailing(`${context.country.GetName()} провела контрразведку, которая выявила шпионскую сеть фракции ${Data.countries[intel.dataValues.fromCountry]?.GetName()}, шпионы ликвидорованы`)
+                            }
+                            findIntelFlag = false
+                        }
+                        if(doCounterFlag || findIntelFlag)
+                        {
+                            await context.send("✅ Контрразведка проведена успешно, вражеская сеть ослаблена", {keyboard: keyboard.build(current_keyboard)})
+                        }
+                        else
+                        {
+                            await context.send("✅ Контрразведка проведена, но следов вражеского вмешательства выявлено не было", {keyboard: keyboard.build(current_keyboard)})
+                        }
+                    }
+                }
+                else
+                {
+                    await context.send("✅ Контрразведка проведена, но следов вражеского вмешательства выявлено не было", {keyboard: keyboard.build(current_keyboard)})
+                }
+                await Data.AddCountryGold(context.country.id, -1 * count)
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/IntelligenceService", e)
+            }
+        })
+    }
+
+    async NewEmpireRule(context, current_keyboard)
+    {
+        return new Promise(async (resolve) =>
+        {
+            try
+            {
+                if (context.country.gold < 5)
+                {
+                    await context.send(`🚫 В бюджете вашей фракции не хватает золотых монет, для публикации имперского закона у требуется минимум 5 золотых.`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const count = await InputManager.InputInteger(context, `В бюджете вашей фракции ${context.country.gold} золотых монет\n\nПубликация имперского закона стоит не менее 5 золотых монет, другие фракции могут отменить его публикациюзаплатив хотя бы на 1 золотую монету больше, введите количество золотых монет, которое вы хотите вложить в публикацию закона (от 5 до ${context.country.gold})`, current_keyboard, 5, context.country.gold)
+                if (!count) return resolve()
+                const ruleName = await InputManager.InputString(context, "Введите название закона", current_keyboard, 1, 255)
+                if(!ruleName) return resolve()
+                const ruleText = await InputManager.InputString(context, "Введите текст закона (до 3000 символов)", current_keyboard, 1, 3000)
+                if(!ruleText) return resolve()
+                const access = await InputManager.InputBoolean(context, `Проверьте данные:\n\nНазвание закона: ${ruleName}\n\nТекст закона: ${ruleText}\n\nКоличество золотых монет: ${count}\n\nВерно?`, current_keyboard)
+                if(!access)
+                {
+                    await context.send(`🚫 Отменено.`, {keyboard: keyboard.build(current_keyboard)})
+                    return resolve()
+                }
+                const rule = await EmpireRules.create({
+                    name: ruleName,
+                    text: ruleText,
+                    price: count
+                })
+                await api.GMMailing(`✅ Правительство фракции ${context.country.GetName()} предложило новый имперский закон, его стоимость составила ${count} золотых монет, вот сам закон:\n\nНазвание: ${ruleName}\n\nТекст закона: ${ruleText}\n\nПредложить гогосование за публикацю?`, [
+                    keyboard.positiveCallbackButton({label: "✅ Передать на голосование", payload: {command: "gm_access_rule", ruleId: rule.dataValues.id}}),
+                    keyboard.negativeCallbackButton({label: "🚫 Отклонить", payload: {command: "gm_decline_rule", ruleId: rule.dataValues.id, countryId: context.country.id}})
+                ])
+                await Data.AddCountryGold(context.country.id, -1 * count)
+                await context.send("✅ Имперский закон принят в рассмотрение ГМ-ам, после одобрения начнется голосование", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/IntelligenceService", e)
+            }
+        })
+    }
+
+    async ChangeEmpireBuildings(context, current_keyboard)
+    {
+        return new Promise(async (resolve) =>
+        {
+            try
+            {
+                const buildings = [
+                    ["⛪ Альтис", "altis", Data.variables["altis"]],
+                    ["👨‍🌾 Торговая жемчужина", "market", Data.variables["market"]],
+                    ["🕍 Страна дворцов", "castle", Data.variables["castle"]],
+                    ["🧱 Высокие стены", "walls", Data.variables["walls"]],
+                    ["🍖 А моей женой накормили толпу", "tavern", Data.variables["tavern"]]
+                ]
+                const newBuildings = await InputManager.RadioKeyboardBuilder(context, "Отметьте постройки", buildings, current_keyboard)
+                if(!newBuildings) return resolve()
+                for(const v of newBuildings) Data.variables[v[0]] = v[1]
+                await Data.SaveVariables()
+                await context.send("✅ Имперские здания обновлены", {keyboard: keyboard.build(current_keyboard)})
+                return resolve()
+            }
+            catch (e)
+            {
+                await api.SendLogs(context, "BuildersAndControlsScripts/IntelligenceService", e)
             }
         })
     }

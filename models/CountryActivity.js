@@ -2,7 +2,7 @@ const Data = require("./CacheData")
 const NameLibrary = require("../variables/NameLibrary")
 const {CountryActive} = require("../database/Models");
 const sequelize = require("../database/DataBase");
-class Active
+class CountryActivity
 {
     async GetDateActive(command, platform, isIOS)
     {
@@ -488,4 +488,4 @@ class Active
     }
 }
 
-module.exports = new Active()
+module.exports = new CountryActivity()

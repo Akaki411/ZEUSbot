@@ -2,7 +2,7 @@ const {API, Upload} = require('vk-io')
 const keyboard = require('../variables/Keyboards')
 const Data = require("../models/CacheData")
 const {PlayerStatus, Warning, Player, Country, PlayerInfo, PlayerResources, Ban, CountryUsingResources,
-    CountryActive, Keys, Army, UnitType
+    CountryActive, Keys, Army, UnitType, LongTimeouts
 } = require("../database/Models");
 const NameLibrary = require("../variables/NameLibrary")
 const fs = require("fs");
@@ -21,6 +21,7 @@ class VK_API
         this.day = this.day === 0 ? 7 : this.day
         Data.onLoad = async (scenes) => {
             await this.LoadTimeouts(scenes)
+            await this.LoadLongTimeouts()
         }
     }
 
@@ -263,6 +264,33 @@ class VK_API
                                             })
                                         } catch (e) {}
                                     }
+                                    await Data.LoadCountries()
+                                }
+                            }
+                        }
+                        if(process.env["MINIROUND"])
+                        {
+                            Data.countries[i].gold += NameLibrary.GetCountryEconomic(Data.countries[i].economicScore).tax
+                            await Country.update({gold: Data.countries[i].gold}, {where: {id: i}})
+                            await this.SendMessage(Data.countries[active].leaderID, `✅ Проведен налоговый сбор, в бюджет собрано ${NameLibrary.GetCountryEconomic(Data.countries[i].economicScore).tax} золотых монет, сейчас в бюджете ${Data.countries[i].gold} золотых`)
+                            if(Data.countries[i].income > 0)
+                            {
+                                await Data.AddCountryGold(i, Data.countries[i].income)
+                                await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция получила ${Data.countries[i].income} золотых в качестве пассивного дохода`)
+                            }
+                            if(Data.countries[i].income < 0)
+                            {
+                                if(Data.countries[i].gold >= Data.countries[i].income)
+                                {
+                                    await Data.AddCountryGold(i, Data.countries[i].income)
+                                    await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция лишилась ${Data.countries[i].income} из-за издержек`)
+                                }
+                                else
+                                {
+                                    const consumption = Data.countries[i].income - Data.countries[i].gold
+                                    await Data.AddCountryGold(i, Data.countries[i].gold)
+                                    await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция лишилась ${Data.countries[i].income} из-за издержек, но в бюджете не хватило золотых для оплаты всей суммы`)
+                                    await this.GMMailing(`Во время уплаты издержек фракции ${Data.countries[i].GetName()} не хватило ${consumption} золотых`)
                                 }
                             }
                         }
@@ -275,16 +303,19 @@ class VK_API
                     Data.countries[i].active = 0
                 }
             }
-            Data.countries[active].rating++
+            if(Data.countries[active])
+            {
+                Data.countries[active].rating++
+                await Country.update({rating: Data.countries[active].rating}, {where: {id: Data.countries[active].id}})
+                await Data.AddCountryResources(Data.countries[active].id, {money: 100})
+                await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 балл, в бюджет передан сладкий подарок в размере 100 монет`)
+            }
             if(min < 200)
             {
                 Data.countries[activeNegative].rating--
                 await Country.update({rating: Data.countries[activeNegative].rating}, {where: {id: Data.countries[activeNegative].id}})
             }
-            await Country.update({rating: Data.countries[active].rating}, {where: {id: Data.countries[active].id}})
-            await Data.AddCountryResources(Data.countries[active].id, {money: 100})
-            await this.SendMessage(Data.countries[active].leaderID, `✅ Ваша фракция ${Data.countries[active].GetName()} набрала наибольший актив за сегодня, рейтинг увеличен на 1 балл, в бюджет передан сладкий подарок в размере 100 монет`)
-            await this.SendMessage(Data.countries[activeNegative].leaderID, `${min < 200 ? "⚠" : "ℹ"} Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 200 ? " и количество сообщений за день не достигло 200, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 200 сообщений, поэтому баллы активности с вас не снимаются."}`)
+            if(Data.countries[activeNegative]) await this.SendMessage(Data.countries[activeNegative].leaderID, `${min < 200 ? "⚠" : "ℹ"} Ваша фракция ${Data.countries[activeNegative].GetName()} набрала самый низкий актив за сегодня${min < 200 ? " и количество сообщений за день не достигло 200, рейтинг уменьшен на 1 балл" : ", но вы смогли преодолеть порог в 200 сообщений, поэтому баллы активности с вас не снимаются."}`)
             await CountryActive.create({
                 json: JSON.stringify(activity),
                 date: yesterday
@@ -414,6 +445,7 @@ class VK_API
             })
             Data.active = 0
             await Data.SaveActive()
+            await this.LoadLongTimeouts()
         }
         catch (e)
         {
@@ -470,6 +502,25 @@ class VK_API
                         if(officials[official].canUseArmy || officials[official].canUseResources)
                         {
                             await this.SendMessage(country.leaderID, request)
+                        }
+                    }
+                }
+                if(process.env["MINIROUND"])
+                {
+                    if(Data.variables['empireDown'] >= 100)
+                    {
+                        country.economicScore = Math.max(0, country.economicScore - 10)
+                        await Country.update({economicScore: country.economicScore}, {where: {id: country.id}})
+                        country.leaderID && await this.SendMessage(country.leaderID, "⚠ Набрано 100 очков падения империи, из-за этого фракция лишается 10 очков экономики")
+                        if(officials)
+                        {
+                            for(const official of Object.keys(officials))
+                            {
+                                if(officials[official].canAppointOfficial)
+                                {
+                                    await this.SendMessage(country.leaderID, "⚠ Набрано 100 очков падения империи, из-за этого фракция лишается 10 очков экономики")
+                                }
+                            }
                         }
                     }
                 }
@@ -777,6 +828,7 @@ class VK_API
                 for (const key of Object.keys(Data.supports))
                 {
                     await this.SendMessage(Data.supports[key].id, "✅ Бот загружен, данные восстановлены")
+                    process.env["MINIROUND"] && await this.SendMessage(Data.supports[key].id, "⚠ Включен режим мини катки")
                 }
             }
             return resolve()
@@ -1136,6 +1188,43 @@ class VK_API
         let names = {}
         for(const i of users) names[i.id] = `@id${i.id}(${i.first_name} ${i.last_name})`
         return names
+    }
+
+    async LoadLongTimeouts()
+    {
+        for(const i of Object.keys(Data.longTimeouts))
+        {
+            clearTimeout(Data.longTimeouts[i])
+            delete Data.longTimeouts[i]
+        }
+        const events = {
+            intelligence_service: (params) => {
+                const result = Math.min(NameLibrary.GetRandomNumb(0, 100) - params.price, 0)
+                let request = `✅ Фракция ${Data.countries[params.fromCountry]?.GetName()} осуществила шпионаж в фракции ${Data.countries[params.toCountry]?.GetName()} и выяснила `
+                if(result < 35) request += "сколько средств за последнюю неделю было влито в экономику"
+                else if(result < 70) request += "её дипломатические ролевые действия"
+                else if(result < 90) request += "её разведывательные и тайные ролевые действия"
+                else request += "компромат на врага"
+                if(result < 90 && NameLibrary.GetChance(30)) request += ", а также компромат на врага"
+                this.GMMailing(request)
+            },
+            implementation: (params) => {
+                const agentsCount = isNaN(parseInt(params.parameters)) ? 1 : parseInt(params.parameters)
+                let request = `✅ Фракция ${Data.countries[params.fromCountry]?.GetName()} ${NameLibrary.GetChance(params) ? "успешно" : "неудачно"} провела внедрение в фракцию ${Data.countries[params.toCountry]?.GetName()}, для этого было отправлено ${agentsCount} агентов и затрачено ${params.price} золотых монет`
+                this.GMMailing(request)
+            }
+        }
+        const now = new Date()
+        const timeouts = await LongTimeouts.findAll()
+        for(const timeout of timeouts)
+        {
+            const endTime = new Date(timeout.dataValues.createdAt)
+            endTime.setDate(endTime.getDate() + timeout.dataValues.time)
+            if(now.getFullYear() !== endTime.getFullYear()) continue
+            if(now.getMonth() !== endTime.getMonth()) continue
+            if(now.getDate() !== endTime.getDate()) continue
+            Data.longTimeouts[timeout.dataValues.id] = setTimeout(events[timeout.dataValues.type](timeout.dataValues), endTime - now)
+        }
     }
 
     SendLogs = async (context, place, error) =>

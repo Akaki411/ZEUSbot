@@ -92,6 +92,12 @@ const LastWills = sequelize.define("last-wills", {
     successorID: {type: DataTypes.INTEGER, allowNull: false},
 })
 
+const UserActivities = sequelize.define("user-active", {
+    id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
+    json: {type: DataTypes.TEXT, allowNull: false},
+    date: {type: DataTypes.DATE}
+})
+
 //Государства
 const Country = sequelize.define("country", {
     id: {type: DataTypes.INTEGER, unique: true, autoIncrement: true, primaryKey: true},
@@ -129,7 +135,12 @@ const Country = sequelize.define("country", {
     military: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     merchants: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
     moderID: {type: DataTypes.INTEGER, allowNull: true},
-    hide: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false}
+    hide: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    blessingScore: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    economicScore: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    loyalty: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    gold: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    income: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0}
 })
 const CountryResources = sequelize.define("country-resources", {
     id: {type: DataTypes.INTEGER, unique: true, primaryKey: true},
@@ -338,6 +349,24 @@ const Variables = sequelize.define("variables", {
     json: {type: DataTypes.TEXT, allowNull: false},
     isGlobal: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true}
 })
+const LongTimeouts = sequelize.define("long-timeouts", {
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true, autoIncrement: true},
+    type: {type: DataTypes.STRING, allowNull: false},
+    time: {type: DataTypes.INTEGER, allowNull: false},
+    price: {type: DataTypes.INTEGER, allowNull: false, defaultValue: 0},
+    fromCountry: {type: DataTypes.INTEGER, allowNull: false},
+    toCountry: {type: DataTypes.INTEGER, allowNull: false},
+    parameters: {type: DataTypes.STRING, allowNull: true}
+})
+const EmpireRules = sequelize.define("empire-rules", {
+    id: {type: DataTypes.INTEGER, unique: true, primaryKey: true, autoIncrement: true},
+    name: {type: DataTypes.STRING, allowNull: false},
+    text: {type: DataTypes.TEXT, allowNull: false},
+    price: {type: DataTypes.INTEGER, allowNull: false},
+    published: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    accessByGM: {type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
+    accessTime: {type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.fn("now")}
+})
 
 
 module.exports = {
@@ -348,6 +377,7 @@ module.exports = {
     PlayerNotes,
     Transactions,
     OfficialInfo,
+    UserActivities,
     Country,
     CountryResources,
     CountryRoads,
@@ -375,5 +405,7 @@ module.exports = {
     VKChats,
     TGChats,
     Actions,
-    Variables
+    Variables,
+    LongTimeouts,
+    EmpireRules
 }

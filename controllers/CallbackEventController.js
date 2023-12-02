@@ -1,5 +1,5 @@
 const api = require("../middleware/API")
-const {PlayerInfo, PlayerStatus, Player, Buildings, Keys, City, Warning, Ban, CityRoads, Transactions} = require("../database/Models");
+const {PlayerInfo, PlayerStatus, Player, Buildings, Keys, City, Warning, Ban, CityRoads, Transactions, EmpireRules} = require("../database/Models");
 const Data = require("../models/CacheData")
 const keyboard = require("../variables/Keyboards")
 const NameLibrary = require("../variables/NameLibrary");
@@ -25,6 +25,154 @@ class CallbackEventController
         context.eventPayload?.command === "transaction_refund_tax" && await this.TransactionRefundTax(context)
         context.eventPayload?.command === "transaction_tax" && await this.TransactionTax(context)
         context.eventPayload?.command === "transaction_tax_evasion" && await this.TransactionTaxEvasion(context)
+        context.eventPayload?.command === "gm_access_rule" && await this.GMAccessRule(context)
+        context.eventPayload?.command === "gm_decline_rule" && await this.GMDeclineRule(context)
+        context.eventPayload?.command === "decline_empire_rule" && await this.DeclineRule(context)
+    }
+
+    async DeclineRule(context)
+    {
+        try
+        {
+            const {ruleId, countryId} = context.eventPayload
+            const rule = await EmpireRules.findOne({where: {id: ruleId}})
+            if(rule)
+            {
+                if(Data.countries[countryId].gold >= (rule.dataValues.price + 1))
+                {
+                    await Data.AddCountryGold(countryId,  -1 * (rule.dataValues.price + 1))
+                    for (const key1 of Data.countries.filter(key => {return key}).map(key => {return {id: key.leaderID, countryId: key.id}}))
+                    {
+                        await api.api.messages.send({
+                            user_id: key1.id,
+                            random_id: Math.round(Math.random() * 100000),
+                            message: `❗ Закон "${rule.dataValues.name}" был отменен, его выкупили`,
+                            keyboard: keyboard.build([[keyboard.negativeCallbackButton({label: `🚫 Отменить закон за ${rule.dataValues.price + 1} золотых`, payload: {command: "decline_empire_rule", ruleId: rule.dataValues.id, countryId: key1.countryId}})]]).inline()
+                        })
+                    }
+                    try
+                    {
+                        await api.api.messages.delete({
+                            conversation_message_ids: context.conversationMessageId,
+                            delete_for_all: 1,
+                            peer_id: context.peerId
+                        })
+                    } catch (e) {}
+                    await EmpireRules.destroy({where: {id: ruleId}})
+                    await api.SendMessage(context.player.id, "✅ Закон отменен")
+                }
+                else
+                {
+                    await api.SendMessage(context.player.id, "⚠ В бюджете не хватает золотых монет")
+                }
+            }
+            else
+            {
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Закон уже отменен")
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "CallbackEventController/TransactionRefundTax", e)
+        }
+    }
+
+    async GMDeclineRule(context)
+    {
+        try
+        {
+            const rule = await EmpireRules.findOne({where: {id: context.messagePayload.ruleId}})
+            if(rule)
+            {
+                await EmpireRules.destroy({where: {id: rule.dataValues.id}})
+                await api.SendMessage(Data.countries[context.messagePayload.countryId].leaderID, "🚫 Имперский закон, предложенный вашей фракцией отклонен ГМ-ми")
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "🚫 Отклонено")
+            }
+            else
+            {
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
+            }
+        }
+        catch(e)
+        {
+            await api.SendLogs(context, "CallbackEventController/TransactionRefundTax", e)
+        }
+    }
+
+    async GMAccessRule(context)
+    {
+        try
+        {
+            const rule = await EmpireRules.findOne({where: {id: context.eventPayload.ruleId}})
+            if(rule && !rule?.dataValues?.accessByGM)
+            {
+                const now = new Date()
+                await EmpireRules.update({accessByGM: true, accessTime: now}, {where: {id: rule.dataValues.id}})
+                now.setHours(now.getHours() + 6)
+                Data.timeouts["empire_rule_" + rule.dataValues.id] = setTimeout(async () => {
+                    await EmpireRules.update({published: true}, {where: {id: rule.dataValues.id}})
+                    await api.GlobalMailing(`❗ Внимание! Принят новый имперский закон\n\n${rule.dataValues.name}\n${rule.dataValues.text}`)
+                }, 21600000)
+                for (const key1 of Data.countries.filter(key => {return key}).map(key => {return {id: key.leaderID, countryId: key.id}}))
+                {
+                    await api.api.messages.send({
+                        user_id: key1.id,
+                        random_id: Math.round(Math.random() * 100000),
+                        message: `❗ Поступило предложение публикации нового имперского закона:\n\nНазвание: ${rule.dataValues.name}\n\nТекст закона: ${rule.dataValues.text}\n\nВы можете оплатить отмену публикации этого закона за ${rule.dataValues.price + 1} золотых, сделать это можно до ${NameLibrary.ParseDateTime(now)}`,
+                        keyboard: keyboard.build([[keyboard.negativeCallbackButton({label: `🚫 Отменить закон за ${rule.dataValues.price + 1} золотых`, payload: {command: "decline_empire_rule", ruleId: rule.dataValues.id, countryId: key1.countryId}})]]).inline()
+                    })
+                }
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "✅ Принято")
+            }
+            else
+            {
+                try
+                {
+                    await api.api.messages.delete({
+                        conversation_message_ids: context.conversationMessageId,
+                        delete_for_all: 1,
+                        peer_id: context.peerId
+                    })
+                } catch (e) {}
+                await api.SendMessage(context.player.id, "⚠ Не актуально")
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "CallbackEventController/TransactionRefundTax", e)
+        }
     }
 
     async TransactionTaxEvasion(context)

@@ -10,7 +10,7 @@ const CrossStates = require("./CrossStates");
 const sequelize = require("../database/DataBase");
 const Rules = require("../variables/Rules");
 const StopList = require("../files/StopList.json");
-const Active = require("../models/Active");
+const Active = require("../models/CountryActivity");
 
 class TGChatController
 {

@@ -122,30 +122,6 @@ module.exports = async (context, next) =>
                     catch (e) {}
                 }
             }
-            if(Data.chatListen[context.peerId])
-            {
-                try
-                {
-                    await api.api.messages.send({
-                        chat_id: Data.chatListen[context.peerId],
-                        random_id: Math.round(Math.random() * 100000),
-                        forward: `{"conversation_message_ids":${context.conversationMessageId},"peer_id":${context.peerId}}`
-                    })
-                }
-                catch (e) {}
-            }
-            if(Data.userListen[peerId])
-            {
-                try
-                {
-                    await api.api.messages.send({
-                        chat_id: Data.userListen[peerId],
-                        random_id: Math.round(Math.random() * 100000),
-                        forward: `{"conversation_message_ids":${context.conversationMessageId},"peer_id":${context.peerId}}`
-                    })
-                }
-                catch (e) {}
-            }
         }
 
         if(Data.users[peerId] && !Data.users[peerId]?.isBanned)

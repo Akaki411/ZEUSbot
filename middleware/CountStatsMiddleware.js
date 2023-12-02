@@ -1,78 +1,64 @@
 const Data = require("../models/CacheData")
 const Commands = require("../variables/Commands")
-const api = require("./API")
+
+function countEmojis(string)
+{
+    const matches = string.match(/\p{Emoji}/gu);
+    return matches ? matches.length : 0;
+}
 
 module.exports = async (context, next) =>
 {
     try
     {
-        if(context.peerType === "chat")
+        if(context.peerType !== "chat") return next()
+        if(!context.player) return next()
+        if(!Data.activity[context.player.id])
         {
-            if(context.player)
+            Data.activity[context.player.id] = {
+                msgs: 0,
+                swords: 0,
+                stickers: 0,
+                music: 0,
+                audio: 0,
+                forwards: 0,
+                photos: 0,
+                videos: 0,
+                emojis: 0,
+                len: 0
+            }
+        }
+        Data.activity[context.player.id].msgs ++
+        Data.activity[context.player.id].len += context.command.length
+        Data.activity[context.player.id].emojis += countEmojis(context.text || "")
+        Data.activity[context.player.id].forwards += context.forwards ? context.forwards.length : 0
+        if(context.command?.match(Commands.censorship))
+        {
+            Data.activity[context.player.id].swords ++
+        }
+        for(let i = 0; i < context.attachments?.length; i++)
+        {
+            if(context.attachments[i]?.type === "sticker")
             {
-                if(Data.activity[context.player.id])
-                {
-                    Data.activity[context.player.id]++
-                }
-                else
-                {
-                    Data.activity[context.player.id] = 1
-                }
-                if(context.command?.match(Commands.censorship))
-                {
-                    if(Data.uncultured[context.player.id])
-                    {
-                        Data.uncultured[context.player.id]++
-                    }
-                    else
-                    {
-                        Data.uncultured[context.player.id] = 1
-                    }
-                }
-                for(let i = 0; i < context.attachments?.length; i++)
-                {
-                    if(context.attachments[i]?.type === "sticker")
-                    {
-                        if(Data.stickermans[context.player.id])
-                        {
-                            Data.stickermans[context.player.id]++
-                        }
-                        else
-                        {
-                            Data.stickermans[context.player.id] = 1
-                        }
-                    }
-                    if(context.attachments[i]?.type === "audio")
-                    {
-                        if(Data.musicLovers[context.player.id])
-                        {
-                            Data.musicLovers[context.player.id]++
-                        }
-                        else
-                        {
-                            Data.musicLovers[context.player.id] = 1
-                        }
-                    }
-                    if(context.attachments[i]?.type === "audio_message" && Data.voiceMute[context.player.id])
-                    {
-                        try
-                        {
-                            await api.api.messages.delete({
-                                conversation_message_ids: context.conversationMessageId,
-                                delete_for_all: 1,
-                                peer_id: context.peerId
-                            })
-                            break
-                        }
-                        catch (e) {console.log(e.message)}
-                    }
-                }
+                Data.activity[context.player.id].stickers ++
+            }
+            if(context.attachments[i]?.type === "audio")
+            {
+                Data.activity[context.player.id].music ++
+            }
+            if(context.attachments[i]?.type === "audio_message")
+            {
+                Data.activity[context.player.id].audio ++
+            }
+            if(context.attachments[i]?.type === "photo")
+            {
+                Data.activity[context.player.id].photos ++
+            }
+            if(context.attachments[i]?.type === "video")
+            {
+                Data.activity[context.player.id].videos ++
             }
         }
         next()
-    }
-    catch (e)
-    {
-        console.log(e)
-    }
+    } catch (e) {}
 }

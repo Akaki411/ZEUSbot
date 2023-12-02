@@ -39,9 +39,8 @@ class CacheData
         this.countryChats = {}
         this.TGcountryChats = {}
         this.countriesWeekPassiveScore = {}
-        this.chatListen = {}
-        this.userListen = {}
         this.TGcodes = {}
+        this.longTimeouts = {}
 
         this.countryResourcesStats = {}
 
@@ -49,7 +48,6 @@ class CacheData
         this.requests = {}
         this.censorship = {}
         this.mute = {}
-        this.voiceMute = {}
         this.activeIgnore = {}
         this.floodBase = {}
         this.ignore = {}
@@ -98,7 +96,7 @@ class CacheData
             time.setSeconds(time.getSeconds() + 20)
             this.floodBase[id].push(time)
             this.floodBase[id] = this.floodBase[id].filter(key => {return (key - now) > 0})
-            if(this.floodBase[id].length >= 8)
+            if(this.floodBase[id].length >= 5)
             {
                 delete this.floodBase[id]
                 this.activeIgnore[id] = setTimeout(() => {
@@ -108,11 +106,11 @@ class CacheData
         }
     }
 
-    GetCountryButtons()
+    GetCountryButtons(ignoreId)
     {
         const buttons = []
         this.countries.forEach((key) => {
-            if(key)
+            if(key && key?.id !== ignoreId)
             {
                 buttons.push([key.name, "ID" + key.id])
             }
@@ -853,6 +851,13 @@ class CacheData
             obj[key] = Math.max(resources.dataValues[key] + res[key], 0)
         }
         await CountryResources.update(obj, {where: {id: id}})
+    }
+
+    async AddCountryGold(id, count)
+    {
+        if(!id || !count) throw new Error("ID or Resources is not exist")
+        this.countries[id].gold += count
+        await Country.update({gold: this.countries[id].gold}, {where: {id: id}})
     }
 
     async AddPlayerResources(id, res)

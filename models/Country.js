@@ -40,6 +40,11 @@ class CountryObject
         this.privateBuildingTax = country.dataValues.privateBuildingTax
         this.moderID = country.dataValues.moderID
         this.hide = country.dataValues.hide
+        this.blessingScore = country.dataValues.blessingScore
+        this.economicScore = country.dataValues.economicScore
+        this.loyalty = country.dataValues.loyalty
+        this.gold = country.dataValues.gold
+        this.income = country.dataValues.income
         this.money = resources.dataValues.money
         this.stone = resources.dataValues.stone
         this.wood = resources.dataValues.wood
@@ -85,7 +90,7 @@ class CountryObject
         }
         else
         {
-            return `Бюджет фракции *public${this.groupID}(${this.name}):\n\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}`
+            return `Бюджет фракции *public${this.groupID}(${this.name}):\n\n💰 Монеты - ${this.money}\n🪨 Камень - ${this.stone}\n🌾 Зерно - ${this.wheat}\n🪵 Дерево - ${this.wood}\n🌑 Железо - ${this.iron}\n🥉 Бронза - ${this.copper}\n🥈 Серебро - ${this.silver}\n💎 Алмазы - ${this.diamond}${process.env["MINIROUND"] && `\n\n🔶 Золотые монеты - ${this.gold}`}`
         }
     }
 

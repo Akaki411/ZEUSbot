@@ -230,6 +230,7 @@ class SceneController
         if(context.official?.canAppointOfficial || NameLibrary.RoleEstimator(context.player.role) > 3) kb[1].push(keyboard.officialsButton)
         if(context.official?.canBuildCity || context.official?.canAppointMayors || NameLibrary.RoleEstimator(context.player.role) > 3) kb[2].push(keyboard.citiesButton)
         if(context.official?.canBeDelegate || NameLibrary.RoleEstimator(context.player.role) > 3) kb[2].push(keyboard.citizensButton)
+        if(process.env["MINIROUND"] && (context.official?.canAppointOfficial || NameLibrary.RoleEstimator(context.player.role) > 3)) kb[2].push(keyboard.MiniRoundButton)
         return kb
     }
 
@@ -286,7 +287,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetOfficialMenuKeyboard(context)
-            if(context.messagePayload?.choice?.match(/back|resources|army|officials|cities|citizens/))
+            if(context.messagePayload?.choice?.match(/back|resources|army|officials|cities|citizens|miniround/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
@@ -318,6 +319,11 @@ class SceneController
                     await context.send("▶ Армия",{keyboard: keyboard.build(this.GetOfficialsArmyMenuKeyboard())})
                     context.player.state = this.OfficialsArmyMenu
                 }
+                if(context.messagePayload?.choice?.match(/miniround/))
+                {
+                    await context.send("▶ Миникатка",{keyboard: keyboard.build(this.GetCountryMiniroundMenuKeyboard())})
+                    context.player.state = this.OfficialsMiniRoundMenu
+                }
             }
             else
             {
@@ -329,6 +335,70 @@ class SceneController
         catch (e)
         {
             await api.SendLogs(context, "SceneController/OfficialMenu", e)
+        }
+    }
+
+    OfficialsMiniRoundMenu = async(context) =>
+    {
+        try
+        {
+            if(await ChatController.CommandHandler(context)) return
+            const current_keyboard = this.GetCountryMiniroundMenuKeyboard()
+            context.country = null
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
+            {
+                context.country = Data.countries[context.player.countryID]
+            }
+            if(!context.country || !process.env['MINIROUND'])
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
+            if(context.messagePayload?.choice?.match(/back|intelligence|implementation|sabotage|counterintelligence|empireRules|buyEconomicScore/))
+            {
+                if (context.messagePayload.choice.match(/back/))
+                {
+                    context.send("↪ Назад", {
+                        keyboard: keyboard.build(this.GetOfficialMenuKeyboard(context))
+                    })
+                    context.player.state = this.OfficialMenu
+                }
+                if (context.messagePayload.choice.match(/intelligence/))
+                {
+                    await Builders.IntelligenceService(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/implementation/))
+                {
+                    await Builders.Implementation(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/buyEconomicScore/))
+                {
+                    await Builders.BuyEconomicScore(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/sabotage/))
+                {
+                    await Builders.Sabotage(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/counterintelligence/))
+                {
+                    await Builders.Counterintelligence(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/empireRules/))
+                {
+                    await Builders.NewEmpireRule(context, current_keyboard)
+                }
+            }
+            else
+            {
+                context.send("👉🏻 Миникатка",{
+                    keyboard: keyboard.build(current_keyboard)
+                })
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "SceneController/CountryInfoMenu", e)
         }
     }
 
@@ -703,10 +773,12 @@ class SceneController
 
     GetGMBuildingsMenuKeyboard = () =>
     {
-        return [
+        const kb = [
             [keyboard.buildingInfoButton, keyboard.freezeBuildingButton],
             [keyboard.backButton]
         ]
+        if(process.env["MINIROUND"]) kb[0].push(keyboard.empireBuildingsButton)
+        return kb
     }
 
     GetGMCountriesMenuKeyboard = () =>
@@ -888,7 +960,7 @@ class SceneController
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGMBuildingsMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|building_info|freeze_building/))
+            if(context.messagePayload?.choice?.match(/back|building_info|freeze_building|empireBuildings/))
             {
                 if(context.messagePayload?.choice?.match(/back/))
                 {
@@ -904,6 +976,10 @@ class SceneController
                 if(context.messagePayload?.choice?.match(/freeze_building/))
                 {
                     await Builders.FreezeBuilding(context, current_keyboard)
+                }
+                if(context.messagePayload?.choice?.match(/empireBuildings/))
+                {
+                    await Builders.ChangeEmpireBuildings(context, current_keyboard)
                 }
             }
             else
@@ -1393,12 +1469,17 @@ class SceneController
 
     GetGovernanceCountryMenuKeyboard = () =>
     {
-        return [
+        let kb = [
             [keyboard.budgetButton],
             [keyboard.citiesButton, keyboard.citizensButton],
             [keyboard.officialsButton, keyboard.armyButton],
             [keyboard.backButton, keyboard.parametersButton]
         ]
+        if(process.env['MINIROUND'])
+        {
+            kb[2].push(keyboard.MiniRoundButton)
+        }
+        return kb
     }
 
     GetCountryArmyMenuKeyboard = () =>
@@ -1467,13 +1548,22 @@ class SceneController
         ]
     }
 
+    GetCountryMiniroundMenuKeyboard = () =>
+    {
+        return [
+            [keyboard.intelligenceButton, keyboard.implementationButton],
+            [keyboard.sabotageButton, keyboard.counterintelligenceButton, keyboard.buyEconomicScoreButton],
+            [keyboard.backButton, keyboard.empireRulesButton]
+        ]
+    }
+
     GovernanceCountryMenu = async(context) =>
     {
         try
         {
             if(await ChatController.CommandHandler(context)) return
             const current_keyboard = this.GetGovernanceCountryMenuKeyboard()
-            if(context.messagePayload?.choice?.match(/back|budget|cities|citizens|officials|params|army/))
+            if(context.messagePayload?.choice?.match(/back|budget|cities|citizens|officials|params|army|miniround/))
             {
                 if (context.messagePayload.choice.match(/back/))
                 {
@@ -1514,6 +1604,11 @@ class SceneController
                 {
                     await context.send("▶ Граждане",{keyboard: keyboard.build(this.GetCountryCitizensMenuKeyboard())})
                     context.player.state = this.CountryCitizensMenu
+                }
+                if(context.messagePayload.choice.match(/miniround/) && process.env['MINIROUND'])
+                {
+                    await context.send("▶ Миникатка",{keyboard: keyboard.build(this.GetCountryMiniroundMenuKeyboard())})
+                    context.player.state = this.CountryMiniRoundMenu
                 }
             }
             else
@@ -1959,6 +2054,70 @@ class SceneController
             else
             {
                 context.send("👉🏻 Управление городом",{
+                    keyboard: keyboard.build(current_keyboard)
+                })
+            }
+        }
+        catch (e)
+        {
+            await api.SendLogs(context, "SceneController/CountryInfoMenu", e)
+        }
+    }
+
+    CountryMiniRoundMenu = async(context) =>
+    {
+        try
+        {
+            if(await ChatController.CommandHandler(context)) return
+            const current_keyboard = this.GetCountryMiniroundMenuKeyboard()
+            context.country = null
+            if(NameLibrary.RoleEstimator(context.player.role) > 2 || Data.GetCountryForCity(context.player.location).leaderID === context.player.id)
+            {
+                context.country = Data.countries[context.player.countryID]
+            }
+            if(!context.country || !process.env['MINIROUND'])
+            {
+                context.player.state = this.StartScreen
+                await context.send("⚠ Вы не имеете права здесь находиться", {keyboard: keyboard.build(this.GetStartMenuKeyboard(context))})
+                return
+            }
+            if(context.messagePayload?.choice?.match(/back|intelligence|implementation|sabotage|counterintelligence|empireRules|buyEconomicScore/))
+            {
+                if (context.messagePayload.choice.match(/back/))
+                {
+                    context.send("↪ Назад", {
+                        keyboard: keyboard.build(this.GetGovernanceCountryMenuKeyboard(context))
+                    })
+                    context.player.state = this.GovernanceCountryMenu
+                }
+                if (context.messagePayload.choice.match(/intelligence/))
+                {
+                    await Builders.IntelligenceService(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/implementation/))
+                {
+                    await Builders.Implementation(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/buyEconomicScore/))
+                {
+                    await Builders.BuyEconomicScore(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/sabotage/))
+                {
+                    await Builders.Sabotage(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/counterintelligence/))
+                {
+                    await Builders.Counterintelligence(context, current_keyboard)
+                }
+                if (context.messagePayload.choice.match(/empireRules/))
+                {
+                    await Builders.NewEmpireRule(context, current_keyboard)
+                }
+            }
+            else
+            {
+                context.send("👉🏻 Миникатка",{
                     keyboard: keyboard.build(current_keyboard)
                 })
             }

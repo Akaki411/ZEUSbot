@@ -15,9 +15,8 @@ const ChatGPTModes = require('../variables/BotCallModes')
 const Rules = require("../variables/Rules")
 const APIKeysGenerator = require("../models/ApiKeysGenerator")
 const CrossStates = require("./CrossStates")
-const BotReactions = require("./Reactions")
 const StopList = require("../files/StopList.json")
-const Active = require("../models/Active")
+const Active = require("../models/CountryActivity")
 
 class ChatController
 {
@@ -231,6 +230,11 @@ class ChatController
             if(context.command?.match(/^админы$/))
             {
                 await this.CheckAdmins(context)
+                return true
+            }
+            if(context.command?.match(/^постройки$|^здания$/))
+            {
+                await this.EmpireBuildings(context)
                 return true
             }
 
@@ -476,21 +480,6 @@ class ChatController
                 await this.HideChat(context)
                 return true
             }
-            if(context.command?.match(/^!следить/) && context.peerType === "chat")
-            {
-                await this.Listen(context)
-                return true
-            }
-            if(context.command?.match(/^!не следить/))
-            {
-                await this.ClearListen(context)
-                return true
-            }
-            if(context.command?.match(/^!список слежки/))
-            {
-                await this.ListenList(context)
-                return true
-            }
             if(context.command?.match(/^!code$/))
             {
                 await this.AccessCode(context)
@@ -734,85 +723,6 @@ class ChatController
         await context.TGapi.sendMessage(context.player.TGID, "✅ Код безопасности: " + Data.accessKey)
     }
 
-    async Listen(context)
-    {
-        if(NameLibrary.RoleEstimator(context.player.role) < 4)
-        {
-            return
-        }
-        if(!context.text.match(Data.accessKey)) return
-        if(context.command.match(/чат/))
-        {
-            let chatID = context.command.match(/\d+/)
-            if(!chatID)
-            {
-                await context.send("Мне нужен номер чата")
-                return
-            }
-            chatID = parseInt(chatID[0])
-            try
-            {
-                const chat = await api.api.messages.getConversationsById({
-                    peer_ids: chatID + 2000000000
-                })
-                if(chat.items[0])
-                {
-                    Data.chatListen[chatID + 2000000000] = context.peerId - 2000000000
-                    await context.send("✅ Чат добавлен")
-                }
-                else
-                {
-                    await context.send("⚠ Чат не доступен")
-                }
-            }
-            catch (e)
-            {
-                await context.send("⚠ Такого чата нет")
-            }
-        }
-        else
-        {
-            if(context.replyPlayers.length === 0)
-            {
-                return
-            }
-            Data.userListen[context.replyPlayers[0]] = context.peerId - 2000000000
-            await context.send("✅ Игрок добавлен")
-        }
-        Data.ChangeCode()
-    }
-
-    async ListenList(context)
-    {
-        if(NameLibrary.RoleEstimator(context.player.role) < 4)
-        {
-            return
-        }
-        if(!context.text.match(Data.accessKey)) return
-        await context.send(`Chats:\n${JSON.stringify(Data.chatListen, null, "\t")}\n\nUsers:\n${JSON.stringify(Data.userListen, null, "\t")}`)
-        Data.ChangeCode()
-    }
-
-    async ClearListen(context)
-    {
-        if(NameLibrary.RoleEstimator(context.player.role) < 4)
-        {
-            return
-        }
-        if(!context.text.match(Data.accessKey)) return
-        if(context.command.match(/чат/))
-        {
-            Data.chatListen = {}
-            await context.send("✅ Список чатов очищен")
-        }
-        else
-        {
-            Data.userListen = {}
-            await context.send("✅ Список игроков очищен")
-        }
-        Data.ChangeCode()
-    }
-
     async HideChat(context)
     {
         if(NameLibrary.RoleEstimator(context.player.role) < 4)
@@ -863,6 +773,17 @@ class ChatController
         context.chat.RP = !context.chat.RP
         await Data.SaveVKChat(context.chat.id)
         await context.send(`✅ РП режим ${context.chat.RP ? "включен" : "выключен"}`)
+    }
+
+    async EmpireBuildings(context)
+    {
+        let request = "🏨 Список особых зданий:\n\n"
+        if(Data.variables["altis"]) request += "⛪ Альтис\n"
+        if(Data.variables["market"]) request += "👨‍🌾 Торговая жемчужина\n"
+        if(Data.variables["castle"]) request += "🕍 Страна дворцов\n"
+        if(Data.variables["walls"]) request += "🧱 Высокие стены\n"
+        if(Data.variables["tavern"]) request += "🍖 А моей женой накормили толпу\n"
+        await context.send(request, {disable_mentions: true})
     }
 
     async CheckAdmins(context)
@@ -1505,14 +1426,6 @@ class ChatController
             if(context.command?.match(/ахах/)) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
-            if(Data.botCallModes[context.peerId].stopWords)
-            {
-                if(context.command.match(Data.botCallModes[context.peerId].stopWords))
-                {
-                    await BotReactions.Mute(context)
-                    return
-                }
-            }
             let time = new Date()
             if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
             {
@@ -1551,14 +1464,6 @@ class ChatController
             if(!Data.botCallModes[context.peerId]) return
             let messages = []
             messages.push(Data.botCallModes[context.peerId] ? Data.botCallModes[context.peerId].request : Data.variables["isTest"] ? ChatGPTModes["NoRestrictions"].request : ChatGPTModes["ChatBot"].request)
-            if(Data.botCallModes[context.peerId].stopWords)
-            {
-                if(context.command.match(Data.botCallModes[context.peerId].stopWords))
-                {
-                    await BotReactions.Mute(context)
-                    return
-                }
-            }
             let limit = 10
             let time = new Date()
             if(Data.botCallTimeouts[context.player.id] && NameLibrary.RoleEstimator(context.player.role) === 0 && context.player.botCallTime - time < 0 && context.command.length > 0)
@@ -2527,50 +2432,30 @@ class ChatController
                 await context.send("⚠ Выберите игрока")
                 return
             }
-            if(context.command.match(/гс|аудио|голосовые/))
+            if(context.chat.muteList[context.replyPlayers[0]])
             {
-                if(Data.voiceMute[context.replyPlayers[0]])
+                delete context.chat.muteList[context.replyPlayers[0]]
+                await Data.SaveVKChat(context.chat.id)
+                await context.send(`✅ С игрока снят локальный мут`)
+                return
+            }
+            if(Data.mute[context.replyPlayers[0]])
+            {
+                let admin = await Player.findOne({where: {id: Data.mute[context.replyPlayers[0]].moder}, attributes: ["role"]})
+                if(NameLibrary.RoleEstimator(admin.dataValues.role) > NameLibrary.RoleEstimator(context.player.role) || Data.mute[context.replyPlayers[0]].moder === context.player.id)
                 {
-                    let admin = await Player.findOne({where: {id: Data.voiceMute[context.replyPlayers[0]].moder}, attributes: ["role"]})
-                    if(NameLibrary.RoleEstimator(admin.dataValues.role) > NameLibrary.RoleEstimator(context.player.role) || Data.voiceMute[context.replyPlayers[0]].moder === context.player.id)
-                    {
-                        clearTimeout(Data.voiceMute[context.replyPlayers[0]].timeout)
-                        delete Data.voiceMute[context.replyPlayers[0]]
-                        await context.send(`✅ Теперь игрок может оставлять голосовые сообщения`)
-                    }
-                    else
-                    {
-                        await context.send("⚠ Снять мут может только тот, кто его наложил или админ рангом выше")
-                    }
+                    clearTimeout(Data.mute[context.replyPlayers[0]].timeout)
+                    delete Data.mute[context.replyPlayers[0]]
+                    await context.send(`✅ С игрока снят глобальный мут`)
+                }
+                else
+                {
+                    await context.send("⚠ Снять мут может только тот, кто его наложил или админ рангом выше")
                 }
             }
             else
             {
-                if(context.chat.muteList[context.replyPlayers[0]])
-                {
-                    delete context.chat.muteList[context.replyPlayers[0]]
-                    await Data.SaveVKChat(context.chat.id)
-                    await context.send(`✅ С игрока снят локальный мут`)
-                    return
-                }
-                if(Data.mute[context.replyPlayers[0]])
-                {
-                    let admin = await Player.findOne({where: {id: Data.mute[context.replyPlayers[0]].moder}, attributes: ["role"]})
-                    if(NameLibrary.RoleEstimator(admin.dataValues.role) > NameLibrary.RoleEstimator(context.player.role) || Data.mute[context.replyPlayers[0]].moder === context.player.id)
-                    {
-                        clearTimeout(Data.mute[context.replyPlayers[0]].timeout)
-                        delete Data.mute[context.replyPlayers[0]]
-                        await context.send(`✅ С игрока снят глобальный мут`)
-                    }
-                    else
-                    {
-                        await context.send("⚠ Снять мут может только тот, кто его наложил или админ рангом выше")
-                    }
-                }
-                else
-                {
-                    await context.send("⚠ Игрок не в муте")
-                }
+                await context.send("⚠ Игрок не в муте")
             }
         }
         catch (e)
@@ -2654,49 +2539,21 @@ class ChatController
             let time = context.command.match(/\d+/)
             time = parseInt( time ? time[0] : 10)
             time = Math.min(time, 1440)
-            if(context.command.match(/гс|аудио|голосовые/))
+            if(Data.mute[context.replyPlayers[0]])
             {
-                if(Data.voiceMute[context.replyPlayers[0]])
-                {
-                    let admin = await Player.findOne({where: {id: Data.voiceMute[context.replyPlayers[0]].moder}, attributes: ["role"]})
-                    if(!(NameLibrary.RoleEstimator(admin.dataValues.role) > NameLibrary.RoleEstimator(context.player.role) || Data.voiceMute[context.replyPlayers[0]].moder === context.player.id))
-                    {
-                        await context.send("⚠ Снять мут может только тот, кто его наложил или админ рангом выше")
-                        return
-                    }
-                    clearTimeout(Data.voiceMute[context.replyPlayers[0]].timeout)
-                    delete Data.voiceMute[context.replyPlayers[0]]
-                    await context.send(`✅ Теперь игрок может оставлять голосовые сообщения`)
-                }
-                else
-                {
-                    Data.voiceMute[context.replyPlayers[0]] = {
-                        moder: context.player.id,
-                        timeout: setTimeout(async () => {
-                            delete Data.voiceMute[context.replyPlayers[0]]
-                        }, time * 60000)
-                    }
-                    await context.send(`✅ Голосовые сообщения игрока отключены на  ${time} минут`)
-                }
+                clearTimeout(Data.mute[context.replyPlayers[0]].timeout)
+                delete Data.mute[context.replyPlayers[0]]
             }
-            else
-            {
-                if(Data.mute[context.replyPlayers[0]])
-                {
-                    clearTimeout(Data.mute[context.replyPlayers[0]].timeout)
+            Data.mute[context.replyPlayers[0]] = {
+                moder: context.player.id,
+                timeout: setTimeout(async () => {
+                    await context.send(`✅ *id${context.replyPlayers[0]}(Игрок) теперь может разговаривать`)
+                    await api.SendMessage(context.replyPlayers[0], `✅ Время действия мута вышло`)
                     delete Data.mute[context.replyPlayers[0]]
-                }
-                Data.mute[context.replyPlayers[0]] = {
-                    moder: context.player.id,
-                    timeout: setTimeout(async () => {
-                        await context.send(`✅ *id${context.replyPlayers[0]}(Игрок) теперь может разговаривать`)
-                        await api.SendMessage(context.replyPlayers[0], `✅ Время действия мута вышло`)
-                        delete Data.mute[context.replyPlayers[0]]
-                    }, time * 60000)
-                }
-                await context.send(`✅ Игрок ближайшие ${time} минут не будет разговаривать`)
-                await api.SendMessage(context.replyPlayers[0], `⚠ На вас был наложен мут, время действия ${time} минут`)
+                }, time * 60000)
             }
+            await context.send(`✅ Игрок ближайшие ${time} минут не будет разговаривать`)
+            await api.SendMessage(context.replyPlayers[0], `⚠ На вас был наложен мут, время действия ${time} минут`)
         }
         catch (e)
         {
@@ -4228,13 +4085,19 @@ class ChatController
                     {
                         user = await Player.findOne({where: {id: country[0].leaderID}, attributes: ["nick"]})
                         request += `${country[0].GetName(context.player.platform === "IOS")}\n`
+                        if(process.env["MINIROUND"])
+                        {
+                            request += `📊 Экономика - ${NameLibrary.GetCountryEconomic(country[0].economicScore).state}\n`
+                            request += `🙏 Благословение - ${country[0].blessingScore}\n`
+                            request += `🔗 Лояльность - ${country[0].loyalty}\n`
+                        }
                         request += `👥 Население - ${country[1]} чел.\n`
-                        request += `🏆 Стабильность - ${country[0].stability}\n`
                         request += `🌆 Столица - ${Data.cities[country[0].capitalID].name}\n`
                         request += `👑 Правител${country[0].isParliament ? "и:\n" : "ь - "}${country[0].isParliament ? ((user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "") + getLeaders(country[0].id)) : (user ? `@id${country[0].leaderID}(${user.dataValues.nick})` : "Не назначен")}\n\n`
                     }
                 }
             }
+            if(process.env["MINIROUND"]) request += `💀 Падение империи - ${NameLibrary.GetCountryStage(Data.variables["empireDown"])} (${Data.variables["empireDown"]}/200)\n`
             await context.send(request, {disable_mentions: true})
         }
         catch (e)
@@ -4519,11 +4382,6 @@ class ChatController
                         {
                             clearTimeout(Data.mute[context.replyPlayers[0]].timeout)
                             delete Data.mute[context.replyPlayers[0]]
-                        }
-                        if(Data.voiceMute[user])
-                        {
-                            clearTimeout(Data.voiceMute[context.replyPlayers[0]].timeout)
-                            delete Data.voiceMute[context.replyPlayers[0]]
                         }
                         if(Data.activeIgnore[user])
                         {
