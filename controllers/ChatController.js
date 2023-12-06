@@ -2816,7 +2816,7 @@ class ChatController
                     active.push({
                         id: player.dataValues.id,
                         nick: player.dataValues.nick,
-                        active: users[player.dataValues.id].active + (Data.activity[player.dataValues.id] ? Data.activity[player.dataValues.id] : 0)
+                        active: users[player.dataValues.id].active + (Data.activity[player.dataValues.id] ? Data.activity[player.dataValues.id].msgs : 0)
                     })
                 }
                 for (let j = active.length - 1; j > 0; j--)
@@ -2833,18 +2833,18 @@ class ChatController
                 }
                 for(let i = 0; i < active.length; i++)
                 {
-                    request += `${i+1}. *id${active[i].id}(${active[i].nick}) - ${active[i].active}\n`
+                    request += `${i+1}. ${NameLibrary.GetUserTag(active[i].id, active[i].nick)} - ${active[i].active}\n`
                 }
                 request += "\n"
 
                 let array = []
                 Object.keys(Data.activity).forEach(key => {
-                    array.push([Data.activity[key], key])
+                    array.push([Data.activity[key].msgs, key])
                 })
 
                 if(array.length === 0)
                 {
-                    request += "😴 За сегодня никто ничего не успел написать в чат"
+                    request += "😴 За сегодня никто ничего не писал"
                     await context.send(request)
                     return
                 }

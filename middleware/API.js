@@ -1223,7 +1223,7 @@ class VK_API
             if(now.getFullYear() !== endTime.getFullYear()) continue
             if(now.getMonth() !== endTime.getMonth()) continue
             if(now.getDate() !== endTime.getDate()) continue
-            Data.longTimeouts[timeout.dataValues.id] = setTimeout(events[timeout.dataValues.type](timeout.dataValues), endTime - now)
+            Data.longTimeouts[timeout.dataValues.id] = setTimeout(() => {events[timeout.dataValues.type](timeout.dataValues)}, endTime - now)
         }
     }
 

@@ -418,6 +418,12 @@ class NameLibrary
         return "Рецессия"
     }
 
+    GetUserTag(id, name)
+    {
+        if(id > 0) return `@id${id}(${name})`
+        else return `@club${Math.abs(id)}(${name})`
+    }
+
     GetCountryEconomic(score)
     {
         if(score <= 100) return {state: "Упадок", tax: 6}
